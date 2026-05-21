@@ -23,7 +23,7 @@ Item {
             id: clockLabel
             text: Qt.formatDateTime(new Date(), "M/d • h:mm ap")
             font.family: "Rubik"
-            font.pixelSize: 14 
+            font.pixelSize: 16
             font.weight: Font.Bold
             color: clockMouseArea.containsMouse ? "#afbaff" : "#cdd6f4"
             anchors.centerIn: parent
