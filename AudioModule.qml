@@ -88,7 +88,7 @@ Item {
                 return "\uE04D";
             }
             font.family: "Material Design Icons"
-            font.pixelSize: 22
+            font.pixelSize: 26
             color: volumeMouseArea.containsMouse ? "#afbaff" : "#cdd6f4"
             anchors.centerIn: parent
             anchors.verticalCenterOffset: 3
