@@ -25,7 +25,7 @@ Scope {
         anchors.top: true
         anchors.left: true
         anchors.right: true
-        implicitHeight: 50
+        implicitHeight: 45
         color: "transparent"
 
         WlrLayershell.layer: WlrLayer.Top
