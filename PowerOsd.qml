@@ -11,6 +11,24 @@ Item {
     implicitWidth: powerHitbox.width
     implicitHeight: 32
 
+    // Smart auto-hide countdown tracker
+    Timer {
+        id: osdAutohideTimer
+        interval: 3500
+        running: false
+        repeat: false
+        onTriggered: rootScope.dismissAll()
+    }
+
+    // Helper logic to cleanly handle user presence changes
+    function checkUserActivity() {
+        if (cardHoverTracker.containsMouse) {
+            osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
+        } else if (globalPowerModal.visible) {
+            osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
+        }
+    }
+
     // ==========================================
     // 🔋 POWER TRIGGER MODULE
     // ==========================================
@@ -40,6 +58,7 @@ Item {
                     rootScope.dismissAll();
                 } else {
                     rootScope.requestOpen(globalPowerModal);
+                    checkUserActivity();
                 }
             }
         }
@@ -87,7 +106,7 @@ Item {
             anchors.top: parent.top
             anchors.right: parent.right
             
-            anchors.topMargin: 5   
+            anchors.topMargin: 5
             anchors.rightMargin: mainBarWindow.WlrLayershell.margins.right 
             
             color: "#cc11111b" 
@@ -105,7 +124,20 @@ Item {
             }
 
             Component.onCompleted: popupPowerWrapper.forceActiveFocus()
-            MouseArea { anchors.fill: parent; onPressed: (mouse) => mouse.accepted = true }
+            
+            // Card base background hover region tracker
+            MouseArea {
+                id: cardHoverTracker
+                anchors.fill: parent
+                hoverEnabled: true
+                onContainsMouseChanged: checkUserActivity()
+            }
+
+            // Explicitly swallow clicks targeting the container background to avoid background dismissal
+            MouseArea { 
+                anchors.fill: parent; 
+                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } 
+            }
 
             // ==========================================
             // 📋 UNIFIED LAYOUT CONTAINER
