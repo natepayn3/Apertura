@@ -19,8 +19,11 @@ Item {
 
     // 🔓 PUBLIC INTERFACE
     function toggleMenu() {
-        appLauncherModal.visible = !appLauncherModal.visible;
+        // 🎯 Hooked into the central state machine
         if (appLauncherModal.visible) {
+            rootScope.dismissAll();
+        } else {
+            rootScope.requestOpen(appLauncherModal);
             appScanner.running = false;
             appScanner.running = true;
         }
@@ -103,7 +106,8 @@ Item {
 
         MouseArea {
             anchors.fill: parent
-            onPressed: appLauncherModal.visible = false
+            // 🎯 Dismiss everything globally when clicking off-card
+            onClicked: rootScope.dismissAll()
         }
 
         Rectangle {
@@ -124,7 +128,8 @@ Item {
             focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    appLauncherModal.visible = false;
+                    // 🎯 Route escape key to clear globally
+                    rootScope.dismissAll();
                     event.accepted = true;
                 } 
                 else if (event.key === Qt.Key_Down) {
@@ -143,10 +148,11 @@ Item {
                     if (appListView.currentIndex >= 0 && appListView.currentIndex < appListView.count) {
                         let targetApp = dynamicAppModel.get(appListView.currentIndex);
                         
-                        // 🎯 Execute through sh wrapper to expand arguments naturally
                         globalLauncherRunner.command = ["/bin/sh", "-c", targetApp.bin];
                         globalLauncherRunner.running = true;
-                        appLauncherModal.visible = false;
+                        
+                        // 🎯 Clear everything globally on execute
+                        rootScope.dismissAll();
                     }
                     event.accepted = true;
                 } 
@@ -279,10 +285,11 @@ Item {
                             onPositionChanged: appListView.currentIndex = index
                             
                             onClicked: {
-                                // 🎯 Execute through sh wrapper here as well
                                 globalLauncherRunner.command = ["/bin/sh", "-c", model.bin];
                                 globalLauncherRunner.running = true;
-                                appLauncherModal.visible = false;
+                                
+                                // 🎯 Clear everything globally on execute
+                                rootScope.dismissAll();
                             }
                         }
                     }
