@@ -140,6 +140,11 @@ Scope {
                         id: audioModule
                         Layout.alignment: Qt.AlignVCenter
                     }
+
+                    PowerOsd {
+                        id: powerModule
+                        Layout.alignment: Qt.AlignVCenter
+                    }
                 }
             }
         }
