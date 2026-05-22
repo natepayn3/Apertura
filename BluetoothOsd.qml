@@ -18,14 +18,32 @@ Item {
     ListModel { id: pairedDevicesModel }
     ListModel { id: discoveredDevicesModel }
 
-    onCurrentTabChanged: {
+    // ⚙️ SAFELY RESTARTABLE EXECUTION ROUTNERS
+    function refreshStatus() {
+        if (!bluetoothWatcher.running) {
+            bluetoothWatcher.running = true;
+        }
+    }
+
+    function refreshPairedList() {
         if (!bluetoothRoot.isPowered) return;
-        if (currentTab === "paired") {
-            deviceScraper.running = false;
+        if (!deviceScraper.running) {
             deviceScraper.running = true;
-        } else if (currentTab === "discover") {
-            discoveryScraper.running = false;
+        }
+    }
+
+    function refreshDiscoverList() {
+        if (!bluetoothRoot.isPowered) return;
+        if (!discoveryScraper.running) {
             discoveryScraper.running = true;
+        }
+    }
+
+    onCurrentTabChanged: {
+        if (currentTab === "paired") {
+            refreshPairedList();
+        } else if (currentTab === "discover") {
+            refreshDiscoverList();
         }
     }
 
@@ -34,6 +52,7 @@ Item {
         id: bluetoothWatcher
         command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "status"]
         running: true
+        onExited: running = false 
         stdout: StdioCollector {
             onTextChanged: {
                 const cleanText = text.trim();
@@ -52,6 +71,7 @@ Item {
         id: deviceScraper
         command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "paired"]
         running: false
+        onExited: running = false 
         stdout: StdioCollector {
             onTextChanged: {
                 const rawOutput = text.trim();
@@ -77,8 +97,14 @@ Item {
     // 📡 DISCOVERY LIVE SCANNER RUNNER
     Process {
         id: scanAction
-        command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "scan"]
-        onExited: bluetoothRoot.isScanning = false
+        // 🔒 FIXED: Wraps active scanning thread inside a 5-second core threshold so it safely triggers onExited
+        command: ["timeout", "5s", "/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "scan"]
+        running: false
+        onExited: {
+            running = false;
+            bluetoothRoot.isScanning = false;
+            refreshDiscoverList(); // Pull cache changes right into the data container layout on exit
+        }
     }
 
     // 📡 DISCOVERED REFRESHER
@@ -86,6 +112,7 @@ Item {
         id: discoveryScraper
         command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "discover"]
         running: false
+        onExited: running = false 
         stdout: StdioCollector {
             onTextChanged: {
                 const rawOutput = text.trim();
@@ -108,42 +135,46 @@ Item {
     }
 
     // 🔄 CORE OPERATION ACTIONS
-    Process { id: bluetoothToggleAction; command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "toggle"] }
-    Process { id: deviceConnectionAction }
-    Process { id: pairAction }
+    Process { 
+        id: bluetoothToggleAction; 
+        command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "toggle"] 
+        onExited: { running = false; refreshStatus(); }
+    }
+    Process { 
+        id: deviceConnectionAction 
+        onExited: { running = false; refreshStatus(); refreshPairedList(); }
+    }
+    Process { 
+        id: pairAction 
+        onExited: { running = false; refreshStatus(); refreshPairedList(); }
+    }
 
     function triggerScan() {
         if (!bluetoothRoot.isPowered || bluetoothRoot.isScanning) return;
         bluetoothRoot.isScanning = true;
-        scanAction.running = false;
         scanAction.running = true;
     }
 
+    // POLL INTERVAL WHEN OVERLAY IS OPEN
     Timer {
         interval: 4000
         running: bluetoothOverlayModal.visible
         repeat: true
         onTriggered: {
-            bluetoothWatcher.running = false;
-            bluetoothWatcher.running = true;
+            refreshStatus();
             if (bluetoothRoot.currentTab === "paired") {
-                deviceScraper.running = false;
-                deviceScraper.running = true;
-            } else if (bluetoothRoot.currentTab === "discover") {
-                discoveryScraper.running = false;
-                discoveryScraper.running = true;
+                refreshPairedList();
             }
+            // 🔒 FIXED: Omitted aggressive polling fallback loop execution on discovery pane to eliminate list flashing
         }
     }
 
+    // POLL INTERVAL WHEN OVERLAY IS CLOSED
     Timer {
         interval: 5000
         running: !bluetoothOverlayModal.visible
         repeat: true
-        onTriggered: {
-            bluetoothWatcher.running = false;
-            bluetoothWatcher.running = true;
-        }
+        onTriggered: refreshStatus()
     }
 
     // 🎨 UI PANEL TRIGGER BUTTON
@@ -170,8 +201,7 @@ Item {
                 bluetoothOverlayModal.visible = !bluetoothOverlayModal.visible;
                 if (bluetoothOverlayModal.visible) {
                     bluetoothRoot.currentTab = "paired";
-                    deviceScraper.running = false;
-                    deviceScraper.running = true;
+                    refreshPairedList();
                 }
             }
         }
@@ -187,8 +217,6 @@ Item {
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
-        
-        // 🎯 FIXED: Proper type lookup reference layout configuration
         WlrLayershell.keyboardFocus: WlrLayershell.OnDemand
 
         onVisibleChanged: {
@@ -205,7 +233,7 @@ Item {
             anchors.topMargin: 5
             anchors.rightMargin: 12
             
-            color: "#cc11111b" // 🎯 MATCHED: 80% opacity glass profile
+            color: "#cc11111b" 
             border.color: "#898989" 
             border.width: 1
             radius: 12
@@ -227,7 +255,7 @@ Item {
                 }
             }
 
-            MouseArea { anchors.fill: parent; onPressed: mouse.accepted = true }
+            MouseArea { anchors.fill: parent; onPressed: (mouse) => mouse.accepted = true }
 
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 12; spacing: 10
@@ -235,7 +263,7 @@ Item {
                 // HEADER SECTION
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Bluetooth"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" } // 🔒 FIXED: Upgraded text luminosity alignment to match Calendar title
+                    Text { text: "Bluetooth"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" } 
                     Item { Layout.fillWidth: true }
                     Rectangle {
                         width: 50; height: 24; radius: 12
@@ -249,9 +277,14 @@ Item {
                         MouseArea {
                             anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                bluetoothToggleAction.running = false; bluetoothToggleAction.running = true;
-                                bluetoothRoot.isPowered = !bluetoothRoot.isPowered;
-                                if (!bluetoothRoot.isPowered) { pairedDevicesModel.clear(); discoveredDevicesModel.clear(); }
+                                if (!bluetoothToggleAction.running) {
+                                    bluetoothToggleAction.running = true;
+                                    bluetoothRoot.isPowered = !bluetoothRoot.isPowered;
+                                    if (!bluetoothRoot.isPowered) { 
+                                        pairedDevicesModel.clear(); 
+                                        discoveredDevicesModel.clear(); 
+                                    }
+                                }
                             }
                         }
                     }
@@ -327,10 +360,12 @@ Item {
                                 MouseArea {
                                     id: pArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        const actionType = model.isDeviceConnected ? "disconnect" : "connect";
-                                        deviceConnectionAction.command = ["bluetoothctl", actionType, model.macAddress];
-                                        deviceConnectionAction.running = true;
-                                        pairedDevicesModel.setProperty(index, "isDeviceConnected", !model.isDeviceConnected);
+                                        if (!deviceConnectionAction.running) {
+                                            const actionType = model.isDeviceConnected ? "disconnect" : "connect";
+                                            deviceConnectionAction.command = ["bluetoothctl", actionType, model.macAddress];
+                                            deviceConnectionAction.running = true;
+                                            pairedDevicesModel.setProperty(index, "isDeviceConnected", !model.isDeviceConnected);
+                                        }
                                     }
                                 }
                             }
@@ -363,9 +398,11 @@ Item {
                                 MouseArea {
                                     id: dArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        pairAction.command = ["bash", "-c", "bluetoothctl pair " + model.macAddress + " && bluetoothctl trust " + model.macAddress + " && bluetoothctl connect " + model.macAddress];
-                                        pairAction.running = true;
-                                        bluetoothRoot.currentTab = "paired";
+                                        if (!pairAction.running) {
+                                            pairAction.command = ["bash", "-c", "bluetoothctl pair " + model.macAddress + " && bluetoothctl trust " + model.macAddress + " && bluetoothctl connect " + model.macAddress];
+                                            pairAction.running = true;
+                                            bluetoothRoot.currentTab = "paired";
+                                        }
                                     }
                                 }
                             }
