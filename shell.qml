@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import QtQml.Models
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
@@ -40,110 +41,117 @@ Scope {
         function toggle(): void { wallpaperModule.toggleMenu(); }
     }
 
-    PanelWindow {
-        id: mainBarWindow
-        
-        anchors.top: true
-        anchors.left: true
-        anchors.right: true
-        implicitHeight: 45
-        color: "transparent"
+    // 🖥️ MULTI-MONITOR INSTANTIATION TRACKING
+    // Loops through all active outputs and spawns an isolated bar on each
+    Instantiator {
+        model: Quickshell.screens
 
-        WlrLayershell.layer: WlrLayer.Top
-        WlrLayershell.namespace: "quickshell-bar"
-        WlrLayershell.margins.top: 12
-        WlrLayershell.margins.left: 12
-        WlrLayershell.margins.right: 12
+        delegate: PanelWindow {
+            id: mainBarWindow
+            
+            // Assign this specific window instance to the iterated display context
+            screen: modelData
+            
+            anchors.top: true
+            anchors.left: true
+            anchors.right: true
+            implicitHeight: 45
+            color: "transparent"
 
-        Rectangle {
-            anchors.fill: parent
-            color: "#9911111b"          
-            border.color: "#898989"   
-            border.width: 1
-            radius: 12
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.namespace: "quickshell-bar"
+            WlrLayershell.margins.top: 5  // Preserving critical anchor topMargin identity
+            WlrLayershell.margins.left: 12
+            WlrLayershell.margins.right: 12
 
-            // 🎯 THE BAR DISMISSAL HOOK
-            // Catches clicks targeting the empty space or background of the bar.
-            // z: -1 ensures it stays behind your interactive module layout row.
-            MouseArea {
+            Rectangle {
                 anchors.fill: parent
-                z: -1
-                acceptedButtons: Qt.LeftButton
-                onPressed: rootScope.dismissAll()
-            }
+                color: "#9911111b"          
+                border.color: "#898989"   
+                border.width: 1
+                radius: 12
 
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 16
-                anchors.rightMargin: 16
-                spacing: 0
-
-                // ==========================================
-                // 👈 LEFT UTILITIES BLOCK
-                // ==========================================
-                RowLayout {
-                    Layout.preferredWidth: 240
-                    Layout.fillHeight: true
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-                    spacing: 8
-
-                    AppLauncherOsd {
-                        id: appLauncherModule
-                        Layout.alignment: Qt.AlignVCenter
-                    }
-
-                    WallpaperOsd {
-                        id: wallpaperModule
-                        Layout.alignment: Qt.AlignVCenter
-                    }
-                    
-                    Item { Layout.fillWidth: true }
+                // 🎯 THE BAR DISMISSAL HOOK
+                MouseArea {
+                    anchors.fill: parent
+                    z: -1
+                    acceptedButtons: Qt.LeftButton
+                    onPressed: rootScope.dismissAll()
                 }
 
-                // ==========================================
-                // 🎯 CENTER WORKSPACES BLOCK
-                // ==========================================
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    
-                    Workspaces {
-                        id: workspacesModule
-                        anchors.centerIn: parent
-                    }
-                }
-
-                // ==========================================
-                // 👉 RIGHT STATUS BLOCK (Inlined & Reordered)
-                // ==========================================
                 RowLayout {
-                    Layout.preferredWidth: 240
-                    Layout.fillHeight: true
-                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                    spacing: 6
+                    anchors.fill: parent
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
+                    spacing: 0
 
-                    Item { Layout.fillWidth: true }
+                    // ==========================================
+                    // 👈 LEFT UTILITIES BLOCK
+                    // ==========================================
+                    RowLayout {
+                        Layout.preferredWidth: 240
+                        Layout.fillHeight: true
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+                        spacing: 8
 
-                    CalendarModule {
-                        Layout.alignment: Qt.AlignVCenter
+                        AppLauncherOsd {
+                            id: appLauncherModule
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        WallpaperOsd {
+                            id: wallpaperModule
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                        
+                        Item { Layout.fillWidth: true }
                     }
 
-                    NotificationOsd {
-                        Layout.alignment: Qt.AlignVCenter
+                    // ==========================================
+                    // 🎯 CENTER WORKSPACES BLOCK
+                    // ==========================================
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        
+                        Workspaces {
+                            id: workspacesModule
+                            anchors.centerIn: parent
+                        }
                     }
 
-                    BluetoothOsd {
-                        Layout.alignment: Qt.AlignVCenter
-                    }
+                    // ==========================================
+                    // 👉 RIGHT STATUS BLOCK
+                    // ==========================================
+                    RowLayout {
+                        Layout.preferredWidth: 240
+                        Layout.fillHeight: true
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                        spacing: 6
 
-                    AudioModule {
-                        id: audioModule
-                        Layout.alignment: Qt.AlignVCenter
-                    }
+                        Item { Layout.fillWidth: true }
 
-                    PowerOsd {
-                        id: powerModule
-                        Layout.alignment: Qt.AlignVCenter
+                        CalendarModule {
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        NotificationOsd {
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        BluetoothOsd {
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        AudioModule {
+                            id: audioModule
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        PowerOsd {
+                            id: powerModule
+                            Layout.alignment: Qt.AlignVCenter
+                        }
                     }
                 }
             }
