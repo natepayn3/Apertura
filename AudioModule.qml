@@ -13,6 +13,9 @@ Item {
     readonly property real currentVol: globalVolumeSlider.value ?? 0.0
     property bool isMuted: false
 
+    // 🧠 VISUAL STATE TRACKER
+    property bool menuOpen: false
+
     // 🔄 AUDIO BACKGROUND LOOP
     Timer {
         interval: 400
@@ -50,10 +53,8 @@ Item {
                                     globalVolumeSlider.value = volVal;
                                     
                                     // Only show if it wasn't already open to prevent resetting timer aggressively
-                                    if (!globalVolumeModal.visible) {
-                                        rootScope.requestOpen(globalVolumeModal);
-                                        syncDevicesQuery.running = false;
-                                        syncDevicesQuery.running = true;
+                                    if (!audioRoot.menuOpen) {
+                                        audioRoot.openMenu();
                                     }
                                     checkUserActivity();
                                 }
@@ -160,7 +161,47 @@ Item {
         interval: 3500
         running: false
         repeat: false
-        onTriggered: rootScope.dismissAll()
+        onTriggered: closeMenu()
+    }
+
+    // 🎬 CLOSE FINALIZER TIMER
+    Timer {
+        id: closeTimer
+        interval: 180
+        repeat: false
+        onTriggered: {
+            audioRoot.menuOpen = false;
+            rootScope.dismissAll();
+        }
+    }
+
+    // 🔓 ANIMATED CONTEXT INTERFACING
+    function toggleMenu(): void {
+        if (menuOpen) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    }
+
+    function openMenu(): void {
+        popupCard.targetX = -655;
+        popupCard.targetOpacity = 0.0;
+
+        rootScope.requestOpen(globalVolumeModal);
+        menuOpen = true;
+
+        slideInAnimation.start();
+        syncDevicesQuery.running = false;
+        syncDevicesQuery.running = true;
+        checkUserActivity();
+    }
+
+    function closeMenu(): void {
+        popupCard.targetX = -655;
+        popupCard.targetOpacity = 0.0;
+
+        closeTimer.start();
     }
 
     // Helper logic to cleanly handle user presence changes
@@ -198,33 +239,23 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                // 🎯 Hook into the root scope state machine
-                if (globalVolumeModal.visible) {
-                    rootScope.dismissAll();
-                } else {
-                    rootScope.requestOpen(globalVolumeModal);
-                    syncDevicesQuery.running = false;
-                    syncDevicesQuery.running = true;
-                    checkUserActivity();
-                }
-            }
+            onClicked: toggleMenu()
         }
     }
 
     // 🎚️ MIXER CONTEXT CONTAINER
     PanelWindow {
         id: globalVolumeModal
-        visible: false
+        visible: audioRoot.menuOpen
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         color: "transparent"
         
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrLayershell.OnDemand
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
         onVisibleChanged: {
-            if (visible) {
+            if (visible && audioRoot.menuOpen) {
                 popupCard.forceActiveFocus();
             }
         }
@@ -232,8 +263,7 @@ Item {
         // Global background click dismiss layer
         MouseArea { 
             anchors.fill: parent
-            // 🎯 Routed to clear everything globally
-            onClicked: rootScope.dismissAll() 
+            onClicked: closeMenu() 
         }
 
         Process {
@@ -245,11 +275,37 @@ Item {
         Rectangle {
             id: popupCard
             width: 300
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.topMargin: 5
-            anchors.rightMargin: 12
             
+            // 🔒 FIXED: Absolute bottom-left placement metrics applied
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.bottomMargin: 12
+            
+            // Explicit animation targets
+            property int targetX: -655
+            property real targetOpacity: 0.0
+
+            anchors.leftMargin: targetX
+            opacity: targetOpacity
+
+            // ✨ ENTRY TIMELINE SEQUENCER
+            SequentialAnimation {
+                id: slideInAnimation
+                PauseAnimation { duration: 16 }
+                ParallelAnimation {
+                    NumberAnimation { target: popupCard; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: popupCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                }
+            }
+
+            // ✨ IMPLICIT EXIT MECHANISMS
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            }
+            Behavior on opacity {
+                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+            }
+
             color: "#cc11111b" 
             border.color: "#898989" 
             border.width: 1
@@ -260,8 +316,7 @@ Item {
             focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    // 🎯 Route escape key to clear globally
-                    rootScope.dismissAll();
+                    closeMenu();
                     event.accepted = true;
                 }
             }
