@@ -19,8 +19,11 @@ Item {
 
     // 🔓 PUBLIC INTERFACE: Allows internal or external IPC toggles
     function toggleMenu() {
-        wallpaperModal.visible = !wallpaperModal.visible;
+        // 🎯 Hooked into the central state machine
         if (wallpaperModal.visible) {
+            rootScope.dismissAll();
+        } else {
+            rootScope.requestOpen(wallpaperModal);
             wallpaperScanner.running = false;
             wallpaperScanner.running = true;
             wallpaperCard.forceActiveFocus();
@@ -91,9 +94,10 @@ Item {
         WlrLayershell.namespace: "quickshell-wallpapers"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
+        // 🎯 Route click away to central manager
         MouseArea {
             anchors.fill: parent
-            onPressed: wallpaperModal.visible = false
+            onClicked: rootScope.dismissAll()
         }
 
         Rectangle {
@@ -113,14 +117,15 @@ Item {
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    wallpaperModal.visible = false;
+                    // 🎯 Route escape to clear globally
+                    rootScope.dismissAll();
                     event.accepted = true;
                 }
             }
 
             MouseArea {
                 anchors.fill: parent
-                onPressed: mouse.accepted = true
+                onPressed: (mouse) => mouse.accepted = true
             }
 
             ColumnLayout {
@@ -186,7 +191,9 @@ Item {
                                             "--transition-step", "16"
                                         ];
                                         wallpaperSetter.running = true;
-                                        wallpaperModal.visible = false;
+                                        
+                                        // 🎯 Clear everything globally on execute
+                                        rootScope.dismissAll();
                                     }
                                 }
                             }
