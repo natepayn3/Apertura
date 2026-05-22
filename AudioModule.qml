@@ -45,7 +45,18 @@ Item {
                         if (parts.length >= 2) {
                             let volVal = parseFloat(parts[1]);
                             if (!isNaN(volVal) && !globalVolumeSlider.pressed) {
-                                globalVolumeSlider.value = volVal;
+                                // 🎯 OSD POPUP LOGIC: Trigger visibility if external volume drifts from current slider state
+                                if (Math.abs(globalVolumeSlider.value - volVal) > 0.001) {
+                                    globalVolumeSlider.value = volVal;
+                                    
+                                    // Only show if it wasn't already open to prevent resetting timer aggressively
+                                    if (!globalVolumeModal.visible) {
+                                        globalVolumeModal.visible = true;
+                                        syncDevicesQuery.running = false;
+                                        syncDevicesQuery.running = true;
+                                    }
+                                    checkUserActivity();
+                                }
                             }
                         }
                     }
@@ -123,7 +134,7 @@ Item {
     function checkUserActivity() {
         if (globalVolumeSlider.pressed || cardHoverTracker.containsMouse || sliderHoverTracker.containsMouse || listHoverTracker.containsMouse) {
             osdAutohideTimer.stop(); 
-        } else if (globalVolumeModal.visible) {
+        } else {
             osdAutohideTimer.restart(); 
         }
     }
