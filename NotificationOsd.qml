@@ -91,7 +91,12 @@ Item {
             cursorShape: Qt.PointingHandCursor
             
             onClicked: {
-                notificationOverlayModal.visible = !notificationOverlayModal.visible;
+                // 🎯 Hooked into the central state machine
+                if (notificationOverlayModal.visible) {
+                    rootScope.dismissAll();
+                } else {
+                    rootScope.requestOpen(notificationOverlayModal);
+                }
             }
             
             onDoubleClicked: {
@@ -118,7 +123,7 @@ Item {
         
         // 📏 DYNAMIC BOUNDING BOX
         implicitWidth: 324
-        implicitHeight: toastColumn.implicitHeight // 🔒 FIXED: Extruded heights clipped back to true absolute limits
+        implicitHeight: toastColumn.implicitHeight 
         
         anchors.top: true
         anchors.right: true
@@ -126,7 +131,8 @@ Item {
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-notifications"
         
-        WlrLayershell.margins.top: 62
+        // 🎯 FIXED POSITION ALIGNMENT: Matches the 5px target margin beneath the main bar window
+        WlrLayershell.margins.top: 5
         WlrLayershell.margins.right: 12
 
         ColumnLayout {
@@ -199,7 +205,8 @@ Item {
             }
         }
 
-        MouseArea { anchors.fill: parent; onClicked: notificationOverlayModal.visible = false }
+        // 🎯 Route click away to central manager
+        MouseArea { anchors.fill: parent; onClicked: rootScope.dismissAll() }
 
         Rectangle {
             id: popupMenuFrame
@@ -224,7 +231,8 @@ Item {
             focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    notificationOverlayModal.visible = false;
+                    // 🎯 Route escape to clear globally
+                    rootScope.dismissAll();
                     event.accepted = true;
                 }
             }
