@@ -238,7 +238,7 @@ Item {
             border.width: 1
             radius: 12
 
-            height: !bluetoothRoot.isPowered ? 92 : Math.min(96 + ((currentTab === "paired" ? pairedDevicesModel.count : discoveredDevicesModel.count) * 40), 300)
+            height: !bluetoothRoot.isPowered ? 92 : Math.min(100 + ((currentTab === "paired" ? pairedDevicesModel.count : discoveredDevicesModel.count) * 42), 300)
 
             Behavior on height {
                 NumberAnimation {
