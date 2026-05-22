@@ -15,7 +15,8 @@ Item {
         interval: 3500
         running: false
         repeat: false
-        onTriggered: globalCalendarModal.visible = false
+        // 🎯 Routed to clear globally on timer trigger
+        onTriggered: rootScope.dismissAll()
     }
 
     // Helper logic to cleanly handle user presence changes
@@ -54,8 +55,11 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-                globalCalendarModal.visible = !globalCalendarModal.visible;
+                // 🎯 Hooked into the central state machine
                 if (globalCalendarModal.visible) {
+                    rootScope.dismissAll();
+                } else {
+                    rootScope.requestOpen(globalCalendarModal);
                     checkUserActivity();
                 }
             }
@@ -87,19 +91,11 @@ Item {
             }
         }
 
-        // Listen to the attached window property to handle focus dropouts safely
-        Connections {
-            target: Quickshell.window
-            function onActiveChanged() {
-                if (!Quickshell.window.active && globalCalendarModal.visible) {
-                    globalCalendarModal.visible = false;
-                }
-            }
-        }
-
+        // Global background click dismiss layer
         MouseArea { 
             anchors.fill: parent; 
-            onClicked: globalCalendarModal.visible = false 
+            // 🎯 Routed to clear everything globally on click-away
+            onClicked: rootScope.dismissAll() 
         }
 
         Rectangle {
@@ -116,9 +112,12 @@ Item {
             radius: 12
 
             focus: true
+            // 🔒 FIXED: Removed unaccepting focus loops that cause structural flashing when clicking month grid nodes
+
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    globalCalendarModal.visible = false;
+                    // 🎯 Route escape to clear globally
+                    rootScope.dismissAll();
                     event.accepted = true;
                 }
             }
