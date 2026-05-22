@@ -16,6 +16,24 @@ Item {
     property var visibleBanners: []
     property var activeHistoryReferences: [] 
 
+    // Smart auto-hide countdown tracker
+    Timer {
+        id: osdAutohideTimer
+        interval: 3500
+        running: false
+        repeat: false
+        onTriggered: rootScope.dismissAll()
+    }
+
+    // Helper logic to cleanly handle user presence changes
+    function checkUserActivity() {
+        if (cardHoverTracker.containsMouse || listContainerMouse.containsMouse) {
+            osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
+        } else if (notificationOverlayModal.visible) {
+            osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
+        }
+    }
+
     function updateCount() {
         if (nativeServer && nativeServer.trackedNotifications) {
             notificationRoot.unreadCount = nativeServer.trackedNotifications.rowCount();
@@ -96,6 +114,7 @@ Item {
                     rootScope.dismissAll();
                 } else {
                     rootScope.requestOpen(notificationOverlayModal);
+                    checkUserActivity();
                 }
             }
             
@@ -214,6 +233,8 @@ Item {
             
             anchors.top: parent.top
             anchors.right: parent.right
+            
+            // 🎯 RESTORED ORIGINAL ALIGNMENT MARGINS
             anchors.topMargin: 5
             anchors.rightMargin: 12
 
@@ -238,7 +259,20 @@ Item {
             }
             
             Component.onCompleted: popupMenuFrame.forceActiveFocus()
-            MouseArea { anchors.fill: parent; onPressed: (mouse) => mouse.accepted = true }
+            
+            // Card base background hover region tracker
+            MouseArea {
+                id: cardHoverTracker
+                anchors.fill: parent
+                hoverEnabled: true
+                onContainsMouseChanged: checkUserActivity()
+            }
+
+            // Explicitly swallow clicks targeting the container background to avoid background dismissal
+            MouseArea { 
+                anchors.fill: parent; 
+                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } 
+            }
 
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 14; spacing: 10
@@ -272,6 +306,7 @@ Item {
                                 notificationRoot.visibleBanners = [];
                                 notificationRoot.activeHistoryReferences = [];
                                 notificationRoot.updateCount();
+                                checkUserActivity();
                             }
                         }
                     }
@@ -279,60 +314,76 @@ Item {
 
                 Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
 
-                ListView {
-                    id: notifListView
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    clip: true; spacing: 8
-                    model: nativeServer.trackedNotifications
+                Item {
+                    id: listContainer
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "No new notifications"
-                        font.family: "Rubik"; font.pixelSize: 13; color: "#a6adc8" 
-                        visible: notifListView.count === 0
+                    // Global container mouse monitoring to ensure safe cursor passing
+                    MouseArea {
+                        id: listContainerMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.NoButton
+                        onContainsMouseChanged: checkUserActivity()
                     }
 
-                    delegate: Item {
-                        width: notifListView.width
-                        height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
+                    ListView {
+                        id: notifListView
+                        anchors.fill: parent
+                        clip: true; spacing: 8
+                        model: nativeServer.trackedNotifications
 
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "#11111b"
-                            border.color: cellMouseArea.containsMouse ? "#898989" : "#313244" 
-                            border.width: 1
-                            radius: 8
+                        Text {
+                            anchors.centerIn: parent
+                            text: "No new notifications"
+                            font.family: "Rubik"; font.pixelSize: 13; color: "#a6adc8" 
+                            visible: notifListView.count === 0
+                        }
 
-                            ColumnLayout {
-                                anchors.fill: parent; anchors.margins: 10; spacing: 2
+                        delegate: Item {
+                            width: notifListView.width
+                            height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
 
-                                Text {
-                                    id: summaryLabel
-                                    text: modelData.summary
-                                    font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
-                                    color: "#cdd6f4" 
-                                    Layout.fillWidth: true; elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    id: bodyLabel
-                                    text: modelData.body
-                                    font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"
-                                    Layout.fillWidth: true; wrapMode: Text.WordWrap; 
-                                    maximumLineCount: 3
-                                    elide: Text.ElideRight
-                                }
-                            }
-                            
-                            MouseArea {
-                                id: cellMouseArea
+                            Rectangle {
                                 anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    try { nativeServer.dismiss(modelData.id); } catch(e) {}
-                                    try { modelData.dismiss(); } catch(e) {}
-                                    notificationRoot.updateCount();
+                                color: "#11111b"
+                                border.color: cellMouseArea.containsMouse ? "#898989" : "#313244" 
+                                border.width: 1
+                                radius: 8
+
+                                ColumnLayout {
+                                    anchors.fill: parent; anchors.margins: 10; spacing: 2
+
+                                    Text {
+                                        id: summaryLabel
+                                        text: modelData.summary
+                                        font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
+                                        color: "#cdd6f4" 
+                                        Layout.fillWidth: true; elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        id: bodyLabel
+                                        text: modelData.body
+                                        font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"
+                                        Layout.fillWidth: true; wrapMode: Text.WordWrap; 
+                                        maximumLineCount: 3
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                                
+                                MouseArea {
+                                    id: cellMouseArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        try { nativeServer.dismiss(modelData.id); } catch(e) {}
+                                        try { modelData.dismiss(); } catch(e) {}
+                                        notificationRoot.updateCount();
+                                        checkUserActivity();
+                                    }
                                 }
                             }
                         }
