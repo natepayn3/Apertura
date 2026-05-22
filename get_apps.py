@@ -2,6 +2,7 @@
 import os
 import json
 import shutil
+import re
 from xdg.DesktopEntry import DesktopEntry
 from xdg.IconTheme import getIconPath
 
@@ -30,19 +31,29 @@ def get_desktop_files():
                     continue
                     
                 name = entry.getName()
+                raw_exec = entry.getExec()
                 
-                # 🎯 FIX: Get the clean executable name without %U, %f, etc.
-                # entry.getTryExec() returns just the core binary name (e.g., "remmina")
-                binary = entry.getTryExec() or entry.getExec().split()[0]
-                binary = binary.replace('"', '').replace("'", "").strip()
+                if not raw_exec:
+                    continue
+
+                # 🧼 Clean standard field descriptors (%u, %F, etc.) out of the execution string
+                clean_exec = re.sub(r'%[fFuUnNdDsSkKmM]', '', raw_exec).strip()
                 
-                # Verify the binary actually exists in your $PATH before adding it
-                if not shutil.which(binary):
+                # Extract the primary binary descriptor for validation
+                # Handles both quoted and unquoted absolute system execution paths safely
+                parts = clean_exec.split()
+                if not parts:
+                    continue
+                    
+                base_binary = parts[0].replace('"', '').replace("'", "")
+                
+                # Validate that the system can see the underlying executable path
+                if not shutil.which(base_binary):
                     continue
                     
                 raw_icon = entry.getIcon()
                 
-                if name and binary:
+                if name and clean_exec:
                     resolved_icon = ""
                     if raw_icon:
                         if os.path.isabs(raw_icon):
@@ -50,11 +61,12 @@ def get_desktop_files():
                         else:
                             resolved_icon = getIconPath(raw_icon, size=32) or ""
                     
-                    if binary not in seen_bins:
-                        seen_bins.add(binary)
+                    # Track uniqueness against full execution paths to allow distinct Chrome profiles/apps
+                    if clean_exec not in seen_bins:
+                        seen_bins.add(clean_exec)
                         apps.append({
                             "name": name,
-                            "bin": binary,
+                            "bin": clean_exec,
                             "icon": resolved_icon
                         })
             except Exception:
