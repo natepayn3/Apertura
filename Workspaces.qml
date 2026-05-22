@@ -6,7 +6,6 @@ import Quickshell.Io
 Item {
     id: workspaceContainer
     
-    // Explicit bounding envelope so the absolute tracking layer works safely
     implicitWidth: mainRowLayout.implicitWidth
     implicitHeight: 22
 
@@ -89,9 +88,8 @@ Item {
                 property bool isActive: workspaceContainer.activeWorkspace === wsId
                 property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
 
-                // Stretches smoothly to make room for text index injections
-                implicitWidth: isActive ? 35 : (isOccupied ? 24 : 20)
-                implicitHeight: 20
+                implicitWidth: isActive ? 50 : (isOccupied ? 30 : 30)
+                implicitHeight: 22
                 cursorShape: Qt.PointingHandCursor
 
                 Behavior on implicitWidth {
@@ -114,7 +112,6 @@ Item {
                     anchors.fill: parent
                     radius: height / 2
                     
-                    // Fades background alpha away if empty to leave just a clean border
                     color: isActive   ? "#cdd6f4" : 
                            isOccupied ? "#313244" : "transparent"
                     
@@ -125,26 +122,26 @@ Item {
                     Behavior on color { ColorAnimation { duration: 120 } }
                     Behavior on border.color { ColorAnimation { duration: 120 } }
 
-                    // 🎯 INDEX NUMERIC TEXT REVEAL: Fades into view when expanded
+                    // 🎯 DYNAMIC TEXT CORE
                     Text {
                         text: workspaceButton.wsId.toString()
                         font.family: "Rubik"
                         font.pixelSize: 12
                         font.bold: true
-                        color: "#11111b" // Contrast dark glyph color against bright active pill
+                        color: workspaceButton.isActive ? "#11111b" : "#a6adc8"
                         
-                        // 🎯 MANUAL BOUNDING PROFILE MATRIX
-                        // Corrects both baseline drop drop-shifts and subpixel tracking horizontal drift
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.verticalCenterOffset: 1
-                        anchors.horizontalCenterOffset: -1
+                        // 🎯 SOLID BOUNDS FIX: Extrude bounding frame out to edge coordinates
+                        // This prevents internal kerning paddings from drifting off-center
+                        width: parent.width
+                        height: parent.height
                         
-                        opacity: workspaceButton.isActive ? 1.0 : 0.0
-                        scale: workspaceButton.isActive ? 1.0 : 0.5
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        
+                        opacity: (workspaceButton.isActive || workspaceButton.isOccupied) ? 1.0 : 0.0
 
                         Behavior on opacity { NumberAnimation { duration: 100 } }
-                        Behavior on scale { NumberAnimation { duration: 100 } }
+                        Behavior on color { ColorAnimation { duration: 100 } }
                     }
                 }
             }
