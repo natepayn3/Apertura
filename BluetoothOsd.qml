@@ -15,6 +15,9 @@ Item {
     property string currentTab: "paired" 
     property bool isScanning: false
 
+    // Controls actual PanelWindow visibility
+    property bool menuOpen: false
+
     ListModel { id: pairedDevicesModel }
     ListModel { id: discoveredDevicesModel }
 
@@ -24,19 +27,61 @@ Item {
         interval: 3500
         running: false
         repeat: false
-        onTriggered: rootScope.dismissAll()
+        onTriggered: closeMenu()
+    }
+
+    // 🎬 CLOSE FINALIZER
+    Timer {
+        id: closeTimer
+        interval: 180
+        repeat: false
+        onTriggered: {
+            bluetoothRoot.menuOpen = false;
+            rootScope.dismissAll();
+        }
+    }
+
+    // 🔓 PUBLIC INTERFACE
+    function toggleMenu(): void {
+        if (menuOpen) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    }
+
+    function openMenu(): void {
+        // Reset hidden baseline coordinates before window mapping
+        popupMenuFrame.targetX = -655;
+        popupMenuFrame.targetOpacity = 0.0;
+
+        rootScope.requestOpen(bluetoothOverlayModal);
+        menuOpen = true;
+
+        // Drive entry transition timeline sequentially
+        slideInAnimation.start();
+        bluetoothRoot.currentTab = "paired";
+        refreshPairedList();
+        checkUserActivity();
+    }
+
+    function closeMenu(): void {
+        // Animate out while layer surface remains active
+        popupMenuFrame.targetX = -655;
+        popupMenuFrame.targetOpacity = 0.0;
+
+        closeTimer.start();
     }
 
     // Helper logic to cleanly handle user presence changes
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse) {
-            osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
-        } else if (bluetoothOverlayModal.visible) {
-            osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
+            osdAutohideTimer.stop(); 
+        } else if (bluetoothOverlayModal.visible && menuOpen) {
+            osdAutohideTimer.restart(); 
         }
     }
 
-    // ⚙️ SAFELY RESTARTABLE EXECUTION ROUTNERS
     function refreshStatus() {
         if (!bluetoothWatcher.running) {
             bluetoothWatcher.running = true;
@@ -115,13 +160,12 @@ Item {
     // 📡 DISCOVERY LIVE SCANNER RUNNER
     Process {
         id: scanAction
-        // 🔒 FIXED: Wraps active scanning thread inside a 5-second core threshold so it safely triggers onExited
         command: ["timeout", "5s", "/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "scan"]
         running: false
         onExited: {
             running = false;
             bluetoothRoot.isScanning = false;
-            refreshDiscoverList(); // Pull cache changes right into the data container layout on exit
+            refreshDiscoverList(); 
         }
     }
 
@@ -214,16 +258,16 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                // 🎯 Hooked into the central state machine
-                if (bluetoothOverlayModal.visible) {
-                    rootScope.dismissAll();
-                } else {
-                    rootScope.requestOpen(bluetoothOverlayModal);
-                    bluetoothRoot.currentTab = "paired";
-                    refreshPairedList();
-                    checkUserActivity();
-                }
+            onClicked: toggleMenu()
+        }
+    }
+
+    // 🔄 GLOBAL CLEANUP LISTENER
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== bluetoothOverlayModal && menuOpen) {
+                closeMenu();
             }
         }
     }
@@ -233,28 +277,56 @@ Item {
     // ==========================================
     PanelWindow {
         id: bluetoothOverlayModal
-        visible: false
+        visible: bluetoothRoot.menuOpen
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrLayershell.OnDemand
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
         onVisibleChanged: {
-            if (visible) popupMenuFrame.forceActiveFocus();
+            if (visible && bluetoothRoot.menuOpen) popupMenuFrame.forceActiveFocus();
         }
 
-        // 🎯 Route click away to global manager
-        MouseArea { anchors.fill: parent; onClicked: rootScope.dismissAll() }
+        MouseArea { anchors.fill: parent; onClicked: closeMenu() }
 
         Rectangle {
             id: popupMenuFrame
             width: 300
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.topMargin: 5
-            anchors.rightMargin: 12
             
+            // 🔒 FIXED: Anchored top-left, matching the universal shell axis alignment
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.bottomMargin: 12
+            
+            // Explicit animation targets
+            property int targetX: -655
+            property real targetOpacity: 0.0
+
+            // 🔒 FIXED: Apply your exact 5px margin specification rule to lock it flush to your bar geometry border
+            anchors.leftMargin: targetX
+            opacity: targetOpacity
+
+            // ✨ ENTRY SEQUENCE: Bypasses layer initialization race conditions
+            SequentialAnimation {
+                id: slideInAnimation
+                PauseAnimation { duration: 16 }
+                ParallelAnimation {
+                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                }
+            }
+
+            // ✨ EXIT SLIDE IMPLICIT TRACKER
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            }
+            
+            // ✨ EXIT FADE IMPLICIT TRACKER
+            Behavior on opacity {
+                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+            }
+
             color: "#cc11111b" 
             border.color: "#898989" 
             border.width: 1
@@ -272,13 +344,11 @@ Item {
             focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    // 🎯 Route escape to clear globally
-                    rootScope.dismissAll();
+                    closeMenu();
                     event.accepted = true;
                 }
             }
 
-            // Card base background hover region tracker
             MouseArea {
                 id: cardHoverTracker
                 anchors.fill: parent
