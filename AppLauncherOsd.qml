@@ -109,9 +109,8 @@ Item {
         Rectangle {
             id: menuCard
             width: 300 
-            height: 300 // 🎯 MATCHED: Uniform vertical bounding envelope height limit
+            height: 300 
             
-            // 🎯 MATCHED: Explicit layout anchoring to screen border matrices
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.topMargin: 5
@@ -144,7 +143,8 @@ Item {
                     if (appListView.currentIndex >= 0 && appListView.currentIndex < appListView.count) {
                         let targetApp = dynamicAppModel.get(appListView.currentIndex);
                         
-                        globalLauncherRunner.command = [targetApp.bin];
+                        // 🎯 Execute through sh wrapper to expand arguments naturally
+                        globalLauncherRunner.command = ["/bin/sh", "-c", targetApp.bin];
                         globalLauncherRunner.running = true;
                         appLauncherModal.visible = false;
                     }
@@ -279,7 +279,8 @@ Item {
                             onPositionChanged: appListView.currentIndex = index
                             
                             onClicked: {
-                                globalLauncherRunner.command = [model.bin];
+                                // 🎯 Execute through sh wrapper here as well
+                                globalLauncherRunner.command = ["/bin/sh", "-c", model.bin];
                                 globalLauncherRunner.running = true;
                                 appLauncherModal.visible = false;
                             }
