@@ -9,6 +9,24 @@ Item {
     implicitWidth: clockHitbox.width
     implicitHeight: 32
 
+    // Smart auto-hide countdown tracker
+    Timer {
+        id: osdAutohideTimer
+        interval: 3500
+        running: false
+        repeat: false
+        onTriggered: globalCalendarModal.visible = false
+    }
+
+    // Helper logic to cleanly handle user presence changes
+    function checkUserActivity() {
+        if (cardMouseArea.containsMouse) {
+            osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
+        } else if (globalCalendarModal.visible) {
+            osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
+        }
+    }
+
     // ==========================================
     // 🕒 CLOCK TRIGGER MODULE
     // ==========================================
@@ -25,7 +43,7 @@ Item {
             font.family: "Rubik"
             font.pixelSize: 16
             font.weight: Font.Bold
-            color: clockMouseArea.containsMouse ? "#afbaff" : "#cdd6f4"
+            color: "#cdd6f4" // 🔒 FIXED: Color stays locked to default text tone on hover
             anchors.centerIn: parent
             anchors.verticalCenterOffset: 1 
         }
@@ -35,7 +53,12 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: globalCalendarModal.visible = !globalCalendarModal.visible
+            onClicked: {
+                globalCalendarModal.visible = !globalCalendarModal.visible;
+                if (globalCalendarModal.visible) {
+                    checkUserActivity();
+                }
+            }
         }
 
         Timer {
@@ -56,7 +79,7 @@ Item {
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+        WlrLayershell.keyboardFocus: WlrLayershell.OnDemand
 
         onVisibleChanged: {
             if (visible) {
@@ -64,18 +87,31 @@ Item {
             }
         }
 
-        MouseArea { anchors.fill: parent; onClicked: globalCalendarModal.visible = false }
+        // Listen to the attached window property to handle focus dropouts safely
+        Connections {
+            target: Quickshell.window
+            function onActiveChanged() {
+                if (!Quickshell.window.active && globalCalendarModal.visible) {
+                    globalCalendarModal.visible = false;
+                }
+            }
+        }
+
+        MouseArea { 
+            anchors.fill: parent; 
+            onClicked: globalCalendarModal.visible = false 
+        }
 
         Rectangle {
             id: popupCalendarWrapper
-            width: 250
-            height: 250
+            width: 300  
+            height: 300 
             anchors.top: parent.top
             anchors.right: parent.right
-            anchors.topMargin: 12
-            anchors.rightMargin: 40 
-            color: "#EE1e1e2e"          
-            border.color: "#313244"   
+            anchors.topMargin: 5   
+            anchors.rightMargin: 12 
+            color: "#cc11111b" // 🎯 MATCHED: Swapped to 80% opacity glass profile to match launcher/wallpaper
+            border.color: "#898989" 
             border.width: 1
             radius: 12
 
@@ -88,20 +124,19 @@ Item {
             }
 
             Component.onCompleted: popupCalendarWrapper.forceActiveFocus()
-            MouseArea { anchors.fill: parent; onPressed: mouse.accepted = true }
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.topMargin: 12; anchors.bottomMargin: 12
-                anchors.leftMargin: 8; anchors.rightMargin: 8
-                spacing: 12
+                anchors.topMargin: 14; anchors.bottomMargin: 14
+                anchors.leftMargin: 12; anchors.rightMargin: 12
+                spacing: 10
 
                 Text {
                     text: Qt.formatDateTime(new Date(), "MMMM yyyy")
                     font.family: "Rubik"
-                    font.pixelSize: 18
+                    font.pixelSize: 16
                     font.weight: Font.Bold
-                    color: "#cdd6f4"
+                    color: "#cdd6f4" 
                     Layout.alignment: Qt.AlignHCenter
                 }
 
@@ -119,9 +154,9 @@ Item {
                         Rectangle {
                             anchors.fill: parent; anchors.margins: 2
                             color: "transparent"
-                            border.width: parent.isToday ? 1 : 0
-                            border.color: "#f5e0dc"
-                            radius: 4
+                            border.width: parent.isToday ? 2 : 0 
+                            border.color: "#cdd6f4" 
+                            radius: 6
                         }
 
                         Text {
@@ -130,13 +165,27 @@ Item {
                             verticalAlignment: Text.AlignVCenter
                             opacity: model.month === grid.month ? 1.0 : 0.3
                             text: model.day
-                            color: parent.isToday ? "#f5e0dc" : "#cdd6f4"
+                            color: "#cdd6f4" 
                             font.family: grid.font.family
                             font.pixelSize: grid.font.pixelSize
                             font.weight: parent.isToday ? Font.Bold : Font.Normal
                         }
                     }
                 }
+            }
+
+            // Raised overlay tracker intercepts focus transparently to avoid grid component masking
+            MouseArea { 
+                id: cardMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                propagateComposedEvents: true 
+                
+                onContainsMouseChanged: checkUserActivity()
+                onPressed: (mouse) => { 
+                    checkUserActivity();
+                    mouse.accepted = false; 
+                } 
             }
         }
     }

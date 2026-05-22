@@ -41,7 +41,6 @@ Scope {
             border.width: 1
             radius: 12 
 
-            // 🎯 FIXED: Direct, top-level RowLayout anchors everything uniformly
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 16
@@ -67,7 +66,6 @@ Scope {
                         Layout.alignment: Qt.AlignVCenter
                     }
                     
-                    // Spacer pushing items left
                     Item { Layout.fillWidth: true }
                 }
 
@@ -85,7 +83,7 @@ Scope {
                 }
 
                 // ==========================================
-                // 👉 RIGHT STATUS BLOCK
+                // 👉 RIGHT STATUS BLOCK (Inlined & Reordered)
                 // ==========================================
                 RowLayout {
                     Layout.preferredWidth: 240
@@ -93,11 +91,21 @@ Scope {
                     Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                     spacing: 6
 
-                    // Spacer pushing items right
                     Item { Layout.fillWidth: true }
 
-                    RightStatus {
-                        id: rightStatusModule
+                    CalendarModule {
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    NotificationOsd {
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    BluetoothOsd {
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    AudioModule {
                         Layout.alignment: Qt.AlignVCenter
                     }
                 }

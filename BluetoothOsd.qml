@@ -188,10 +188,9 @@ Item {
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
         
-        // 🎯 THE FIX: Explicitly request keyboard processing vectors from the wayland compositor
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+        // 🎯 FIXED: Proper type lookup reference layout configuration
+        WlrLayershell.keyboardFocus: WlrLayershell.OnDemand
 
-        // Fire focus request triggers directly down to the structural frame container when visible
         onVisibleChanged: {
             if (visible) popupMenuFrame.forceActiveFocus();
         }
@@ -200,11 +199,26 @@ Item {
 
         Rectangle {
             id: popupMenuFrame
-            width: 280; height: 350
-            x: parent.width - width - 80; y: 10 
-            color: "#EE1e1e2e"; border.color: "#313244"; border.width: 1; radius: 12
+            width: 300
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 5
+            anchors.rightMargin: 12
             
-            // 🎯 THE FIX: Intercept keyboard escape escape sequences to safely toggle hidden
+            color: "#cc11111b" // 🎯 MATCHED: 80% opacity glass profile
+            border.color: "#898989" 
+            border.width: 1
+            radius: 12
+
+            height: !bluetoothRoot.isPowered ? 92 : Math.min(96 + ((currentTab === "paired" ? pairedDevicesModel.count : discoveredDevicesModel.count) * 40), 300)
+
+            Behavior on height {
+                NumberAnimation {
+                    duration: 150
+                    easing.type: Easing.OutCubic
+                }
+            }
+            
             focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -221,7 +235,7 @@ Item {
                 // HEADER SECTION
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Bluetooth"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" }
+                    Text { text: "Bluetooth"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" } // 🔒 FIXED: Upgraded text luminosity alignment to match Calendar title
                     Item { Layout.fillWidth: true }
                     Rectangle {
                         width: 50; height: 24; radius: 12
@@ -280,7 +294,8 @@ Item {
                     }
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
+                // SUBSECTION SEPARATOR
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#313244"; visible: bluetoothRoot.isPowered }
 
                 // PANE MULTIPLEXER STACK
                 Item {
@@ -296,7 +311,7 @@ Item {
                         Text { 
                             anchors.centerIn: parent; 
                             text: bluetoothRoot.isPowered ? "No paired devices found" : "Bluetooth is turned off"; 
-                            font.family: "Rubik"; font.pixelSize: 12; color: "#585b70"; 
+                            font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"; 
                             visible: pairedListView.count === 0 || !bluetoothRoot.isPowered 
                         }
                         delegate: Item {
@@ -307,7 +322,7 @@ Item {
                                     anchors.fill: parent; anchors.margins: 8; spacing: 10
                                     Text { text: model.isDeviceConnected ? "󰂱" : "󰂯"; font.family: "Rubik"; font.pixelSize: 16; color: model.isDeviceConnected ? "#a6e3a1" : "#a6adc8" }
                                     Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#cdd6f4"; Layout.fillWidth: true; elide: Text.ElideRight }
-                                    Text { text: model.isDeviceConnected ? "Disconnect" : "Connect"; font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: model.isDeviceConnected ? "#f38ba8" : "#b4befe"; visible: pArea.containsMouse }
+                                    Text { text: model.isDeviceConnected ? "Disconnect" : "Connect"; font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: model.isDeviceConnected ? "#f38ba8" : "#cdd6f4"; visible: pArea.containsMouse }
                                 }
                                 MouseArea {
                                     id: pArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -332,7 +347,7 @@ Item {
                         Text { 
                             anchors.centerIn: parent; 
                             text: bluetoothRoot.isPowered ? (bluetoothRoot.isScanning ? "Scanning for local signals..." : "No new devices found") : "Bluetooth is turned off"; 
-                            font.family: "Rubik"; font.pixelSize: 12; color: "#585b70"; 
+                            font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"; 
                             visible: discoveryListView.count === 0 || !bluetoothRoot.isPowered 
                         }
                         delegate: Item {
@@ -341,9 +356,9 @@ Item {
                                 anchors.fill: parent; color: dArea.containsMouse ? "#313244" : "transparent"; radius: 6
                                 RowLayout {
                                     anchors.fill: parent; anchors.margins: 8; spacing: 10
-                                    Text { text: ""; font.family: "Rubik"; font.pixelSize: 14; color: "#b4befe" }
-                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#bac2de"; Layout.fillWidth: true; elide: Text.ElideRight }
-                                    Text { text: "Pair"; font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#a6e3a1"; visible: dArea.containsMouse }
+                                    Text { text: ""; font.family: "Rubik"; font.pixelSize: 14; color: "#cdd6f4" } 
+                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#cdd6f4"; Layout.fillWidth: true; elide: Text.ElideRight } 
+                                    Text { text: "Pair"; font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#cdd6f4"; visible: dArea.containsMouse } 
                                 }
                                 MouseArea {
                                     id: dArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor

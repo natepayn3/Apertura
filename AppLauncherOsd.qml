@@ -76,7 +76,7 @@ Item {
             text: "󰣇" 
             font.family: "Rubik"
             font.pixelSize: 24
-            color: launcherMouseArea.containsMouse ? "#afbaff" : "#cdd6f4"
+            color: "#cdd6f4" 
         }
 
         MouseArea {
@@ -109,11 +109,16 @@ Item {
         Rectangle {
             id: menuCard
             width: 300 
-            height: 450 
-            x: 16
-            y: 10 
-            color: "#EE1e1e2e" 
-            border.color: "#313244"   
+            height: 300 // 🎯 MATCHED: Uniform vertical bounding envelope height limit
+            
+            // 🎯 MATCHED: Explicit layout anchoring to screen border matrices
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.topMargin: 5
+            anchors.leftMargin: 12
+            
+            color: "#cc11111b" 
+            border.color: "#898989" 
             border.width: 1
             radius: 12
 
@@ -139,7 +144,6 @@ Item {
                     if (appListView.currentIndex >= 0 && appListView.currentIndex < appListView.count) {
                         let targetApp = dynamicAppModel.get(appListView.currentIndex);
                         
-                        // 🎯 Direct array pass bypassing subshell string parsing errors
                         globalLauncherRunner.command = [targetApp.bin];
                         globalLauncherRunner.running = true;
                         appLauncherModal.visible = false;
@@ -175,7 +179,7 @@ Item {
                     font.family: "Rubik"
                     font.pixelSize: 18
                     font.weight: Font.Bold
-                    color: "#a6adc8"
+                    color: "#cdd6f4" 
                     Layout.alignment: Qt.AlignLeft
                     Layout.bottomMargin: 2
                     Layout.topMargin: 4
@@ -234,6 +238,7 @@ Item {
                                     visible: model.iconPath !== ""
                                     source: model.iconPath ? "file://" + model.iconPath : ""
                                     fillMode: Image.PreserveAspectFit
+                                    clip: true
                                 }
 
                                 Rectangle {
@@ -274,7 +279,6 @@ Item {
                             onPositionChanged: appListView.currentIndex = index
                             
                             onClicked: {
-                                // 🎯 Matches keyboard loop with direct target array routing
                                 globalLauncherRunner.command = [model.bin];
                                 globalLauncherRunner.running = true;
                                 appLauncherModal.visible = false;
@@ -286,7 +290,7 @@ Item {
         }
     }
 
-    // 🔬 DEBUG MONITORING ENGINE
+    // 🏃 APPLICATION RUNNER INTERFACE
     Process {
         id: globalLauncherRunner
         running: false

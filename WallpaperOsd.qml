@@ -66,7 +66,7 @@ Item {
             text: "󰸉"
             font.family: "Rubik"
             font.pixelSize: 24
-            color: wallpaperMouseArea.containsMouse ? "#f5e0dc" : "#cdd6f4"
+            color: "#cdd6f4" 
         }
 
         MouseArea {
@@ -100,10 +100,14 @@ Item {
             id: wallpaperCard
             width: 650
             height: 480
-            x: 60 
-            y: 10
-            color: "#EE1e1e2e"
-            border.color: "#313244"
+            
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.topMargin: 5
+            anchors.leftMargin: 12
+            
+            color: "#cc11111b" 
+            border.color: "#898989" 
             border.width: 1
             radius: 12
 
@@ -121,7 +125,6 @@ Item {
 
             ColumnLayout {
                 anchors.fill: parent
-                // 👇 BALANCED MARGINS: Forces matching structural bounding spaces on all sides
                 anchors.leftMargin: 20
                 anchors.rightMargin: 20
                 anchors.topMargin: 16
@@ -133,8 +136,8 @@ Item {
                     font.family: "Rubik"
                     font.pixelSize: 18
                     font.weight: Font.Bold
-                    color: "#a6adc8"
-                    Layout.leftMargin: 2 // Tiny text alignment offset match
+                    color: "#cdd6f4" // 🔒 FIXED: Upgraded from #a6adc8 to mirror bright Calendar text specs
+                    Layout.leftMargin: 2 
                 }
 
                 // 📜 SCROLLABLE VIEW PORT
@@ -150,19 +153,17 @@ Item {
                     Flow {
                         id: flowGrid
                         width: parent.width
-                        // 👇 BALANCED SPACING: Distributes layout gaps symmetrically between column elements
                         spacing: 16
                         
                         Repeater {
                             model: wallpaperModel
                             
                             delegate: Rectangle {
-                                // 📐 Explicitly balanced for 3 columns across 610px of content width
                                 width: 192
                                 height: 132
                                 radius: 8
                                 color: gridMouse.containsMouse ? "#313244" : "#181825"
-                                border.color: gridMouse.containsMouse ? "#f5e0dc" : "transparent"
+                                border.color: gridMouse.containsMouse ? "#898989" : "transparent" 
                                 border.width: 1
 
                                 Image {

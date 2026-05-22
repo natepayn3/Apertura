@@ -133,13 +133,13 @@ RowLayout {
                 anchors.fill: parent
                 radius: 10
                 
-                // 👇 UPDATED: Lifted color profiles to stay crisp against #9911111b glass transparency
-                color: isActive   ? '#afbaff' :         // Active pill remains your standard accent
-                       isOccupied ? "#45475a" : "transparent" // Occupied gets Surface1; Empty is cleanly punched out
+                // 🎨 FIXED: Set active pill elements to match target bar icon color parameters
+                color: isActive   ? '#cdd6f4' :         
+                       isOccupied ? "#45475a" : "transparent" 
                 
                 border.width: 2
-                border.color: isActive   ? '#afbaff' : 
-                              isOccupied ? "#a6adc8" : "#585b70" // Subtle contrast adjustments for the sub-states
+                border.color: isActive   ? '#cdd6f4' : 
+                              isOccupied ? "#a6adc8" : "#585b70" 
             }
         }
     }

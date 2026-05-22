@@ -14,7 +14,7 @@ Item {
     
     // Custom storage arrays to keep references clean and mutable
     property var visibleBanners: []
-    property var activeHistoryReferences: [] // 🎯 THE FIX: Keeps raw mutable references safe from read-only lists
+    property var activeHistoryReferences: [] 
 
     function updateCount() {
         if (nativeServer && nativeServer.trackedNotifications) {
@@ -95,7 +95,6 @@ Item {
             }
             
             onDoubleClicked: {
-                // Multi-version fallback block for double click shortcut
                 try { nativeServer.clear(); } catch(e) {}
                 try { nativeServer.dismissAll(); } catch(e) {}
                 for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
@@ -117,22 +116,24 @@ Item {
         visible: notificationRoot.visibleBanners.length > 0 && !notificationOverlayModal.visible
         color: "transparent"
         
+        // 📏 DYNAMIC BOUNDING BOX
+        implicitWidth: 324
+        implicitHeight: toastColumn.implicitHeight // 🔒 FIXED: Extruded heights clipped back to true absolute limits
+        
         anchors.top: true
         anchors.right: true
         
-        implicitWidth: 340
-        implicitHeight: toastColumn.implicitHeight + 40
-        
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-notifications"
+        
+        WlrLayershell.margins.top: 62
+        WlrLayershell.margins.right: 12
 
         ColumnLayout {
             id: toastColumn
-            width: 320
+            width: 300 
             anchors.top: parent.top
             anchors.right: parent.right
-            anchors.topMargin: 12   // 🔒 PRESERVED: Stays flush with your bar baseline bounds
-            anchors.rightMargin: 20
             spacing: 8
 
             Repeater {
@@ -141,10 +142,10 @@ Item {
                 delegate: Rectangle {
                     Layout.fillWidth: true
                     implicitHeight: Math.max(60, tSummary.implicitHeight + tBody.implicitHeight + 20)
-                    color: "#EE1e1e2e"
-                    border.color: "#313244"
+                    color: "#cc11111b" 
+                    border.color: "#898989"
                     border.width: 1
-                    radius: 8
+                    radius: 12
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -190,7 +191,7 @@ Item {
         
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+        WlrLayershell.keyboardFocus: WlrLayershell.OnDemand
 
         onVisibleChanged: {
             if (visible) {
@@ -202,15 +203,23 @@ Item {
 
         Rectangle {
             id: popupMenuFrame
-            width: 340
-            height: 350
+            width: 300 
             
             anchors.top: parent.top
             anchors.right: parent.right
-            anchors.topMargin: 12   // 🔒 PRESERVED: Stays flush with your bar baseline bounds
-            anchors.rightMargin: 80 
+            anchors.topMargin: 5
+            anchors.rightMargin: 12
 
-            color: "#EE1e1e2e"; border.color: "#313244"; border.width: 1; radius: 12
+            color: "#cc11111b"; border.color: "#898989"; border.width: 1; radius: 12 
+            
+            height: notifListView.count === 0 ? 92 : Math.min(56 + (notifListView.count * 58), 300)
+
+            Behavior on height {
+                NumberAnimation {
+                    duration: 150
+                    easing.type: Easing.OutCubic
+                }
+            }
             
             focus: true
             Keys.onPressed: (event) => {
@@ -228,7 +237,7 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#b4befe" }
+                    Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" } 
                     Item { Layout.fillWidth: true }
                     
                     Text {
@@ -241,11 +250,9 @@ Item {
                             id: clearAllMouse
                             anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                // 🎯 THE FIX: Fire a combined multi-method strategy directly at the server component
                                 try { nativeServer.clear(); } catch(e) {}
                                 try { nativeServer.dismissAll(); } catch(e) {}
                                 
-                                // 🎯 THE FIX: Loop our clean, out-of-model mutable reference stack
                                 for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
                                     let item = notificationRoot.activeHistoryReferences[i];
                                     if (item) {
@@ -254,7 +261,6 @@ Item {
                                     }
                                 }
                                 
-                                // Reset our custom monitoring matrices
                                 notificationRoot.visibleBanners = [];
                                 notificationRoot.activeHistoryReferences = [];
                                 notificationRoot.updateCount();
@@ -274,8 +280,8 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: "No new notifications"
-                        font.family: "Rubik"; font.pixelSize: 13; color: "#585b70"
-                        visible: nativeServer.trackedNotifications.rowCount() === 0
+                        font.family: "Rubik"; font.pixelSize: 13; color: "#a6adc8" 
+                        visible: notifListView.count === 0
                     }
 
                     delegate: Item {
@@ -283,7 +289,11 @@ Item {
                         height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
 
                         Rectangle {
-                            anchors.fill: parent; color: "#11111b"; border.color: "#313244"; border.width: 1; radius: 8
+                            anchors.fill: parent
+                            color: "#11111b"
+                            border.color: cellMouseArea.containsMouse ? "#898989" : "#313244" 
+                            border.width: 1
+                            radius: 8
 
                             ColumnLayout {
                                 anchors.fill: parent; anchors.margins: 10; spacing: 2
@@ -291,7 +301,8 @@ Item {
                                 Text {
                                     id: summaryLabel
                                     text: modelData.summary
-                                    font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#cdd6f4"
+                                    font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
+                                    color: "#cdd6f4" 
                                     Layout.fillWidth: true; elide: Text.ElideRight
                                 }
 
@@ -306,9 +317,11 @@ Item {
                             }
                             
                             MouseArea {
-                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                id: cellMouseArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    // Individual card dismissal bypass routines
                                     try { nativeServer.dismiss(modelData.id); } catch(e) {}
                                     try { modelData.dismiss(); } catch(e) {}
                                     notificationRoot.updateCount();
