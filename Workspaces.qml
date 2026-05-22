@@ -115,7 +115,7 @@ Item {
                     color: isActive   ? "#cdd6f4" : 
                            isOccupied ? "#313244" : "transparent"
                     
-                    border.width: 2
+                    border.width: 1
                     border.color: isActive   ? "#cdd6f4" : 
                                   isOccupied ? "#a6adc8" : "#45475a"
 
