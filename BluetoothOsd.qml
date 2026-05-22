@@ -165,7 +165,6 @@ Item {
             if (bluetoothRoot.currentTab === "paired") {
                 refreshPairedList();
             }
-            // 🔒 FIXED: Omitted aggressive polling fallback loop execution on discovery pane to eliminate list flashing
         }
     }
 
@@ -198,8 +197,11 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-                bluetoothOverlayModal.visible = !bluetoothOverlayModal.visible;
+                // 🎯 Hooked into the central state machine
                 if (bluetoothOverlayModal.visible) {
+                    rootScope.dismissAll();
+                } else {
+                    rootScope.requestOpen(bluetoothOverlayModal);
                     bluetoothRoot.currentTab = "paired";
                     refreshPairedList();
                 }
@@ -223,7 +225,8 @@ Item {
             if (visible) popupMenuFrame.forceActiveFocus();
         }
 
-        MouseArea { anchors.fill: parent; onClicked: bluetoothOverlayModal.visible = false }
+        // 🎯 Route click away to global manager
+        MouseArea { anchors.fill: parent; onClicked: rootScope.dismissAll() }
 
         Rectangle {
             id: popupMenuFrame
@@ -250,7 +253,8 @@ Item {
             focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    bluetoothOverlayModal.visible = false;
+                    // 🎯 Route escape to clear globally
+                    rootScope.dismissAll();
                     event.accepted = true;
                 }
             }
