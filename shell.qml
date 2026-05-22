@@ -9,6 +9,27 @@ import "."
 Scope {
     id: rootScope
 
+    // 🎯 LOCAL CENTRAL STATE MACHINE
+    // Tracks the currently active open OSD panel object reference
+    property var activeModal: null
+
+    function requestOpen(modalObject) {
+        if (activeModal && activeModal !== modalObject) {
+            activeModal.visible = false;
+        }
+        activeModal = modalObject;
+        if (activeModal) {
+            activeModal.visible = true;
+        }
+    }
+
+    function dismissAll() {
+        if (activeModal) {
+            activeModal.visible = false;
+            activeModal = null;
+        }
+    }
+
     IpcHandler {
         target: "launcher"
         function toggle(): void { appLauncherModule.toggleMenu(); }
@@ -39,7 +60,17 @@ Scope {
             color: "#9911111b"          
             border.color: "#898989"   
             border.width: 1
-            radius: 12 
+            radius: 12
+
+            // 🎯 THE BAR DISMISSAL HOOK
+            // Catches clicks targeting the empty space or background of the bar.
+            // z: -1 ensures it stays behind your interactive module layout row.
+            MouseArea {
+                anchors.fill: parent
+                z: -1
+                acceptedButtons: Qt.LeftButton
+                onPressed: rootScope.dismissAll()
+            }
 
             RowLayout {
                 anchors.fill: parent
@@ -106,6 +137,7 @@ Scope {
                     }
 
                     AudioModule {
+                        id: audioModule
                         Layout.alignment: Qt.AlignVCenter
                     }
                 }
