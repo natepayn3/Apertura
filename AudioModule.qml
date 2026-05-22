@@ -65,7 +65,7 @@ Item {
         }
     }
 
-    // 🎧 SINK/OUTPUT DEVICE PARSER
+    // 🎧 SINK/OUTPUT DEVICE PARSER (Diff-matching engine to prevent element recreation)
     Process {
         id: syncDevicesQuery
         command: ["wpctl", "status"]
@@ -75,8 +75,7 @@ Item {
                 try {
                     let lines = text.split("\n");
                     let parsingSinks = false;
-                    
-                    deviceListModel.clear();
+                    let currentSinks = [];
 
                     for (let i = 0; i < lines.length; i++) {
                         let line = lines[i];
@@ -98,12 +97,46 @@ Item {
                                 let rawName = match[3].trim();
                                 let cleanName = rawName.split("[")[0].trim();
 
-                                deviceListModel.append({
+                                currentSinks.push({
                                     "devId": devId,
                                     "name": cleanName,
                                     "active": isActive
                                 });
                             }
+                        }
+                    }
+
+                    // 🎯 IN-PLACE UPDATE MODEL DIFF: Sync properties without blowing away components
+                    for (let m = 0; m < currentSinks.length; m++) {
+                        let found = false;
+                        for (let n = 0; n < deviceListModel.count; n++) {
+                            if (deviceListModel.get(n).devId === currentSinks[m].devId) {
+                                found = true;
+                                if (deviceListModel.get(n).active !== currentSinks[m].active) {
+                                    deviceListModel.setProperty(n, "active", currentSinks[m].active);
+                                }
+                                if (deviceListModel.get(n).name !== currentSinks[m].name) {
+                                    deviceListModel.setProperty(n, "name", currentSinks[m].name);
+                                }
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            deviceListModel.append(currentSinks[m]);
+                        }
+                    }
+
+                    // Remove items no longer reported by wpctl
+                    for (let k = deviceListModel.count - 1; k >= 0; k--) {
+                        let keep = false;
+                        for (let j = 0; j < currentSinks.length; j++) {
+                            if (currentSinks[j].devId === deviceListModel.get(k).devId) {
+                                keep = true;
+                                break;
+                            }
+                        }
+                        if (!keep) {
+                            deviceListModel.remove(k);
                         }
                     }
                 } catch(e) {}
@@ -132,7 +165,7 @@ Item {
 
     // Helper logic to cleanly handle user presence changes
     function checkUserActivity() {
-        if (globalVolumeSlider.pressed || cardHoverTracker.containsMouse || sliderHoverTracker.containsMouse || listHoverTracker.containsMouse) {
+        if (globalVolumeSlider.pressed || cardHoverTracker.containsMouse || sliderHoverTracker.containsMouse || listContainerMouse.containsMouse) {
             osdAutohideTimer.stop(); 
         } else {
             osdAutohideTimer.restart(); 
@@ -193,15 +226,6 @@ Item {
             }
         }
 
-        Connections {
-            target: Quickshell.window
-            function onActiveChanged() {
-                if (!Quickshell.window.active && globalVolumeModal.visible) {
-                    globalVolumeModal.visible = false;
-                }
-            }
-        }
-
         // Global background click dismiss layer
         MouseArea { 
             anchors.fill: parent
@@ -222,7 +246,7 @@ Item {
             anchors.topMargin: 5
             anchors.rightMargin: 12
             
-            color: "#cc11111b" // 🎯 MATCHED: 80% opacity glass profile
+            color: "#cc11111b" 
             border.color: "#898989" 
             border.width: 1
             radius: 12
@@ -267,7 +291,7 @@ Item {
                 id: titleLabel
                 text: "Audio"
                 font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; 
-                color: "#cdd6f4" // 🔒 FIXED: Upgraded text luminosity alignment to match Calendar title
+                color: "#cdd6f4" 
                 x: 14; y: 14
             }
 
@@ -302,7 +326,7 @@ Item {
                     Rectangle {
                         height: parent.height
                         width: globalVolumeSlider.visualPosition * parent.width
-                        color: "#898989" // 🔒 FIXED: Swapped filled track from purple to framework accent tone
+                        color: "#898989" 
                         radius: 3
                     }
                 }
@@ -346,7 +370,7 @@ Item {
                 id: outputsLabel
                 text: "Outputs"
                 font.family: "Rubik"; font.pixelSize: 13; font.bold: true; 
-                color: "#cdd6f4" // 🔒 FIXED: Upgraded text luminosity alignment to match Calendar title
+                color: "#cdd6f4" 
                 x: 14; y: 104
             }
 
@@ -360,6 +384,15 @@ Item {
                 anchors.topMargin: 6
                 anchors.bottomMargin: 12
 
+                // Global container mouse monitoring to ensure safe cursor passing
+                MouseArea {
+                    id: listContainerMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.NoButton
+                    onContainsMouseChanged: checkUserActivity()
+                }
+
                 ListView {
                     id: deviceListView
                     anchors.fill: parent
@@ -367,58 +400,50 @@ Item {
                     clip: true
                     spacing: 4
 
-                    delegate: Rectangle {
+                    delegate: Item {
                         width: deviceListView.width
                         height: 36
-                        radius: 6
-                        color: active ? "#313244" : (deviceMouse.containsMouse ? "#252538" : "transparent")
-                        border.color: active ? "#898989" : "transparent" // 🔒 FIXED: Set frame border highlight to gray tone vector
-                        border.width: 1
 
-                        RowLayout {
+                        Rectangle {
                             anchors.fill: parent
-                            anchors.leftMargin: 8; anchors.rightMargin: 8
-                            spacing: 8
+                            radius: 6
+                            color: active ? "#313244" : (deviceMouse.containsMouse ? "#252538" : "transparent")
+                            border.color: active ? "#898989" : "transparent" 
+                            border.width: 1
 
-                            Rectangle {
-                                width: 6; height: 6; radius: 3
-                                color: active ? "#a6e3a1" : "transparent"
-                                Layout.alignment: Qt.AlignVCenter
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 8; anchors.rightMargin: 8
+                                spacing: 8
+
+                                Rectangle {
+                                    width: 6; height: 6; radius: 3
+                                    color: active ? "#a6e3a1" : "transparent"
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                Text {
+                                    text: name
+                                    font.family: "Rubik"; font.pixelSize: 12
+                                    color: active ? "#cdd6f4" : "#a6adc8" 
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
                             }
 
-                            Text {
-                                text: name
-                                font.family: "Rubik"; font.pixelSize: 12
-                                color: active ? "#cdd6f4" : "#a6adc8" // 🔒 FIXED: Active text stays foreground-stabilized, non-active tracks to subtext gray
-                                elide: Text.ElideRight
-                                Layout.fillWidth: true
+                            MouseArea {
+                                id: deviceMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    changeDeviceProcess.switchSink(devId);
+                                    syncDevicesQuery.running = false;
+                                    syncDevicesQuery.running = true;
+                                    checkUserActivity();
+                                }
                             }
                         }
-
-                        MouseArea {
-                            id: deviceMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                changeDeviceProcess.switchSink(devId);
-                                syncDevicesQuery.running = false;
-                                syncDevicesQuery.running = true;
-                                checkUserActivity();
-                            }
-                        }
-                    }
-                }
-
-                MouseArea {
-                    id: listHoverTracker
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    propagateComposedEvents: true 
-                    onContainsMouseChanged: checkUserActivity()
-                    onPressed: (mouse) => {
-                        checkUserActivity();
-                        mouse.accepted = false; 
                     }
                 }
             }
