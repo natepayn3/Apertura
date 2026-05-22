@@ -51,7 +51,7 @@ Item {
                                     
                                     // Only show if it wasn't already open to prevent resetting timer aggressively
                                     if (!globalVolumeModal.visible) {
-                                        globalVolumeModal.visible = true;
+                                        rootScope.requestOpen(globalVolumeModal);
                                         syncDevicesQuery.running = false;
                                         syncDevicesQuery.running = true;
                                     }
@@ -160,7 +160,7 @@ Item {
         interval: 3500
         running: false
         repeat: false
-        onTriggered: globalVolumeModal.visible = false
+        onTriggered: rootScope.dismissAll()
     }
 
     // Helper logic to cleanly handle user presence changes
@@ -199,8 +199,11 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-                globalVolumeModal.visible = !globalVolumeModal.visible;
+                // 🎯 Hook into the root scope state machine
                 if (globalVolumeModal.visible) {
+                    rootScope.dismissAll();
+                } else {
+                    rootScope.requestOpen(globalVolumeModal);
                     syncDevicesQuery.running = false;
                     syncDevicesQuery.running = true;
                     checkUserActivity();
@@ -229,7 +232,8 @@ Item {
         // Global background click dismiss layer
         MouseArea { 
             anchors.fill: parent
-            onClicked: globalVolumeModal.visible = false 
+            // 🎯 Routed to clear everything globally
+            onClicked: rootScope.dismissAll() 
         }
 
         Process {
@@ -256,7 +260,8 @@ Item {
             focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    globalVolumeModal.visible = false;
+                    // 🎯 Route escape key to clear globally
+                    rootScope.dismissAll();
                     event.accepted = true;
                 }
             }
