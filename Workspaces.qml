@@ -6,14 +6,18 @@ import Quickshell.Io
 Item {
     id: workspaceContainer
     
-    implicitWidth: mainRowLayout.implicitWidth
-    implicitHeight: 22
+    // 🎛️ ORIENTATION TOGGLE
+    property bool isVertical: true
+
+    // 🔒 FIXED: Read sizes dynamically out of the active instantiated loader item context instead of a broken component ID
+    implicitWidth: isVertical ? 22 : (layoutLoader.item ? layoutLoader.item.implicitWidth : 0)
+    implicitHeight: isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight : 0) : 22
 
     property int activeWorkspace: 1
     property var activeWorkspaceList: [1, 2]
     property var occupiedMap: ({})
 
-    // 🔄 REUSE POLLING LOGIC EXECUTIONS UNCHANGED
+    // 🔄 HYPRLAND POLLING LOGIC
     Process {
         id: queryWorkspaceList
         command: ["hyprctl", "workspaces", "-j"]
@@ -71,78 +75,106 @@ Item {
     }
 
     // ==========================================
-    // 🎨 CORE VISUAL ROW INTERFACE
+    // 🎨 DYNAMIC LAYOUT CELL FRAMEWORK
     // ==========================================
-    RowLayout {
-        id: mainRowLayout
+    Loader {
+        id: layoutLoader
         anchors.fill: parent
-        spacing: 10
+        sourceComponent: workspaceContainer.isVertical ? verticalLayoutComponent : horizontalLayoutComponent
+    }
 
-        Repeater {
-            id: workspaceRepeater
-            model: workspaceContainer.activeWorkspaceList
+    // 🔄 VERTICAL ORIENTATION (Column Layout Engine)
+    Component {
+        id: verticalLayoutComponent
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 10
+            
+            Repeater {
+                model: workspaceContainer.activeWorkspaceList
+                delegate: workspaceButtonDelegate
+            }
+        }
+    }
 
-            delegate: MouseArea {
-                id: workspaceButton
-                property int wsId: modelData
-                property bool isActive: workspaceContainer.activeWorkspace === wsId
-                property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
+    // ↔️ HORIZONTAL ORIENTATION (Original Row Layout Engine)
+    Component {
+        id: horizontalLayoutComponent
+        RowLayout {
+            anchors.fill: parent
+            spacing: 10
+            
+            Repeater {
+                model: workspaceContainer.activeWorkspaceList
+                delegate: workspaceButtonDelegate
+            }
+        }
+    }
 
-                implicitWidth: isActive ? 50 : (isOccupied ? 30 : 30)
-                implicitHeight: 22
-                cursorShape: Qt.PointingHandCursor
+    // ==========================================
+    // 🪴 CELL REPEATER DELEGATE TEMPLATE
+    // ==========================================
+    Component {
+        id: workspaceButtonDelegate
+        
+        MouseArea {
+            id: workspaceButton
+            property int wsId: modelData
+            property bool isActive: workspaceContainer.activeWorkspace === wsId
+            property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
 
-                Behavior on implicitWidth {
-                    NumberAnimation {
-                        duration: 140
-                        easing.type: Easing.OutCubic
-                    }
-                }
+            implicitWidth: workspaceContainer.isVertical ? 22 : (isActive ? 50 : 30)
+            implicitHeight: workspaceContainer.isVertical ? (isActive ? 50 : 30) : 22
+            cursorShape: Qt.PointingHandCursor
 
-                onClicked: {
-                    workspaceContainer.activeWorkspace = wsId;
-                    switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + wsId + "\" })"];
-                    switchWorkspace.running = true;
-                }
+            Behavior on implicitWidth {
+                enabled: !workspaceContainer.isVertical
+                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+            }
+            Behavior on implicitHeight {
+                enabled: workspaceContainer.isVertical
+                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+            }
 
-                Process { id: switchWorkspace; running: false }
+            onClicked: {
+                workspaceContainer.activeWorkspace = wsId;
+                switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + wsId + "\" })"];
+                switchWorkspace.running = true;
+            }
 
-                // Underlying cell shell
-                Rectangle {
-                    anchors.fill: parent
-                    radius: height / 2
+            Process { id: switchWorkspace; running: false }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: workspaceContainer.isVertical ? width / 2 : height / 2
+                
+                color: isActive   ? "#cdd6f4" : 
+                       isOccupied ? "#313244" : "transparent"
+                
+                border.width: 1
+                border.color: isActive   ? "#cdd6f4" : 
+                              isOccupied ? "#a6adc8" : "#45475a"
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+                Behavior on border.color { ColorAnimation { duration: 120 } }
+
+                Text {
+                    text: workspaceButton.wsId.toString()
+                    font.family: "Rubik"
+                    font.pixelSize: 12
+                    font.bold: true
+                    color: workspaceButton.isActive ? "#11111b" : "#a6adc8"
                     
-                    color: isActive   ? "#cdd6f4" : 
-                           isOccupied ? "#313244" : "transparent"
+                    width: parent.width
+                    height: parent.height
                     
-                    border.width: 1
-                    border.color: isActive   ? "#cdd6f4" : 
-                                  isOccupied ? "#a6adc8" : "#45475a"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    
+                    opacity: (workspaceButton.isActive || workspaceButton.isOccupied) ? 1.0 : 0.0
 
-                    Behavior on color { ColorAnimation { duration: 120 } }
-                    Behavior on border.color { ColorAnimation { duration: 120 } }
-
-                    // 🎯 DYNAMIC TEXT CORE
-                    Text {
-                        text: workspaceButton.wsId.toString()
-                        font.family: "Rubik"
-                        font.pixelSize: 12
-                        font.bold: true
-                        color: workspaceButton.isActive ? "#11111b" : "#a6adc8"
-                        
-                        // 🎯 SOLID BOUNDS FIX: Extrude bounding frame out to edge coordinates
-                        // This prevents internal kerning paddings from drifting off-center
-                        width: parent.width
-                        height: parent.height
-                        
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        
-                        opacity: (workspaceButton.isActive || workspaceButton.isOccupied) ? 1.0 : 0.0
-
-                        Behavior on opacity { NumberAnimation { duration: 100 } }
-                        Behavior on color { ColorAnimation { duration: 100 } }
-                    }
+                    Behavior on opacity { NumberAnimation { duration: 100 } }
+                    Behavior on color { ColorAnimation { duration: 100 } }
                 }
             }
         }
