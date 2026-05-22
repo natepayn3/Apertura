@@ -11,7 +11,6 @@ Scope {
     id: rootScope
 
     // 🎯 LOCAL CENTRAL STATE MACHINE
-    // Tracks the currently active open OSD panel object reference
     property var activeModal: null
 
     function requestOpen(modalObject) {
@@ -31,38 +30,56 @@ Scope {
         }
     }
 
+    // 🔒 GLOBAL IPC ROUTING MAPS
     IpcHandler {
         target: "launcher"
-        function toggle(): void { appLauncherModule.toggleMenu(); }
+        function toggle(): void {
+            for (let i = 0; i < barWindows.count; i++) {
+                let bar = barWindows.objectAt(i);
+                if (bar && bar.appLauncherModule) {
+                    bar.appLauncherModule.toggleMenu();
+                }
+            }
+        }
     }
 
     IpcHandler {
         target: "wallpaper"
-        function toggle(): void { wallpaperModule.toggleMenu(); }
+        function toggle(): void {
+            for (let i = 0; i < barWindows.count; i++) {
+                let bar = barWindows.objectAt(i);
+                if (bar && bar.wallpaperModule) {
+                    bar.wallpaperModule.toggleMenu();
+                }
+            }
+        }
     }
 
     // 🖥️ MULTI-MONITOR INSTANTIATION TRACKING
-    // Loops through all active outputs and spawns an isolated bar on each
     Instantiator {
+        id: barWindows
         model: Quickshell.screens
 
         delegate: PanelWindow {
             id: mainBarWindow
             
-            // Assign this specific window instance to the iterated display context
+            property alias appLauncherModule: appLauncherItem
+            property alias wallpaperModule: wallpaperItem
+
             screen: modelData
             
-            anchors.top: true
             anchors.left: true
-            anchors.right: true
-            implicitHeight: 45
+            anchors.top: true
+            anchors.bottom: true
+            implicitWidth: 54
             color: "transparent"
 
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "quickshell-bar"
-            WlrLayershell.margins.top: 5  // Preserving critical anchor topMargin identity
+            WlrLayershell.margins.top: 12
+            WlrLayershell.margins.bottom: 12
             WlrLayershell.margins.left: 12
-            WlrLayershell.margins.right: 12
+            WlrLayershell.margins.right: 0
 
             Rectangle {
                 anchors.fill: parent
@@ -71,7 +88,6 @@ Scope {
                 border.width: 1
                 radius: 12
 
-                // 🎯 THE BAR DISMISSAL HOOK
                 MouseArea {
                     anchors.fill: parent
                     z: -1
@@ -79,32 +95,32 @@ Scope {
                     onPressed: rootScope.dismissAll()
                 }
 
-                RowLayout {
+                ColumnLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 16
-                    anchors.rightMargin: 16
+                    anchors.topMargin: 16
+                    anchors.bottomMargin: 16
                     spacing: 0
 
                     // ==========================================
-                    // 👈 LEFT UTILITIES BLOCK
+                    // 👆 TOP UTILITIES BLOCK
                     // ==========================================
-                    RowLayout {
-                        Layout.preferredWidth: 240
-                        Layout.fillHeight: true
-                        Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-                        spacing: 8
+                    ColumnLayout {
+                        Layout.preferredHeight: 180
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
+                        spacing: 12
 
                         AppLauncherOsd {
-                            id: appLauncherModule
-                            Layout.alignment: Qt.AlignVCenter
+                            id: appLauncherItem
+                            Layout.alignment: Qt.AlignHCenter
                         }
 
                         WallpaperOsd {
-                            id: wallpaperModule
-                            Layout.alignment: Qt.AlignVCenter
+                            id: wallpaperItem
+                            Layout.alignment: Qt.AlignHCenter
                         }
                         
-                        Item { Layout.fillWidth: true }
+                        Item { Layout.fillHeight: true }
                     }
 
                     // ==========================================
@@ -115,42 +131,39 @@ Scope {
                         Layout.fillHeight: true
                         
                         Workspaces {
-                            id: workspacesModule
                             anchors.centerIn: parent
                         }
                     }
 
                     // ==========================================
-                    // 👉 RIGHT STATUS BLOCK
+                    // 👇 BOTTOM STATUS BLOCK
                     // ==========================================
-                    RowLayout {
-                        Layout.preferredWidth: 240
-                        Layout.fillHeight: true
-                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        spacing: 6
+                    ColumnLayout {
+                        Layout.preferredHeight: 320
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
+                        spacing: 12
 
-                        Item { Layout.fillWidth: true }
+                        Item { Layout.fillHeight: true }
 
                         CalendarModule {
-                            Layout.alignment: Qt.AlignVCenter
+                            Layout.alignment: Qt.AlignHCenter
                         }
 
                         NotificationOsd {
-                            Layout.alignment: Qt.AlignVCenter
+                            Layout.alignment: Qt.AlignHCenter
                         }
 
                         BluetoothOsd {
-                            Layout.alignment: Qt.AlignVCenter
+                            Layout.alignment: Qt.AlignHCenter
                         }
 
                         AudioModule {
-                            id: audioModule
-                            Layout.alignment: Qt.AlignVCenter
+                            Layout.alignment: Qt.AlignHCenter
                         }
 
                         PowerOsd {
-                            id: powerModule
-                            Layout.alignment: Qt.AlignVCenter
+                            Layout.alignment: Qt.AlignHCenter
                         }
                     }
                 }
