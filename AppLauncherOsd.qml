@@ -12,20 +12,64 @@ Item {
 
     property var allApps: []
     property string activeSearchQuery: ""
+    
+    // Controls actual PanelWindow visibility
+    property bool menuOpen: false
 
     ListModel {
         id: dynamicAppModel
     }
 
-    // 🔓 PUBLIC INTERFACE
-    function toggleMenu() {
-        // 🎯 Hooked into the central state machine
-        if (appLauncherModal.visible) {
+    // 🎬 CLOSE FINALIZER
+    Timer {
+        id: closeTimer
+        interval: 180
+        repeat: false
+        onTriggered: {
+            launcherModuleRoot.menuOpen = false;
             rootScope.dismissAll();
+        }
+    }
+
+    // 🔓 PUBLIC INTERFACE
+    function toggleMenu(): void {
+        if (menuOpen) {
+            closeMenu();
         } else {
-            rootScope.requestOpen(appLauncherModal);
-            appScanner.running = false;
-            appScanner.running = true;
+            openMenu();
+        }
+    }
+
+    function openMenu(): void {
+        // Reset hidden baseline coordinates before mapping
+        menuCard.targetX = -655;
+        menuCard.targetOpacity = 0.0;
+
+        rootScope.requestOpen(appLauncherModal);
+        menuOpen = true;
+
+        // Drive the entry transition timeline sequentially
+        slideInAnimation.start();
+
+        appScanner.running = false;
+        appScanner.running = true;
+    }
+
+    function closeMenu(): void {
+        // Animate out while the window layer shell is still active
+        menuCard.targetX = -655;
+        menuCard.targetOpacity = 0.0;
+
+        closeTimer.start();
+    }
+
+    // 🔄 GLOBAL CLEANUP LISTENER
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== appLauncherModal && menuOpen) {
+                closeMenu();
+            }
         }
     }
 
@@ -94,7 +138,7 @@ Item {
     // 🪟 LAUNCHER WINDOW
     PanelWindow {
         id: appLauncherModal
-        visible: false
+        visible: launcherModuleRoot.menuOpen
         anchors.top: true
         anchors.bottom: true
         anchors.left: true
@@ -104,10 +148,20 @@ Item {
         WlrLayershell.namespace: "quickshell-launcher"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
+        onVisibleChanged: {
+            if (visible && launcherModuleRoot.menuOpen) {
+                activeSearchQuery = "";
+                filterApps("");
+                appListView.currentIndex = 0;
+                appListView.positionViewAtBeginning();
+                menuCard.forceActiveFocus();
+            }
+        }
+
+        // Backdrop click dismiss handling
         MouseArea {
             anchors.fill: parent
-            // 🎯 Dismiss everything globally when clicking off-card
-            onClicked: rootScope.dismissAll()
+            onClicked: closeMenu()
         }
 
         Rectangle {
@@ -115,21 +169,48 @@ Item {
             width: 300 
             height: 300 
             
+            // 🔒 FIXED: Anchored top-left, matching the Wallpaper panel behavior
             anchors.top: parent.top
             anchors.left: parent.left
-            anchors.topMargin: 5
-            anchors.leftMargin: 12
+            anchors.topMargin: 12
             
+            // Explicit animation property mappings
+            property int targetX: -655
+            property real targetOpacity: 0.0
+
+            anchors.leftMargin: targetX
+            opacity: targetOpacity
+
+            // ✨ ENTRY SEQUENCE: Bypasses window map race conditions
+            SequentialAnimation {
+                id: slideInAnimation
+                PauseAnimation { duration: 16 } // Let the layer-shell unmap resolve
+                ParallelAnimation {
+                    NumberAnimation { target: menuCard; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: menuCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                }
+            }
+
+            // ✨ EXIT SLIDE IMPLICIT TRACKER
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            }
+            
+            // ✨ EXIT FADE IMPLICIT TRACKER
+            Behavior on opacity {
+                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+            }
+
             color: "#cc11111b" 
             border.color: "#898989" 
             border.width: 1
             radius: 12
 
             focus: true
+
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    // 🎯 Route escape key to clear globally
-                    rootScope.dismissAll();
+                    closeMenu();
                     event.accepted = true;
                 } 
                 else if (event.key === Qt.Key_Down) {
@@ -151,8 +232,7 @@ Item {
                         globalLauncherRunner.command = ["/bin/sh", "-c", targetApp.bin];
                         globalLauncherRunner.running = true;
                         
-                        // 🎯 Clear everything globally on execute
-                        rootScope.dismissAll();
+                        closeMenu();
                     }
                     event.accepted = true;
                 } 
@@ -172,7 +252,7 @@ Item {
 
             MouseArea {
                 anchors.fill: parent
-                onPressed: mouse.accepted = true
+                onPressed: (mouse) => mouse.accepted = true
             }
 
             ColumnLayout {
@@ -207,19 +287,6 @@ Item {
                         color: "#313244"
                         radius: 6
                         z: 0 
-                    }
-
-                    Connections {
-                        target: appLauncherModal
-                        function onVisibleChanged() {
-                            if (appLauncherModal.visible) {
-                                activeSearchQuery = "";
-                                filterApps("");
-                                appListView.currentIndex = 0;
-                                appListView.positionViewAtBeginning();
-                                menuCard.forceActiveFocus();
-                            }
-                        }
                     }
 
                     delegate: Item {
@@ -288,8 +355,7 @@ Item {
                                 globalLauncherRunner.command = ["/bin/sh", "-c", model.bin];
                                 globalLauncherRunner.running = true;
                                 
-                                // 🎯 Clear everything globally on execute
-                                rootScope.dismissAll();
+                                closeMenu();
                             }
                         }
                     }
