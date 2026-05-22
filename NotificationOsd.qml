@@ -212,7 +212,7 @@ Item {
 
             color: "#cc11111b"; border.color: "#898989"; border.width: 1; radius: 12 
             
-            height: notifListView.count === 0 ? 92 : Math.min(56 + (notifListView.count * 58), 300)
+            height: notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300)
 
             Behavior on height {
                 NumberAnimation {
