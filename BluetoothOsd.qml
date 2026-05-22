@@ -18,6 +18,24 @@ Item {
     ListModel { id: pairedDevicesModel }
     ListModel { id: discoveredDevicesModel }
 
+    // Smart auto-hide countdown tracker
+    Timer {
+        id: osdAutohideTimer
+        interval: 3500
+        running: false
+        repeat: false
+        onTriggered: rootScope.dismissAll()
+    }
+
+    // Helper logic to cleanly handle user presence changes
+    function checkUserActivity() {
+        if (cardHoverTracker.containsMouse) {
+            osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
+        } else if (bluetoothOverlayModal.visible) {
+            osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
+        }
+    }
+
     // ⚙️ SAFELY RESTARTABLE EXECUTION ROUTNERS
     function refreshStatus() {
         if (!bluetoothWatcher.running) {
@@ -204,6 +222,7 @@ Item {
                     rootScope.requestOpen(bluetoothOverlayModal);
                     bluetoothRoot.currentTab = "paired";
                     refreshPairedList();
+                    checkUserActivity();
                 }
             }
         }
@@ -259,7 +278,15 @@ Item {
                 }
             }
 
-            MouseArea { anchors.fill: parent; onPressed: (mouse) => mouse.accepted = true }
+            // Card base background hover region tracker
+            MouseArea {
+                id: cardHoverTracker
+                anchors.fill: parent
+                hoverEnabled: true
+                onContainsMouseChanged: checkUserActivity()
+            }
+
+            MouseArea { anchors.fill: parent; onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } }
 
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 12; spacing: 10
@@ -288,6 +315,7 @@ Item {
                                         pairedDevicesModel.clear(); 
                                         discoveredDevicesModel.clear(); 
                                     }
+                                    checkUserActivity();
                                 }
                             }
                         }
@@ -304,7 +332,7 @@ Item {
                         Layout.fillWidth: true; height: 26; radius: 6
                         color: bluetoothRoot.currentTab === "paired" ? "#313244" : "transparent"
                         Text { text: "My Devices"; font.family: "Rubik"; font.pixelSize: 12; color: "#cdd6f4"; anchors.centerIn: parent }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: bluetoothRoot.currentTab = "paired" }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { bluetoothRoot.currentTab = "paired"; checkUserActivity(); } }
                     }
 
                     // Tab Button: Discover New Devices
@@ -326,6 +354,7 @@ Item {
                             onClicked: {
                                 bluetoothRoot.currentTab = "discover";
                                 bluetoothRoot.triggerScan();
+                                checkUserActivity();
                             }
                         }
                     }
@@ -369,6 +398,7 @@ Item {
                                             deviceConnectionAction.command = ["bluetoothctl", actionType, model.macAddress];
                                             deviceConnectionAction.running = true;
                                             pairedDevicesModel.setProperty(index, "isDeviceConnected", !model.isDeviceConnected);
+                                            checkUserActivity();
                                         }
                                     }
                                 }
@@ -406,6 +436,7 @@ Item {
                                             pairAction.command = ["bash", "-c", "bluetoothctl pair " + model.macAddress + " && bluetoothctl trust " + model.macAddress + " && bluetoothctl connect " + model.macAddress];
                                             pairAction.running = true;
                                             bluetoothRoot.currentTab = "paired";
+                                            checkUserActivity();
                                         }
                                     }
                                 }
