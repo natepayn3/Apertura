@@ -100,7 +100,7 @@ RowLayout {
             property bool isActive: workspaceContainer.activeWorkspace === wsId
             property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
 
-            implicitWidth: isActive ? 40 : 20
+            implicitWidth: isActive ? 35 : 20
             implicitHeight: 18
             cursorShape: Qt.PointingHandCursor
 
@@ -131,7 +131,7 @@ RowLayout {
 
             Rectangle {
                 anchors.fill: parent
-                radius: 10
+                radius: 8
                 
                 // 🎨 FIXED: Set active pill elements to match target bar icon color parameters
                 color: isActive   ? '#cdd6f4' :         
