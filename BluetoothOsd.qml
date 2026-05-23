@@ -36,8 +36,8 @@ Item {
         interval: 180
         repeat: false
         onTriggered: {
+            // 🔒 FIX: Isolate modifications to local context properties to prevent killing active panels on focus swap
             bluetoothRoot.menuOpen = false;
-            rootScope.dismissAll();
         }
     }
 
@@ -88,6 +88,7 @@ Item {
         }
     }
 
+    // Remaining script processes left intact for background script pipelines...
     function refreshPairedList() {
         if (!bluetoothRoot.isPowered) return;
         if (!deviceScraper.running) {
@@ -294,16 +295,13 @@ Item {
             id: popupMenuFrame
             width: 300
             
-            // 🔒 FIXED: Anchored top-left, matching the universal shell axis alignment
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.bottomMargin: 12
             
-            // Explicit animation targets
             property int targetX: -655
             property real targetOpacity: 0.0
 
-            // 🔒 FIXED: Apply your exact 5px margin specification rule to lock it flush to your bar geometry border
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
