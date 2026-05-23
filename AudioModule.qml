@@ -16,6 +16,13 @@ Item {
     // 🧠 VISUAL STATE TRACKER
     property bool menuOpen: false
 
+    // 🔒 FIXED: Connect the global safelock variable directly to your slider interaction matrix
+    Binding {
+        target: rootScope
+        property: "audioSliderActive"
+        value: globalVolumeSlider.pressed
+    }
+
     // 🔄 AUDIO BACKGROUND LOOP
     Timer {
         interval: 400
@@ -48,14 +55,8 @@ Item {
                         if (parts.length >= 2) {
                             let volVal = parseFloat(parts[1]);
                             if (!isNaN(volVal) && !globalVolumeSlider.pressed) {
-                                // 🎯 OSD POPUP LOGIC: Trigger visibility if external volume drifts from current slider state
                                 if (Math.abs(globalVolumeSlider.value - volVal) > 0.001) {
                                     globalVolumeSlider.value = volVal;
-                                    
-                                    // Only show if it wasn't already open to prevent resetting timer aggressively
-                                    if (!audioRoot.menuOpen) {
-                                        audioRoot.openMenu();
-                                    }
                                     checkUserActivity();
                                 }
                             }
@@ -107,7 +108,6 @@ Item {
                         }
                     }
 
-                    // 🎯 IN-PLACE UPDATE MODEL DIFF: Sync properties without blowing away components
                     for (let m = 0; m < currentSinks.length; m++) {
                         let found = false;
                         for (let n = 0; n < deviceListModel.count; n++) {
@@ -127,7 +127,6 @@ Item {
                         }
                     }
 
-                    // Remove items no longer reported by wpctl
                     for (let k = deviceListModel.count - 1; k >= 0; k--) {
                         let keep = false;
                         for (let j = 0; j < currentSinks.length; j++) {
@@ -171,7 +170,6 @@ Item {
         repeat: false
         onTriggered: {
             audioRoot.menuOpen = false;
-            rootScope.dismissAll();
         }
     }
 
@@ -204,7 +202,6 @@ Item {
         closeTimer.start();
     }
 
-    // Helper logic to cleanly handle user presence changes
     function checkUserActivity() {
         if (globalVolumeSlider.pressed || cardHoverTracker.containsMouse || sliderHoverTracker.containsMouse || listContainerMouse.containsMouse) {
             osdAutohideTimer.stop(); 
@@ -217,7 +214,18 @@ Item {
         id: deviceListModel
     }
 
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== globalVolumeModal && menuOpen) {
+                closeMenu();
+            }
+        }
+    }
+
+    // ==========================================
     // 🔊 AUDIO ICON PANEL TRIGGER
+    // ==========================================
     Rectangle {
         id: volumeHitbox
         anchors.fill: parent
@@ -243,7 +251,9 @@ Item {
         }
     }
 
+    // ==========================================
     // 🎚️ MIXER CONTEXT CONTAINER
+    // ==========================================
     PanelWindow {
         id: globalVolumeModal
         visible: audioRoot.menuOpen
@@ -260,7 +270,6 @@ Item {
             }
         }
 
-        // Global background click dismiss layer
         MouseArea { 
             anchors.fill: parent
             onClicked: closeMenu() 
@@ -276,19 +285,16 @@ Item {
             id: popupCard
             width: 300
             
-            // 🔒 FIXED: Absolute bottom-left placement metrics applied
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.bottomMargin: 12
             
-            // Explicit animation targets
             property int targetX: -655
             property real targetOpacity: 0.0
 
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
-            // ✨ ENTRY TIMELINE SEQUENCER
             SequentialAnimation {
                 id: slideInAnimation
                 PauseAnimation { duration: 16 }
@@ -298,7 +304,6 @@ Item {
                 }
             }
 
-            // ✨ IMPLICIT EXIT MECHANISMS
             Behavior on anchors.leftMargin {
                 NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
             }
@@ -330,7 +335,6 @@ Item {
                 }
             }
 
-            // Card base background hover region tracker
             MouseArea {
                 id: cardHoverTracker
                 anchors.fill: parent
@@ -338,15 +342,11 @@ Item {
                 onContainsMouseChanged: checkUserActivity()
             }
 
-            // Explicitly swallow clicks targeting the container background to avoid background dismissal
             MouseArea {
                 anchors.fill: parent
                 onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
             }
 
-            // ==========================================
-            // 🏷️ ABSOLUTE ANCHORED GEOMETRY BLOCK
-            // ==========================================
             Text {
                 id: titleLabel
                 text: "Audio"
@@ -412,7 +412,6 @@ Item {
                 }
             }
 
-            // Volume Percentage Badge
             Text {
                 text: Math.round(globalVolumeSlider.value * 100) + "%"
                 font.family: "Rubik"; font.pixelSize: 12; font.bold: true; color: "#cdd6f4"
@@ -434,7 +433,6 @@ Item {
                 x: 14; y: 104
             }
 
-            // 🎧 SCROLLABLE LIST VIEWPORT
             Item {
                 id: listContainer
                 width: parent.width - 24
@@ -444,7 +442,6 @@ Item {
                 anchors.topMargin: 6
                 anchors.bottomMargin: 12
 
-                // Global container mouse monitoring to ensure safe cursor passing
                 MouseArea {
                     id: listContainerMouse
                     anchors.fill: parent
