@@ -16,20 +16,64 @@ Item {
     property var visibleBanners: []
     property var activeHistoryReferences: [] 
 
+    // Controls actual history card PanelWindow visibility
+    property bool menuOpen: false
+
     // Smart auto-hide countdown tracker
     Timer {
         id: osdAutohideTimer
         interval: 3500
         running: false
         repeat: false
-        onTriggered: rootScope.dismissAll()
+        onTriggered: closeMenu()
+    }
+
+    // 🎬 CLOSE FINALIZER
+    Timer {
+        id: closeTimer
+        interval: 180
+        repeat: false
+        onTriggered: {
+            // 🔒 FIX: Localized variable mutations prevent background lifecycle interference
+            notificationRoot.menuOpen = false;
+        }
+    }
+
+    // 🔓 PUBLIC INTERFACE (Targeted by manual toggles)
+    function toggleMenu(): void {
+        if (menuOpen) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    }
+
+    function openMenu(): void {
+        // Reset hidden baseline coordinates before mapping window surface
+        popupMenuFrame.targetX = -655;
+        popupMenuFrame.targetOpacity = 0.0;
+
+        rootScope.requestOpen(notificationOverlayModal);
+        menuOpen = true;
+
+        // Drive the entry transition timeline sequentially
+        slideInAnimation.start();
+        checkUserActivity();
+    }
+
+    function closeMenu(): void {
+        // Animate out while the window layer shell surface is still active
+        popupMenuFrame.targetX = -655;
+        popupMenuFrame.targetOpacity = 0.0;
+
+        closeTimer.start();
     }
 
     // Helper logic to cleanly handle user presence changes
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse || listContainerMouse.containsMouse) {
             osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
-        } else if (notificationOverlayModal.visible) {
+        } else if (notificationOverlayModal.visible && menuOpen) {
             osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
         }
     }
@@ -55,6 +99,9 @@ Item {
             // Store raw mutable references for fallback tracking
             notificationRoot.activeHistoryReferences = [...notificationRoot.activeHistoryReferences, notification];
             notificationRoot.visibleBanners = [...notificationRoot.visibleBanners, notification];
+
+            // Trigger a separate horizontal slide entry sequence specifically for the new toast alert element
+            toastSlideIn.restart();
 
             // Auto-evict the banner slot from the floating HUD after 5 seconds
             let toastTimer = Qt.createQmlObject('import QtQuick; Timer { interval: 5000; running: true; repeat: false }', notificationRoot);
@@ -107,16 +154,7 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            
-            onClicked: {
-                // 🎯 Hooked into the central state machine
-                if (notificationOverlayModal.visible) {
-                    rootScope.dismissAll();
-                } else {
-                    rootScope.requestOpen(notificationOverlayModal);
-                    checkUserActivity();
-                }
-            }
+            onClicked: toggleMenu()
             
             onDoubleClicked: {
                 try { nativeServer.clear(); } catch(e) {}
@@ -132,6 +170,16 @@ Item {
         }
     }
 
+    // 🔄 GLOBAL CLEANUP LISTENER
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== notificationOverlayModal && menuOpen) {
+                closeMenu();
+            }
+        }
+    }
+
     // ==========================================
     // 🪟 1. FLOATING DESKTOP BANNER POPUPS (Bubbly HUD)
     // ==========================================
@@ -140,26 +188,34 @@ Item {
         visible: notificationRoot.visibleBanners.length > 0 && !notificationOverlayModal.visible
         color: "transparent"
         
-        // 📏 DYNAMIC BOUNDING BOX
-        implicitWidth: 324
-        implicitHeight: toastColumn.implicitHeight 
-        
         anchors.top: true
+        anchors.bottom: true
+        anchors.left: true
         anchors.right: true
         
+        // Pass-through notification layers completely ignore keyboard interaction states
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-notifications"
-        
-        // 🎯 FIXED POSITION ALIGNMENT: Matches the 5px target margin beneath the main bar window
-        WlrLayershell.margins.top: 5
-        WlrLayershell.margins.right: 12
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
         ColumnLayout {
             id: toastColumn
             width: 300 
-            anchors.top: parent.top
-            anchors.right: parent.right
+            
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.bottomMargin: 12
+            
+            property int targetX: 5
+            anchors.leftMargin: targetX
             spacing: 8
+
+            // Floating alert banners slide in natively on creation pass
+            NumberAnimation { id: toastSlideIn; target: toastColumn; property: "targetX"; from: -320; to: 5; duration: 180; easing.type: Easing.OutCubic }
+
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            }
 
             Repeater {
                 model: notificationRoot.visibleBanners
@@ -209,58 +265,72 @@ Item {
     // ==========================================
     PanelWindow {
         id: notificationOverlayModal
-        visible: false
+        visible: notificationRoot.menuOpen
         color: "transparent"
         
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrLayershell.OnDemand
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
         onVisibleChanged: {
-            if (visible) {
+            if (visible && notificationRoot.menuOpen) {
                 popupMenuFrame.forceActiveFocus();
             }
         }
 
-        // 🎯 Route click away to central manager
-        MouseArea { anchors.fill: parent; onClicked: rootScope.dismissAll() }
+        MouseArea { anchors.fill: parent; onClicked: closeMenu() }
 
         Rectangle {
             id: popupMenuFrame
             width: 300 
             
-            anchors.top: parent.top
-            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.bottomMargin: 12
             
-            // 🎯 RESTORED ORIGINAL ALIGNMENT MARGINS
-            anchors.topMargin: 5
-            anchors.rightMargin: 12
+            // Mutable animation target maps
+            property int targetX: -655
+            property real targetOpacity: 0.0
+
+            anchors.leftMargin: targetX
+            opacity: targetOpacity
+
+            // ✨ ENTRY SEQUENCE: Solves the birth frame asset mapping bug
+            SequentialAnimation {
+                id: slideInAnimation
+                PauseAnimation { duration: 16 }
+                ParallelAnimation {
+                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                }
+            }
+
+            // ✨ EXIT SLIDE IMPLICIT TRACKER
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            }
+            
+            // ✨ EXIT FADE IMPLICIT TRACKER
+            Behavior on opacity {
+                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+            }
 
             color: "#cc11111b"; border.color: "#898989"; border.width: 1; radius: 12 
             
             height: notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300)
-
-            Behavior on height {
-                NumberAnimation {
-                    duration: 150
-                    easing.type: Easing.OutCubic
-                }
-            }
             
             focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    // 🎯 Route escape to clear globally
-                    rootScope.dismissAll();
+                    closeMenu();
                     event.accepted = true;
                 }
             }
             
             Component.onCompleted: popupMenuFrame.forceActiveFocus()
             
-            // Card base background hover region tracker
             MouseArea {
                 id: cardHoverTracker
                 anchors.fill: parent
@@ -268,9 +338,8 @@ Item {
                 onContainsMouseChanged: checkUserActivity()
             }
 
-            // Explicitly swallow clicks targeting the container background to avoid background dismissal
             MouseArea { 
-                anchors.fill: parent; 
+                anchors.fill: parent
                 onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } 
             }
 
@@ -319,7 +388,6 @@ Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    // Global container mouse monitoring to ensure safe cursor passing
                     MouseArea {
                         id: listContainerMouse
                         anchors.fill: parent
