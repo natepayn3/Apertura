@@ -11,8 +11,6 @@ Scope {
     id: rootScope
 
     // 🎯 LOCAL CENTRAL STATE MACHINE
-    // 🔒 FIXED: Keep type as 'var' to prevent primitive strictness compiler errors,
-    // but use string values ("bluetooth", "calendar", etc.) for pure decoupled coordination.
     property var activeModal: null
 
     function requestOpen(modalName) {
@@ -100,6 +98,13 @@ Scope {
                         onPressed: rootScope.dismissAll()
                     }
 
+                    // 🔒 FIX: Workspaces pulled completely out of the layout engine constraints.
+                    // This guarantees it centers flawlessly based on absolute display dimensions.
+                    Workspaces {
+                        anchors.centerIn: parent
+                        z: 1 // Keeps it safely layered on top of the background mouse handling zones
+                    }
+
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.topMargin: 16
@@ -129,15 +134,14 @@ Scope {
                         }
 
                         // ==========================================
-                        // 🎯 CENTER WORKSPACES BLOCK
+                        // 🎯 CENTER SPACER HOLDER
                         // ==========================================
+                        // 🔒 FIX: Replacing the Workspaces module wrapper inside the layout tree 
+                        // with a pure greedy spacer. This keeps the top and bottom utility blocks 
+                        // perfectly pinned to their respective screen edges without pushing the workspaces.
                         Item {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            
-                            Workspaces {
-                                anchors.centerIn: parent
-                            }
                         }
 
                         // ==========================================
