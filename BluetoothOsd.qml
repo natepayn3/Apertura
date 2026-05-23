@@ -36,7 +36,7 @@ Item {
         interval: 180
         repeat: false
         onTriggered: {
-            // 🔒 FIX: Isolate modifications to local context properties to prevent killing active panels on focus swap
+            // 🔒 FIXED: Isolate modifications to local context properties to prevent killing active panels on focus swap
             bluetoothRoot.menuOpen = false;
         }
     }
@@ -241,6 +241,7 @@ Item {
 
     // 🎨 UI PANEL TRIGGER BUTTON
     Rectangle {
+        id: triggerBox
         anchors.fill: parent
         color: bluetoothMouseArea.containsMouse ? "#313244" : "transparent"
         radius: 8
@@ -310,7 +311,8 @@ Item {
                 id: slideInAnimation
                 PauseAnimation { duration: 16 }
                 ParallelAnimation {
-                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    // 📐 HORIZONTAL ALIGNMENT FIX: Direct slide target shifted clean to 0px left margin offset
+                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
             }
@@ -325,10 +327,15 @@ Item {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
-            color: "#cc11111b" 
-            border.color: "#898989" 
-            border.width: 1
-            radius: 12
+            // 🎨 EXACT VALUE MATCHING: Borders dropped completely and color matrix tracking bound to #9911111b
+            color: "#9911111b" 
+            border.width: 0
+            
+            // 📐 GRANULAR CORNER CLIP: Symmetrical flat left edge execution matching your system panel modules
+            topLeftRadius: 0
+            bottomLeftRadius: 0
+            topRightRadius: 12
+            bottomRightRadius: 12
 
             height: !bluetoothRoot.isPowered ? 92 : Math.min(100 + ((currentTab === "paired" ? pairedDevicesModel.count : discoveredDevicesModel.count) * 42), 300)
 
