@@ -139,9 +139,11 @@ Item {
             }
 
             color: "#cc11111b"
-            border.color: "#313244"
-            border.width: 1
             radius: 12
+            border.width: 1
+            
+            // 🔒 FIXED: Restored to match the uniform system outline color across your setup
+            border.color: "#898989"
 
             ColumnLayout {
                 anchors.fill: parent
@@ -162,8 +164,6 @@ Item {
                         id: barFill
                         width: parent.width
                         height: parent.height * Math.min(hudRoot.volumeLevel, 1.0)
-                        
-                        // 🔒 FIXED: Changed active state color filling from #74c7ec (blue) to #cdd6f4 (text lavender/white)
                         color: hudRoot.isMuted ? "#f38ba8" : "#cdd6f4"
                         radius: 5
                         
