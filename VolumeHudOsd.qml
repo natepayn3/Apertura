@@ -38,18 +38,20 @@ Item {
         hudRoot.volumeLevel = newVol;
         hudRoot.isMuted = muteState;
         
-        if (!hudRoot.visibleActive) {
+        // 🔒 FIXED: Read the master slider interlock from rootScope.
+        // If you are actively dragging the slider, the OSD will remain hidden.
+        if (!hudRoot.visibleActive && !rootScope.audioSliderActive) {
             slideOutAnimation.stop();
             hudCardFrame.targetX = -48;
             hudCardFrame.targetOpacity = 0.0;
             hudRoot.visibleActive = true;
             slideInAnimation.start();
-        } else {
+        } else if (hudRoot.visibleActive && !rootScope.audioSliderActive) {
             dismissTimer.restart();
         }
     }
 
-    // Ticking driver to poll wpctl status
+    // Ticking driver to poll wpctl status safely in user-space
     Timer {
         interval: 100
         running: true
@@ -60,7 +62,7 @@ Item {
         }
     }
 
-    // 📡 HARDWARE SYNC LOOP
+    // 📡 UNIVERSAL PRIVILEGE-FREE SYNC LOOP
     Process {
         id: hudVolumeWatcher
         command: ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]
@@ -95,13 +97,11 @@ Item {
         visible: hudRoot.visibleActive
         
         screen: hudRoot.targetScreen
-
         width: 48
         
         anchors.left: true
         anchors.top: true
         anchors.bottom: true
-        
         margins.left: 70
 
         WlrLayershell.margins.top: hudRoot.targetScreen ? (hudRoot.targetScreen.height / 2) - 100 : 0
@@ -111,13 +111,11 @@ Item {
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-hud"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-
         WlrLayershell.exclusiveZone: -1
         mask: Region {}
 
         Rectangle {
             id: hudCardFrame
-            
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             width: parent.width
@@ -128,21 +126,16 @@ Item {
             x: targetX
             opacity: targetOpacity
 
-            // ✨ ENTRY TRANSLATION TIMELINE
             SequentialAnimation {
                 id: slideInAnimation
-                ParallelAnimation {
-                    NumberAnimation { target: hudCardFrame; property: "targetX"; to: 0; duration: 150; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: hudCardFrame; property: "targetOpacity"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
-                }
+                NumberAnimation { target: hudCardFrame; property: "targetX"; to: 0; duration: 150; easing.type: Easing.OutCubic }
+                NumberAnimation { target: hudCardFrame; property: "targetOpacity"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
                 PropertyAction { target: dismissTimer; property: "running"; value: true }
             }
 
             color: "#cc11111b"
             radius: 12
             border.width: 1
-            
-            // 🔒 FIXED: Restored to match the uniform system outline color across your setup
             border.color: "#898989"
 
             ColumnLayout {
@@ -150,7 +143,6 @@ Item {
                 anchors.margins: 8
                 spacing: 8
 
-                // 🔊 PROGRESS BAR TRACK
                 Rectangle {
                     id: barTrack
                     Layout.preferredWidth: 10
@@ -166,7 +158,6 @@ Item {
                         height: parent.height * Math.min(hudRoot.volumeLevel, 1.0)
                         color: hudRoot.isMuted ? "#f38ba8" : "#cdd6f4"
                         radius: 5
-                        
                         anchors.bottom: parent.bottom
 
                         Behavior on height {
@@ -175,7 +166,6 @@ Item {
                     }
                 }
 
-                // 🔢 RUNTIME STATE DATA
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 4
