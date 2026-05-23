@@ -78,6 +78,7 @@ Item {
         }
     }
 
+    // Updated system-to-model proxy handler safely executing on main state synchronization bounds
     function updateCount() {
         if (nativeServer && nativeServer.trackedNotifications) {
             notificationRoot.unreadCount = nativeServer.trackedNotifications.rowCount();
@@ -120,7 +121,9 @@ Item {
         onTriggered: notificationRoot.updateCount()
     }
 
-    // 🎨 UI PANEL TRIGGER BUTTON
+    // ==========================================
+    // 🔔 NOTIFICATION ICON TRIGGER MODULE
+    // ==========================================
     Rectangle {
         id: notificationHitbox
         anchors.fill: parent
@@ -206,12 +209,12 @@ Item {
             anchors.left: parent.left
             anchors.bottomMargin: 12
             
-            property int targetX: 5
+            property int targetX: 0
             anchors.leftMargin: targetX
             spacing: 8
 
             // Floating alert banners slide in natively on creation pass
-            NumberAnimation { id: toastSlideIn; target: toastColumn; property: "targetX"; from: -320; to: 5; duration: 180; easing.type: Easing.OutCubic }
+            NumberAnimation { id: toastSlideIn; target: toastColumn; property: "targetX"; from: -320; to: 0; duration: 180; easing.type: Easing.OutCubic }
 
             Behavior on anchors.leftMargin {
                 NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
@@ -223,10 +226,16 @@ Item {
                 delegate: Rectangle {
                     Layout.fillWidth: true
                     implicitHeight: Math.max(60, tSummary.implicitHeight + tBody.implicitHeight + 20)
-                    color: "#cc11111b" 
-                    border.color: "#898989"
-                    border.width: 1
-                    radius: 12
+                    
+                    // 🎨 MATCHED BANNER STYLING: Borders dropped, color shifted clean to #9911111b
+                    color: "#9911111b" 
+                    border.width: 0
+                    
+                    // 📐 GRANULAR CORNER CLIP: Left side squared flat, right side handles system roundings
+                    topLeftRadius: 0
+                    bottomLeftRadius: 0
+                    topRightRadius: 12
+                    bottomRightRadius: 12
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -302,7 +311,8 @@ Item {
                 id: slideInAnimation
                 PauseAnimation { duration: 16 }
                 ParallelAnimation {
-                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    // 📐 HORIZONTAL ALIGNMENT FIX: Direct landing vector fixed clean to 0px left margin offset bounds
+                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
             }
@@ -317,7 +327,15 @@ Item {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
-            color: "#cc11111b"; border.color: "#898989"; border.width: 1; radius: 12 
+            // 🎨 EXACT VALUE MATCHING: Outer boundaries stripped of borders, background color tracking bound to #9911111b
+            color: "#9911111b"
+            border.width: 0
+            
+            // 📐 GRANULAR CORNER CLIP: Left edges flattened perfectly straight flush to the system bar
+            topLeftRadius: 0
+            bottomLeftRadius: 0
+            topRightRadius: 12
+            bottomRightRadius: 12
             
             height: notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300)
             
