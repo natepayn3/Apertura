@@ -60,6 +60,11 @@ Scope {
         delegate: Item {
             id: displayGroupContext
 
+            // 🌟 FIX: Forward the module aliases to the root delegate item
+            // This exposes them directly to barWindows.objectAt(i)
+            property alias appLauncherModule: mainBarWindow.appLauncherModule
+            property alias wallpaperModule: mainBarWindow.wallpaperModule
+
             // Instantiate your dedicated volume overlay
             VolumeHudOsd {
                 targetScreen: modelData
