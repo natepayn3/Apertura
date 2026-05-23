@@ -163,7 +163,8 @@ Item {
                 id: slideInAnimation
                 PauseAnimation { duration: 16 }
                 ParallelAnimation {
-                    NumberAnimation { target: popupPowerWrapper; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    // 📐 HORIZONTAL ALIGNMENT FIX: Slide destination set to 0px left margin offset
+                    NumberAnimation { target: popupPowerWrapper; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: popupPowerWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
             }
@@ -176,11 +177,16 @@ Item {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
-            color: "#cc11111b" 
-            border.color: "#898989" 
-            border.width: 1
-            radius: 12
+            // 🎨 EXACT VALUE MATCHING: Borders stripped completely and opacity color code locked down to #9911111b
+            color: "#9911111b" 
+            border.width: 0
             focus: true
+
+            // 📐 GRANULAR CORNER CLIP: Square left edges flush to the bar, round the right outer corners
+            topLeftRadius: 0
+            bottomLeftRadius: 0
+            topRightRadius: 12
+            bottomRightRadius: 12
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -263,7 +269,7 @@ Item {
                                     text: modelData.label
                                     font.family: "Rubik"
                                     font.pixelSize: 13
-                                    font.weight: Font.Bold
+                                    font.weight: Font.Regular
                                     color: menuBtn.containsMouse ? "#cdd6f4" : "#a6adc8"
                                     
                                     anchors.verticalCenter: btnBg.verticalCenter
