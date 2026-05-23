@@ -20,9 +20,8 @@ Item {
         id: wallpaperModel
     }
 
-    // Tracks last true hardware mouse position to prevent view scroll snapping
-    property int lastMouseX: -1
-    property int lastMouseY: -1
+    // 🔒 ROOT HARDWARE COORDINATE TRACKERS
+    property point globalMousePos: Qt.point(-1, -1)
 
     // 🎬 CLOSE FINALIZER
     Timer {
@@ -45,18 +44,18 @@ Item {
     }
 
     function openMenu(): void {
-        // Clear cursor positions on window map to avoid matching old interaction delta footprints
-        lastMouseX = -1;
-        lastMouseY = -1;
+        // Clear coordinate tracking records on window map
+        globalMousePos = Qt.point(-1, -1);
 
-        // Reset hidden left offsets and opacity before mapping (start compressed behind bar)
+        wallpaperListView.activeKeyIndex = -1;
+        wallpaperListView.logicalMouseIndexStore = -1;
+
         wallpaperCard.targetX = -216;
         wallpaperCard.targetOpacity = 0.0;
 
         rootScope.requestOpen(wallpaperModal);
         menuOpen = true;
 
-        // Run the smooth horizontal slide-right sequence
         slideRightAnimation.start();
 
         if (wallpaperModel.count === 0) {
@@ -66,10 +65,8 @@ Item {
     }
 
     function closeMenu(): void {
-        // Slide horizontally backward toward the bar on exit
         wallpaperCard.targetX = -216;
         wallpaperCard.targetOpacity = 0.0;
-
         closeTimer.start();
     }
 
@@ -96,10 +93,8 @@ Item {
                 });
             }
         }
-        
-        if (wallpaperListView.count > 0) {
-            wallpaperListView.currentIndex = 0;
-        }
+        wallpaperListView.activeKeyIndex = -1;
+        wallpaperListView.logicalMouseIndexStore = -1;
     }
 
     // 🔄 WALLPAPER DIRECTORY SCANNER
@@ -155,13 +150,13 @@ Item {
 
         onVisibleChanged: {
             if (visible && wallpaperModuleRoot.menuOpen) {
-                wallpaperListView.currentIndex = 0;
+                wallpaperListView.activeKeyIndex = -1;
+                wallpaperListView.logicalMouseIndexStore = -1;
                 wallpaperListView.positionViewAtBeginning();
                 wallpaperCard.forceActiveFocus();
             }
         }
 
-        // 🌫 BACKDROP
         MouseArea {
             anchors.fill: parent
             onClicked: closeMenu()
@@ -184,7 +179,6 @@ Item {
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
-            // ✨ HORIZONTAL SLIDE ENTRY SEQUENCE
             SequentialAnimation {
                 id: slideRightAnimation
                 PauseAnimation { duration: 16 }
@@ -194,14 +188,8 @@ Item {
                 }
             }
 
-            // ✨ HORIZONTAL EXIT TRACKERS
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
-            }
-            
-            Behavior on opacity {
-                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
-            }
+            Behavior on anchors.leftMargin { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
 
             color: "#cc11111b"
             border.color: "#898989"
@@ -215,20 +203,29 @@ Item {
                     event.accepted = true;
                 }
                 else if (event.key === Qt.Key_Down) {
-                    if (wallpaperListView.currentIndex < wallpaperListView.count - 1) {
-                        wallpaperListView.currentIndex++;
+                    wallpaperListView.logicalMouseIndexStore = -1;
+                    
+                    if (wallpaperListView.activeKeyIndex === -1) {
+                        wallpaperListView.activeKeyIndex = 0;
+                    } else if (wallpaperListView.activeKeyIndex < wallpaperListView.count - 1) {
+                        wallpaperListView.activeKeyIndex++;
                     }
+                    wallpaperListView.positionViewAtIndex(wallpaperListView.activeKeyIndex, ListView.Contain);
                     event.accepted = true;
                 }
                 else if (event.key === Qt.Key_Up) {
-                    if (wallpaperListView.currentIndex > 0) {
-                        wallpaperListView.currentIndex--;
+                    wallpaperListView.logicalMouseIndexStore = -1;
+                    
+                    if (wallpaperListView.activeKeyIndex > 0) {
+                        wallpaperListView.activeKeyIndex--;
                     }
+                    wallpaperListView.positionViewAtIndex(wallpaperListView.activeKeyIndex, ListView.Contain);
                     event.accepted = true;
                 }
                 else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    if (wallpaperListView.currentIndex >= 0 && wallpaperListView.currentIndex < wallpaperListView.count) {
-                        let targetWallpaper = wallpaperModel.get(wallpaperListView.currentIndex);
+                    let finalTarget = wallpaperListView.activeKeyIndex !== -1 ? wallpaperListView.activeKeyIndex : wallpaperListView.activeMouseIndex;
+                    if (finalTarget >= 0 && finalTarget < wallpaperListView.count) {
+                        let targetWallpaper = wallpaperModel.get(finalTarget);
                         
                         wallpaperSetter.command = [
                             "awww",
@@ -257,7 +254,6 @@ Item {
                 anchors.bottomMargin: 16
                 spacing: 12
 
-                // 🏷 HEADER
                 Text {
                     text: "Wallpapers"
                     font.family: "Rubik"
@@ -277,9 +273,12 @@ Item {
                     spacing: 12
                     model: wallpaperModel
                     boundsBehavior: Flickable.StopAtBounds
+
+                    property int activeKeyIndex: -1
+                    property int logicalMouseIndexStore: -1 // 🔒 FIXED: Lowercase property name to align with QML compiler specification limits
                     
-                    highlightFollowsCurrentItem: true
-                    highlightMoveDuration: 60
+                    // Evaluates whether the mouse is actively permitted to request visual layout changes
+                    property int activeMouseIndex: (activeKeyIndex === -1) ? logicalMouseIndexStore : -1
 
                     delegate: Item {
                         width: wallpaperListView.width
@@ -291,17 +290,12 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             radius: 8
                             
-                            // Background highlight toggles cleanly for both active focus methods
-                            color: (gridMouse.containsMouse || (wallpaperListView.currentIndex === index && wallpaperCard.activeFocus))
-                                   ? "#313244"
-                                   : "#181825"
-                                   
-                            // 🔒 FIXED: Distinguish explicit active focus keyboard tracking rings from native hovering outlines
-                            border.color: (wallpaperListView.currentIndex === index && wallpaperCard.activeFocus)
-                                          ? "#b4befe" 
-                                          : (gridMouse.containsMouse ? "#b4befe" : "transparent")
-                                          
-                            border.width: (wallpaperListView.currentIndex === index && wallpaperCard.activeFocus) ? 1 : 1
+                            readonly property bool isHighlighted: (wallpaperListView.activeKeyIndex === index && wallpaperCard.activeFocus) || 
+                                                                  (wallpaperListView.activeMouseIndex === index)
+
+                            color: isHighlighted ? "#313244" : "#181825"
+                            border.color: isHighlighted ? "#b4befe" : "transparent"
+                            border.width: 1
 
                             Image {
                                 anchors.fill: parent
@@ -318,14 +312,35 @@ Item {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             
-                            onPositionChanged: (mouse) => {
-                                if (lastMouseX !== mouse.screenX || lastMouseY !== mouse.screenY) {
-                                    lastMouseX = mouse.screenX;
-                                    lastMouseY = mouse.screenY;
-                                    
-                                    if (wallpaperListView.currentIndex !== index) {
-                                        wallpaperListView.currentIndex = index;
+                            // Track real hardware motions relative to system display geometry bounds
+                            function verifyTruePointerAction() {
+                                var currentGlobalPoint = gridMouse.mapToItem(wallpaperModuleRoot, gridMouse.mouseX, gridMouse.mouseY);
+                                if (wallpaperModuleRoot.globalMousePos.x !== currentGlobalPoint.x || wallpaperModuleRoot.globalMousePos.y !== currentGlobalPoint.y) {
+                                    wallpaperModuleRoot.globalMousePos = currentGlobalPoint;
+                                    return true;
+                                }
+                                return false;
+                            }
+
+                            onEntered: {
+                                if (verifyTruePointerAction()) {
+                                    wallpaperListView.activeKeyIndex = -1;
+                                    wallpaperListView.logicalMouseIndexStore = index;
+                                }
+                            }
+
+                            onPositionChanged: {
+                                if (verifyTruePointerAction()) {
+                                    if (wallpaperListView.logicalMouseIndexStore !== index) {
+                                        wallpaperListView.activeKeyIndex = -1;
+                                        wallpaperListView.logicalMouseIndexStore = index;
                                     }
+                                }
+                            }
+                            
+                            onExited: {
+                                if (wallpaperListView.logicalMouseIndexStore === index) {
+                                    wallpaperListView.logicalMouseIndexStore = -1;
                                 }
                             }
                             
