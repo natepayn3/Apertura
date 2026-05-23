@@ -12,6 +12,9 @@ Scope {
 
     // 🎯 LOCAL CENTRAL STATE MACHINE
     property var activeModal: null
+    
+    // 🔒 GLOBAL SAFELOCK REGISTER: Tracks when the GUI volume slider is being dragged
+    property bool audioSliderActive: false
 
     function requestOpen(modalName) {
         if (activeModal !== null && activeModal !== modalName) {
@@ -92,7 +95,9 @@ Scope {
                     radius: 12
 
                     MouseArea {
+                        id: mainBarMouseTracker
                         anchors.fill: parent
+                        hoverEnabled: true
                         z: -1
                         acceptedButtons: Qt.LeftButton
                         onPressed: rootScope.dismissAll()
