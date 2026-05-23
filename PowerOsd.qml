@@ -11,20 +11,61 @@ Item {
     implicitWidth: powerHitbox.width
     implicitHeight: 32
 
+    // 🧠 VISUAL STATE TRACKER
+    property bool menuOpen: false
+
     // Smart auto-hide countdown tracker
     Timer {
         id: osdAutohideTimer
         interval: 3500
         running: false
         repeat: false
-        onTriggered: rootScope.dismissAll()
+        onTriggered: closeMenu()
+    }
+
+    // 🎬 CLOSE FINALIZER TIMER
+    Timer {
+        id: closeTimer
+        interval: 180
+        repeat: false
+        onTriggered: {
+            powerRoot.menuOpen = false;
+            rootScope.dismissAll();
+        }
+    }
+
+    // 🔓 ANIMATED CONTEXT INTERFACING
+    function toggleMenu(): void {
+        if (menuOpen) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    }
+
+    function openMenu(): void {
+        popupPowerWrapper.targetX = -655;
+        popupPowerWrapper.targetOpacity = 0.0;
+
+        rootScope.requestOpen(globalPowerModal);
+        menuOpen = true;
+
+        slideInAnimation.start();
+        checkUserActivity();
+    }
+
+    function closeMenu(): void {
+        popupPowerWrapper.targetX = -655;
+        popupPowerWrapper.targetOpacity = 0.0;
+
+        closeTimer.start();
     }
 
     // Helper logic to cleanly handle user presence changes
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse) {
             osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
-        } else if (globalPowerModal.visible) {
+        } else if (globalPowerModal.visible && menuOpen) {
             osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
         }
     }
@@ -36,7 +77,7 @@ Item {
         id: powerHitbox
         width: 32
         height: 32
-        color: powerMouseArea.containsMouse || globalPowerModal.visible ? "#313244" : "transparent"
+        color: powerMouseArea.containsMouse || menuOpen ? "#313244" : "transparent"
         radius: 8
 
         Text {
@@ -44,7 +85,7 @@ Item {
             text: "⏻"
             font.family: "Rubik"
             font.pixelSize: 16
-            color: globalPowerModal.visible ? "#f38ba8" : "#a6adc8"
+            color: menuOpen ? "#f38ba8" : "#a6adc8"
             anchors.centerIn: parent
         }
 
@@ -53,14 +94,7 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                if (globalPowerModal.visible) {
-                    rootScope.dismissAll();
-                } else {
-                    rootScope.requestOpen(globalPowerModal);
-                    checkUserActivity();
-                }
-            }
+            onClicked: toggleMenu()
         }
     }
 
@@ -69,7 +103,7 @@ Item {
     // ==========================================
     PanelWindow {
         id: globalPowerModal
-        visible: false
+        visible: powerRoot.menuOpen
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
@@ -77,14 +111,14 @@ Item {
         WlrLayershell.keyboardFocus: WlrLayershell.OnDemand
 
         onVisibleChanged: {
-            if (visible) {
+            if (visible && powerRoot.menuOpen) {
                 popupPowerWrapper.forceActiveFocus();
             }
         }
 
         MouseArea { 
             anchors.fill: parent; 
-            onClicked: rootScope.dismissAll() 
+            onClicked: closeMenu() 
         }
 
         Process {
@@ -93,7 +127,7 @@ Item {
         }
 
         function runCommand(args) {
-            rootScope.dismissAll();
+            closeMenu();
             sysCmd.command = args;
             sysCmd.running = true;
         }
@@ -103,12 +137,36 @@ Item {
             width: 160  
             height: menuContentLayout.implicitHeight + 28
             
-            anchors.top: parent.top
-            anchors.right: parent.right
+            // Anchored bottom-left, matching the universal axis alignment
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.bottomMargin: 12
             
-            anchors.topMargin: 5
-            anchors.rightMargin: mainBarWindow.WlrLayershell.margins.right 
-            
+            // Explicit animation targets
+            property int targetX: -655
+            property real targetOpacity: 0.0
+
+            anchors.leftMargin: targetX
+            opacity: targetOpacity
+
+            // ✨ ENTRY TIMELINE SEQUENCER
+            SequentialAnimation {
+                id: slideInAnimation
+                PauseAnimation { duration: 16 }
+                ParallelAnimation {
+                    NumberAnimation { target: popupPowerWrapper; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: popupPowerWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                }
+            }
+
+            // ✨ IMPLICIT EXIT MECHANISMS
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            }
+            Behavior on opacity {
+                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+            }
+
             color: "#cc11111b" 
             border.color: "#898989" 
             border.width: 1
@@ -118,7 +176,7 @@ Item {
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    rootScope.dismissAll();
+                    closeMenu();
                     event.accepted = true;
                 }
             }
