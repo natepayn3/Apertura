@@ -82,10 +82,10 @@ Item {
 
         Text {
             id: powerIcon
-            text: "⏻"
+            text: "\u23FB"
             font.family: "Rubik"
-            font.pixelSize: 16
-            color: menuOpen ? "#f38ba8" : "#a6adc8"
+            font.pixelSize: 30
+            color: menuOpen ? "#f38ba8" : "#cdd6f4"
             anchors.centerIn: parent
         }
 
