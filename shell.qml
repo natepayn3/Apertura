@@ -11,23 +11,19 @@ Scope {
     id: rootScope
 
     // 🎯 LOCAL CENTRAL STATE MACHINE
+    // 🔒 FIXED: Keep type as 'var' to prevent primitive strictness compiler errors,
+    // but use string values ("bluetooth", "calendar", etc.) for pure decoupled coordination.
     property var activeModal: null
 
-    function requestOpen(modalObject) {
-        if (activeModal && activeModal !== modalObject) {
-            activeModal.visible = false;
+    function requestOpen(modalName) {
+        if (activeModal !== null && activeModal !== modalName) {
+            activeModal = null;
         }
-        activeModal = modalObject;
-        if (activeModal) {
-            activeModal.visible = true;
-        }
+        activeModal = modalName;
     }
 
     function dismissAll() {
-        if (activeModal) {
-            activeModal.visible = false;
-            activeModal = null;
-        }
+        activeModal = null;
     }
 
     // 🔒 GLOBAL IPC ROUTING MAPS
@@ -60,110 +56,120 @@ Scope {
         id: barWindows
         model: Quickshell.screens
 
-        delegate: PanelWindow {
-            id: mainBarWindow
-            
-            property alias appLauncherModule: appLauncherItem
-            property alias wallpaperModule: wallpaperItem
+        delegate: Item {
+            id: displayGroupContext
 
-            screen: modelData
-            
-            anchors.left: true
-            anchors.top: true
-            anchors.bottom: true
-            implicitWidth: 54
-            color: "transparent"
+            // Instantiate your dedicated volume overlay
+            VolumeHudOsd {
+                targetScreen: modelData
+            }
 
-            WlrLayershell.layer: WlrLayer.Top
-            WlrLayershell.namespace: "quickshell-bar"
-            WlrLayershell.margins.top: 12
-            WlrLayershell.margins.bottom: 12
-            WlrLayershell.margins.left: 12
-            WlrLayershell.margins.right: 0
+            // Your main bar layout remains intact below
+            PanelWindow {
+                id: mainBarWindow
+                
+                property alias appLauncherModule: appLauncherItem
+                property alias wallpaperModule: wallpaperItem
 
-            Rectangle {
-                anchors.fill: parent
-                color: "#9911111b"          
-                border.color: "#898989"   
-                border.width: 1
-                radius: 12
+                screen: modelData
+                
+                anchors.left: true
+                anchors.top: true
+                anchors.bottom: true
+                implicitWidth: 54
+                color: "transparent"
 
-                MouseArea {
+                WlrLayershell.layer: WlrLayer.Top
+                WlrLayershell.namespace: "quickshell-bar"
+                WlrLayershell.margins.top: 12
+                WlrLayershell.margins.bottom: 12
+                WlrLayershell.margins.left: 12
+                WlrLayershell.margins.right: 0
+
+                Rectangle {
                     anchors.fill: parent
-                    z: -1
-                    acceptedButtons: Qt.LeftButton
-                    onPressed: rootScope.dismissAll()
-                }
+                    color: "#9911111b"          
+                    border.color: "#898989"   
+                    border.width: 1
+                    radius: 12
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.topMargin: 16
-                    anchors.bottomMargin: 16
-                    spacing: 0
-
-                    // ==========================================
-                    // 👆 TOP UTILITIES BLOCK
-                    // ==========================================
-                    ColumnLayout {
-                        Layout.preferredHeight: 180
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-                        spacing: 12
-
-                        AppLauncherOsd {
-                            id: appLauncherItem
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-
-                        WallpaperOsd {
-                            id: wallpaperItem
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-                        
-                        Item { Layout.fillHeight: true }
+                    MouseArea {
+                        anchors.fill: parent
+                        z: -1
+                        acceptedButtons: Qt.LeftButton
+                        onPressed: rootScope.dismissAll()
                     }
 
-                    // ==========================================
-                    // 🎯 CENTER WORKSPACES BLOCK
-                    // ==========================================
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        
-                        Workspaces {
-                            anchors.centerIn: parent
-                        }
-                    }
-
-                    // ==========================================
-                    // 👇 BOTTOM STATUS BLOCK
-                    // ==========================================
                     ColumnLayout {
-                        Layout.preferredHeight: 320
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
-                        spacing: 12
+                        anchors.fill: parent
+                        anchors.topMargin: 16
+                        anchors.bottomMargin: 16
+                        spacing: 0
 
-                        Item { Layout.fillHeight: true }
+                        // ==========================================
+                        // 👆 TOP UTILITIES BLOCK
+                        // ==========================================
+                        ColumnLayout {
+                            Layout.preferredHeight: 180
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
+                            spacing: 12
 
-                        CalendarModule {
-                            Layout.alignment: Qt.AlignHCenter
+                            AppLauncherOsd {
+                                id: appLauncherItem
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+
+                            WallpaperOsd {
+                                id: wallpaperItem
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+                            
+                            Item { Layout.fillHeight: true }
                         }
 
-                        NotificationOsd {
-                            Layout.alignment: Qt.AlignHCenter
+                        // ==========================================
+                        // 🎯 CENTER WORKSPACES BLOCK
+                        // ==========================================
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            
+                            Workspaces {
+                                anchors.centerIn: parent
+                            }
                         }
 
-                        BluetoothOsd {
-                            Layout.alignment: Qt.AlignHCenter
-                        }
+                        // ==========================================
+                        // 👇 BOTTOM STATUS BLOCK
+                        // ==========================================
+                        ColumnLayout {
+                            Layout.preferredHeight: 320
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
+                            spacing: 12
 
-                        AudioModule {
-                            Layout.alignment: Qt.AlignHCenter
-                        }
+                            Item { Layout.fillHeight: true }
 
-                        PowerOsd {
-                            Layout.alignment: Qt.AlignHCenter
+                            CalendarModule {
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+
+                            NotificationOsd {
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+
+                            BluetoothOsd {
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+
+                            AudioModule {
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+
+                            PowerOsd {
+                                Layout.alignment: Qt.AlignHCenter
+                            }
                         }
                     }
                 }
