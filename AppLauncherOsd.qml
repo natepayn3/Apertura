@@ -67,7 +67,8 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (rootScope.activeModal !== appLauncherModal && menuOpen) {
+            // Added check to ensure entry transitions don't trip premature closure
+            if (menuOpen && rootScope.activeModal !== appLauncherModal && !slideInAnimation.running) {
                 closeMenu();
             }
         }
@@ -169,7 +170,7 @@ Item {
             width: 300 
             height: 300 
             
-            // 🔒 FIXED: Anchored top-left, matching the Wallpaper panel behavior
+            // Anchored top-left, matching the Wallpaper panel behavior
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.topMargin: 12
