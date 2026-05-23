@@ -45,7 +45,7 @@ Item {
         popupPowerWrapper.targetX = -655;
         popupPowerWrapper.targetOpacity = 0.0;
 
-        rootScope.requestOpen(globalPowerModal);
+        rootScope.requestOpen("power");
         menuOpen = true;
 
         slideInAnimation.start();
@@ -72,8 +72,7 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            // 🔒 FIX: If another panel requests mapping, instantly slide away without stealing the bar's cursor input events
-            if (menuOpen && rootScope.activeModal !== globalPowerModal && !slideInAnimation.running) {
+            if (menuOpen && rootScope.activeModal !== "power" && !slideInAnimation.running) {
                 closeMenu();
             }
         }
@@ -94,7 +93,9 @@ Item {
             text: "\u23FB"
             font.family: "Rubik"
             font.pixelSize: 20
-            color: menuOpen ? "#f38ba8" : "#cdd6f4"
+            
+            // 🔒 FIX: Reverted and locked permanently to the primary system color palette target string
+            color: "#cdd6f4"
             anchors.centerIn: parent
         }
 
@@ -114,7 +115,6 @@ Item {
         id: globalPowerModal
         visible: powerRoot.menuOpen
 
-        // 🔒 FIX: Shrink layout bounds to match the card exactly so the background remains clickable for other bar items
         width: 160
         height: menuContentLayout.implicitHeight + 28 + 12 // Content + margins
 
@@ -124,7 +124,7 @@ Item {
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrLayershell.OnDemand
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
         onVisibleChanged: {
             if (visible && powerRoot.menuOpen) {
