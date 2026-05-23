@@ -187,7 +187,8 @@ Item {
                 id: slideInAnimation
                 PauseAnimation { duration: 16 } // Let the layer-shell unmap resolve
                 ParallelAnimation {
-                    NumberAnimation { target: menuCard; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    // 📐 HORIZONTAL ALIGNMENT FIX: Direct landing location fixed cleanly to 0px left margin offset
+                    NumberAnimation { target: menuCard; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: menuCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
             }
@@ -202,12 +203,16 @@ Item {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
-            color: "#cc11111b" 
-            border.color: "#898989" 
-            border.width: 1
-            radius: 12
-
+            // 🎨 EXACT VALUE MATCHING: Outer border removed completely, background opacity mapped to #9911111b
+            color: "#9911111b" 
+            border.width: 0
             focus: true
+
+            // 📐 GRANULAR CORNER CLIP: Left side corners squared flat flush to the system bar panel boundary
+            topLeftRadius: 0
+            bottomLeftRadius: 0
+            topRightRadius: 12
+            bottomRightRadius: 12
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
