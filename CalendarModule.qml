@@ -16,7 +16,7 @@ Item {
     // Controls actual PanelWindow visibility
     property bool menuOpen: false
 
-    // 🔒 FIXED: Single source of truth for time updates. Standard property hooks force engine repaints.
+    // Single source of truth for time updates. Standard property hooks force engine repaints.
     property date currentDateTime: new Date()
 
     // Global ticking driver updating the centralized root timestamp property register
@@ -82,7 +82,16 @@ Item {
         repeat: false
         onTriggered: {
             calendarRoot.menuOpen = false;
-            rootScope.dismissAll();
+        }
+    }
+
+    // 🔒 FIX: Added the missing global lifecycle handoff listener to align with the rest of your bar's state machine
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== globalCalendarModal && menuOpen) {
+                closeMenu();
+            }
         }
     }
 
@@ -108,7 +117,6 @@ Item {
             ColumnLayout {
                 spacing: 1
                 Text {
-                    // 🔒 FIXED: Explicitly bind targets back to the centralized clock property context
                     text: Qt.formatDateTime(calendarRoot.currentDateTime, "ddd")
                     font.family: "Rubik"
                     font.pixelSize: 14
@@ -176,8 +184,11 @@ Item {
         }
 
         MouseArea { 
-            anchors.fill: parent; 
-            onClicked: closeMenu()
+            anchors.fill: parent
+            onPressed: {
+                closeMenu();
+                mouse.accepted = true;
+            }
         }
 
         Rectangle {
@@ -295,7 +306,7 @@ Item {
                 onContainsMouseChanged: checkUserActivity()
                 onPressed: (mouse) => { 
                     checkUserActivity();
-                    mouse.accepted = false; 
+                    mouse.accepted = true; 
                 } 
             }
         }
