@@ -20,6 +20,10 @@ Item {
         id: wallpaperModel
     }
 
+    // Tracks last true hardware mouse position to prevent view scroll snapping
+    property int lastMouseX: -1
+    property int lastMouseY: -1
+
     // 🎬 CLOSE FINALIZER
     Timer {
         id: closeTimer
@@ -41,6 +45,10 @@ Item {
     }
 
     function openMenu(): void {
+        // Clear cursor positions on window map to avoid matching old interaction delta footprints
+        lastMouseX = -1;
+        lastMouseY = -1;
+
         // Reset hidden left offsets and opacity before mapping (start compressed behind bar)
         wallpaperCard.targetX = -216;
         wallpaperCard.targetOpacity = 0.0;
@@ -87,6 +95,10 @@ Item {
                     fullPath: wallpaperDir + "/" + line
                 });
             }
+        }
+        
+        if (wallpaperListView.count > 0) {
+            wallpaperListView.currentIndex = 0;
         }
     }
 
@@ -143,6 +155,8 @@ Item {
 
         onVisibleChanged: {
             if (visible && wallpaperModuleRoot.menuOpen) {
+                wallpaperListView.currentIndex = 0;
+                wallpaperListView.positionViewAtBeginning();
                 wallpaperCard.forceActiveFocus();
             }
         }
@@ -160,11 +174,8 @@ Item {
             width: 216
             height: 600
             
-            // Lock the top margin flush to the bar alignment baseline geometry
             anchors.top: parent.top
             anchors.topMargin: 12
-            
-            // 🔒 FIXED: Driving horizontal emergence mapping via the left anchor offset track
             anchors.left: parent.left
             
             property int targetX: -216
@@ -203,6 +214,36 @@ Item {
                     closeMenu();
                     event.accepted = true;
                 }
+                else if (event.key === Qt.Key_Down) {
+                    if (wallpaperListView.currentIndex < wallpaperListView.count - 1) {
+                        wallpaperListView.currentIndex++;
+                    }
+                    event.accepted = true;
+                }
+                else if (event.key === Qt.Key_Up) {
+                    if (wallpaperListView.currentIndex > 0) {
+                        wallpaperListView.currentIndex--;
+                    }
+                    event.accepted = true;
+                }
+                else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    if (wallpaperListView.currentIndex >= 0 && wallpaperListView.currentIndex < wallpaperListView.count) {
+                        let targetWallpaper = wallpaperModel.get(wallpaperListView.currentIndex);
+                        
+                        wallpaperSetter.command = [
+                            "awww",
+                            "img",
+                            targetWallpaper.fullPath,
+                            "--transition-type",
+                            "wipe",
+                            "--transition-step",
+                            "16"
+                        ];
+                        wallpaperSetter.running = true;
+                        closeMenu();
+                    }
+                    event.accepted = true;
+                }
             }
 
             MouseArea {
@@ -236,6 +277,9 @@ Item {
                     spacing: 12
                     model: wallpaperModel
                     boundsBehavior: Flickable.StopAtBounds
+                    
+                    highlightFollowsCurrentItem: true
+                    highlightMoveDuration: 60
 
                     delegate: Item {
                         width: wallpaperListView.width
@@ -246,9 +290,18 @@ Item {
                             height: 132
                             anchors.horizontalCenter: parent.horizontalCenter
                             radius: 8
-                            color: gridMouse.containsMouse ? "#313244" : "#181825"
-                            border.color: gridMouse.containsMouse ? "#898989" : "transparent"
-                            border.width: 1
+                            
+                            // Background highlight toggles cleanly for both active focus methods
+                            color: (gridMouse.containsMouse || (wallpaperListView.currentIndex === index && wallpaperCard.activeFocus))
+                                   ? "#313244"
+                                   : "#181825"
+                                   
+                            // 🔒 FIXED: Distinguish explicit active focus keyboard tracking rings from native hovering outlines
+                            border.color: (wallpaperListView.currentIndex === index && wallpaperCard.activeFocus)
+                                          ? "#b4befe" 
+                                          : (gridMouse.containsMouse ? "#b4befe" : "transparent")
+                                          
+                            border.width: (wallpaperListView.currentIndex === index && wallpaperCard.activeFocus) ? 1 : 1
 
                             Image {
                                 anchors.fill: parent
@@ -264,6 +317,18 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            
+                            onPositionChanged: (mouse) => {
+                                if (lastMouseX !== mouse.screenX || lastMouseY !== mouse.screenY) {
+                                    lastMouseX = mouse.screenX;
+                                    lastMouseY = mouse.screenY;
+                                    
+                                    if (wallpaperListView.currentIndex !== index) {
+                                        wallpaperListView.currentIndex = index;
+                                    }
+                                }
+                            }
+                            
                             onClicked: {
                                 wallpaperSetter.command = [
                                     "awww",
