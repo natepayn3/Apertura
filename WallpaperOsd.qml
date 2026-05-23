@@ -23,10 +23,8 @@ Item {
     // 🎬 CLOSE FINALIZER
     Timer {
         id: closeTimer
-
         interval: 180
         repeat: false
-
         onTriggered: {
             wallpaperModuleRoot.menuOpen = false;
             rootScope.dismissAll();
@@ -43,23 +41,25 @@ Item {
     }
 
     function openMenu(): void {
-        // 🔒 FIXED: Reset the targets synchronously BEFORE requesting the window map
-        wallpaperCard.targetX = -655;
+        // Reset hidden left offsets and opacity before mapping (start compressed behind bar)
+        wallpaperCard.targetX = -216;
         wallpaperCard.targetOpacity = 0.0;
 
         rootScope.requestOpen(wallpaperModal);
         menuOpen = true;
 
-        // 🔒 FIXED: Let the sequential animation controller handle the entry delta steps cleanly
-        slideInAnimation.start();
+        // Run the smooth horizontal slide-right sequence
+        slideRightAnimation.start();
 
-        wallpaperScanner.running = false;
-        wallpaperScanner.running = true;
+        if (wallpaperModel.count === 0) {
+            wallpaperScanner.running = false;
+            wallpaperScanner.running = true;
+        }
     }
 
     function closeMenu(): void {
-        // Animate out while still visible
-        wallpaperCard.targetX = -655;
+        // Slide horizontally backward toward the bar on exit
+        wallpaperCard.targetX = -216;
         wallpaperCard.targetOpacity = 0.0;
 
         closeTimer.start();
@@ -68,9 +68,8 @@ Item {
     // 🔄 GLOBAL CLEANUP LISTENER
     Connections {
         target: rootScope
-
         function onActiveModalChanged() {
-            if (rootScope.activeModal !== wallpaperModal && menuOpen) {
+            if (menuOpen && rootScope.activeModal !== wallpaperModal && !slideRightAnimation.running) {
                 closeMenu();
             }
         }
@@ -79,12 +78,9 @@ Item {
     // 📦 LOAD WALLPAPERS
     function populateWallpapers(rawText) {
         wallpaperModel.clear();
-
         let lines = rawText.split("\n");
-
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
-
             if (line !== "") {
                 wallpaperModel.append({
                     fileName: line,
@@ -97,10 +93,8 @@ Item {
     // 🔄 WALLPAPER DIRECTORY SCANNER
     Process {
         id: wallpaperScanner
-
         running: true
         command: ["ls", wallpaperDir]
-
         stdout: StdioCollector {
             onTextChanged: {
                 populateWallpapers(text);
@@ -111,34 +105,23 @@ Item {
     // 🔘 TRIGGER BUTTON
     Rectangle {
         id: triggerButton
-
         anchors.fill: parent
-
         radius: 8
-
-        color: wallpaperMouseArea.containsMouse
-               ? "#313244"
-               : "transparent"
+        color: wallpaperMouseArea.containsMouse ? "#313244" : "transparent"
 
         Text {
             anchors.centerIn: parent
-
             text: "󰸉"
-
             font.family: "Rubik"
             font.pixelSize: 24
-
             color: "#cdd6f4"
         }
 
         MouseArea {
             id: wallpaperMouseArea
-
             anchors.fill: parent
-
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-
             onClicked: toggleMenu()
         }
     }
@@ -146,14 +129,12 @@ Item {
     // 🪟 WALLPAPER WINDOW
     PanelWindow {
         id: wallpaperModal
-
         visible: wallpaperModuleRoot.menuOpen
 
         anchors.top: true
         anchors.bottom: true
         anchors.left: true
         anchors.right: true
-
         color: "transparent"
 
         WlrLayershell.layer: WlrLayer.Overlay
@@ -161,7 +142,7 @@ Item {
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
         onVisibleChanged: {
-            if (visible) {
+            if (visible && wallpaperModuleRoot.menuOpen) {
                 wallpaperCard.forceActiveFocus();
             }
         }
@@ -172,56 +153,49 @@ Item {
             onClicked: closeMenu()
         }
 
-        // 📦 MAIN CARD
+        // 📦 VERTICAL PANE CONTAINER
         Rectangle {
             id: wallpaperCard
 
-            width: 650
-            height: 480
-
+            width: 216
+            height: 600
+            
+            // Lock the top margin flush to the bar alignment baseline geometry
             anchors.top: parent.top
             anchors.topMargin: 12
-
-            // Mutable animation targets
-            property int targetX: -655
+            
+            // 🔒 FIXED: Driving horizontal emergence mapping via the left anchor offset track
+            anchors.left: parent.left
+            
+            property int targetX: -216
             property real targetOpacity: 0.0
 
-            x: targetX
+            anchors.leftMargin: targetX
             opacity: targetOpacity
 
-            // 🔒 FIXED: Dedicated entry script sequence guarantees baseline layout tracking values are caught
+            // ✨ HORIZONTAL SLIDE ENTRY SEQUENCE
             SequentialAnimation {
-                id: slideInAnimation
-                PauseAnimation { duration: 16 } // Holds back just enough for Wayland window map to settle
+                id: slideRightAnimation
+                PauseAnimation { duration: 16 }
                 ParallelAnimation {
                     NumberAnimation { target: wallpaperCard; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: wallpaperCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
             }
 
-            // ✨ SLIDE (Handles implicit property drift modifications on closeMenu)
-            Behavior on x {
-                NumberAnimation {
-                    duration: 180
-                    easing.type: Easing.OutCubic
-                }
+            // ✨ HORIZONTAL EXIT TRACKERS
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
             }
-
-            // ✨ FADE (Handles implicit property drift modifications on closeMenu)
+            
             Behavior on opacity {
-                NumberAnimation {
-                    duration: 140
-                    easing.type: Easing.OutQuad
-                }
+                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
             color: "#cc11111b"
-
             border.color: "#898989"
             border.width: 1
-
             radius: 12
-
             focus: true
 
             Keys.onPressed: (event) => {
@@ -231,107 +205,77 @@ Item {
                 }
             }
 
-            // Prevent click-through
             MouseArea {
                 anchors.fill: parent
-
                 onPressed: (mouse) => mouse.accepted = true
             }
 
             ColumnLayout {
                 anchors.fill: parent
-
-                anchors.leftMargin: 20
-                anchors.rightMargin: 20
                 anchors.topMargin: 16
                 anchors.bottomMargin: 16
-
                 spacing: 12
 
                 // 🏷 HEADER
                 Text {
-                    text: "Select Wallpaper"
-
+                    text: "Wallpapers"
                     font.family: "Rubik"
-                    font.pixelSize: 18
+                    font.pixelSize: 16
                     font.weight: Font.Bold
-
                     color: "#cdd6f4"
-
-                    Layout.leftMargin: 2
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
                 }
 
-                // 📜 SCROLLABLE WALLPAPER GRID
-                Flickable {
-                    id: scrollContainer
-
+                // 📜 VERTICAL LIST VIEW
+                ListView {
+                    id: wallpaperListView
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-
-                    contentHeight: flowGrid.childrenRect.height
-
                     clip: true
+                    spacing: 12
+                    model: wallpaperModel
                     boundsBehavior: Flickable.StopAtBounds
 
-                    Flow {
-                        id: flowGrid
+                    delegate: Item {
+                        width: wallpaperListView.width
+                        height: 132
 
-                        width: parent.width
-                        spacing: 16
+                        Rectangle {
+                            width: 192
+                            height: 132
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            radius: 8
+                            color: gridMouse.containsMouse ? "#313244" : "#181825"
+                            border.color: gridMouse.containsMouse ? "#898989" : "transparent"
+                            border.width: 1
 
-                        Repeater {
-                            model: wallpaperModel
+                            Image {
+                                anchors.fill: parent
+                                anchors.margins: 4
+                                source: "file://" + model.fullPath
+                                fillMode: Image.PreserveAspectCrop
+                                clip: true
+                            }
+                        }
 
-                            delegate: Rectangle {
-                                width: 192
-                                height: 132
-
-                                radius: 8
-
-                                color: gridMouse.containsMouse
-                                       ? "#313244"
-                                       : "#181825"
-
-                                border.color: gridMouse.containsMouse
-                                              ? "#898989"
-                                              : "transparent"
-
-                                border.width: 1
-
-                                Image {
-                                    anchors.fill: parent
-                                    anchors.margins: 4
-
-                                    source: "file://" + model.fullPath
-
-                                    fillMode: Image.PreserveAspectCrop
-                                    clip: true
-                                }
-
-                                MouseArea {
-                                    id: gridMouse
-
-                                    anchors.fill: parent
-
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-
-                                    onClicked: {
-                                        wallpaperSetter.command = [
-                                            "awww",
-                                            "img",
-                                            model.fullPath,
-                                            "--transition-type",
-                                            "wipe",
-                                            "--transition-step",
-                                            "16"
-                                        ];
-
-                                        wallpaperSetter.running = true;
-
-                                        closeMenu();
-                                    }
-                                }
+                        MouseArea {
+                            id: gridMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                wallpaperSetter.command = [
+                                    "awww",
+                                    "img",
+                                    model.fullPath,
+                                    "--transition-type",
+                                    "wipe",
+                                    "--transition-step",
+                                    "16"
+                                ];
+                                wallpaperSetter.running = true;
+                                closeMenu();
                             }
                         }
                     }
@@ -343,7 +287,6 @@ Item {
     // 🏃 WALLPAPER SETTER
     Process {
         id: wallpaperSetter
-
         running: false
     }
 }
