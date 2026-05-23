@@ -299,7 +299,7 @@ Item {
                 id: slideInAnimation
                 PauseAnimation { duration: 16 }
                 ParallelAnimation {
-                    NumberAnimation { target: popupCard; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: popupCard; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: popupCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
             }
@@ -311,10 +311,14 @@ Item {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
-            color: "#cc11111b" 
-            border.color: "#898989" 
-            border.width: 1
-            radius: 12
+            color: "#9911111b" 
+            border.width: 0
+            
+            // 📐 GRANULAR CORNER CLIP: Square left edges flush to the bar, round the right outer corners
+            topLeftRadius: 0
+            bottomLeftRadius: 0
+            topRightRadius: 12
+            bottomRightRadius: 12
 
             height: Math.min(146 + (deviceListModel.count * 40), 300)
 
@@ -465,8 +469,9 @@ Item {
                             anchors.fill: parent
                             radius: 6
                             color: active ? "#313244" : (deviceMouse.containsMouse ? "#252538" : "transparent")
-                            border.color: active ? "#898989" : "transparent" 
-                            border.width: 1
+                            
+                            // 📐 INTERNAL BORDERS REMOVED: Inner item outlines dropped clean
+                            border.width: 0
 
                             RowLayout {
                                 anchors.fill: parent
