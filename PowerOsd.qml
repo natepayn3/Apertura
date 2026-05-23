@@ -1,4 +1,3 @@
-// PowerOsd.qml
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
@@ -30,7 +29,6 @@ Item {
         repeat: false
         onTriggered: {
             powerRoot.menuOpen = false;
-            rootScope.dismissAll();
         }
     }
 
@@ -64,9 +62,20 @@ Item {
     // Helper logic to cleanly handle user presence changes
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse) {
-            osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
-        } else if (globalPowerModal.visible && menuOpen) {
-            osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
+            osdAutohideTimer.stop(); 
+        } else if (menuOpen) {
+            osdAutohideTimer.restart(); 
+        }
+    }
+
+    // 🔄 GLOBAL PANEL HANDOFF SWAP LISTENER
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            // 🔒 FIX: If another panel requests mapping, instantly slide away without stealing the bar's cursor input events
+            if (menuOpen && rootScope.activeModal !== globalPowerModal && !slideInAnimation.running) {
+                closeMenu();
+            }
         }
     }
 
@@ -84,7 +93,7 @@ Item {
             id: powerIcon
             text: "\u23FB"
             font.family: "Rubik"
-            font.pixelSize: 30
+            font.pixelSize: 20
             color: menuOpen ? "#f38ba8" : "#cdd6f4"
             anchors.centerIn: parent
         }
@@ -104,7 +113,14 @@ Item {
     PanelWindow {
         id: globalPowerModal
         visible: powerRoot.menuOpen
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+
+        // 🔒 FIX: Shrink layout bounds to match the card exactly so the background remains clickable for other bar items
+        width: 160
+        height: menuContentLayout.implicitHeight + 28 + 12 // Content + margins
+
+        anchors.bottom: true
+        anchors.left: true
+        
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
@@ -113,12 +129,10 @@ Item {
         onVisibleChanged: {
             if (visible && powerRoot.menuOpen) {
                 popupPowerWrapper.forceActiveFocus();
+            } else if (!visible && powerRoot.menuOpen) {
+                powerRoot.menuOpen = false;
+                osdAutohideTimer.stop();
             }
-        }
-
-        MouseArea { 
-            anchors.fill: parent; 
-            onClicked: closeMenu() 
         }
 
         Process {
@@ -134,12 +148,7 @@ Item {
 
         Rectangle {
             id: popupPowerWrapper
-            width: 160  
-            height: menuContentLayout.implicitHeight + 28
-            
-            // Anchored bottom-left, matching the universal axis alignment
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
+            anchors.fill: parent
             anchors.bottomMargin: 12
             
             // Explicit animation targets
@@ -171,7 +180,6 @@ Item {
             border.color: "#898989" 
             border.width: 1
             radius: 12
-
             focus: true
 
             Keys.onPressed: (event) => {
@@ -183,18 +191,14 @@ Item {
 
             Component.onCompleted: popupPowerWrapper.forceActiveFocus()
             
-            // Card base background hover region tracker
             MouseArea {
                 id: cardHoverTracker
                 anchors.fill: parent
                 hoverEnabled: true
+                z: -1
+                
                 onContainsMouseChanged: checkUserActivity()
-            }
-
-            // Explicitly swallow clicks targeting the container background to avoid background dismissal
-            MouseArea { 
-                anchors.fill: parent; 
-                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } 
+                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
             }
 
             // ==========================================
