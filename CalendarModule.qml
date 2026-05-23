@@ -54,38 +54,28 @@ Item {
         }
     }
 
+    // 🎬 ANIMATION-DRIVEN ENGAGEMENT TIMELINE
     function openMenu(): void {
-        // Reset hidden left/right offsets and opacity before mapping (start compressed behind bar)
-        popupCalendarWrapper.targetX = calendarRoot.isVertical ? -300 : parent.width + 12;
-        popupCalendarWrapper.targetOpacity = 0.0;
+        // Stop any unfinished exit tracking before mapping state changes
+        slideOutAnimation.stop();
+
+        // Compress container completely offscreen relative to screen margin alignments
+        popupTranslate.x = calendarRoot.isVertical ? -popupCalendarWrapper.width : popupCalendarWrapper.width;
+        popupCalendarWrapper.opacity = 0.0;
 
         rootScope.requestOpen(globalCalendarModal);
         menuOpen = true;
 
-        // Drive the entry transition timeline sequentially
         slideInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        // Slide horizontally backward toward the bar tracking margins on exit
-        popupCalendarWrapper.targetX = calendarRoot.isVertical ? -300 : parent.width + 12;
-        popupCalendarWrapper.targetOpacity = 0.0;
-
-        closeTimer.start();
+        slideInAnimation.stop();
+        slideOutAnimation.start();
     }
 
-    // 🎬 CLOSE FINALIZER TIMELINE TRACKER
-    Timer {
-        id: closeTimer
-        interval: 180
-        repeat: false
-        onTriggered: {
-            calendarRoot.menuOpen = false;
-        }
-    }
-
-    // 🔒 FIX: Added the missing global lifecycle handoff listener to align with the rest of your bar's state machine
+    // 🔒 STATE LOCK HANDOFF: Listens to the global state register inside shell.qml to cleanly hide the dropdown
     Connections {
         target: rootScope
         function onActiveModalChanged() {
@@ -171,11 +161,19 @@ Item {
     PanelWindow {
         id: globalCalendarModal
         visible: calendarRoot.menuOpen
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
-        color: "transparent"
+        
+        // 🌀 BLUR HOOK: Tells Hyprland to target the overlay window for background blur passes
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        color: "transparent"
+
+        WlrLayershell.margins.left: 0
+        WlrLayershell.margins.bottom: 0
+        WlrLayershell.margins.top: 0
+        WlrLayershell.margins.right: 0
 
         onVisibleChanged: {
             if (visible && calendarRoot.menuOpen) {
@@ -196,50 +194,74 @@ Item {
             width: 300  
             height: 300 
             
-            // Anchored to the bottom baseline alignment constraint of your floating panel
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 12
-            
-            // Conditional layout anchors handling horizontal structural breakout splits smoothly
+            anchors.bottomMargin: 12 
             anchors.left: calendarRoot.isVertical ? parent.left : undefined
             anchors.right: calendarRoot.isVertical ? undefined : parent.right
-            
-            // Mutable animation target maps bound to the X-axis constraints
-            property int targetX: calendarRoot.isVertical ? -300 : 300
-            property real targetOpacity: 0.0
+            anchors.leftMargin: 0
+            anchors.rightMargin: 0
 
-            anchors.leftMargin: calendarRoot.isVertical ? targetX : undefined
-            anchors.rightMargin: calendarRoot.isVertical ? undefined : targetX
-            opacity: targetOpacity
+            // 🛠️ TRANSFORM LAYER: Handles translation cleanly away from the monitor edge bounds
+            transform: Translate {
+                id: popupTranslate
+                x: calendarRoot.isVertical ? -popupCalendarWrapper.width : popupCalendarWrapper.width
+            }
 
-            // ✨ HORIZONTAL SLIDE-RIGHT ENTRY SEQUENCE
-            SequentialAnimation {
+            // ✨ THE EMERGING SLIDE-IN MOTOR
+            ParallelAnimation {
                 id: slideInAnimation
-                PauseAnimation { duration: 16 } // Holds back just enough for Wayland window map to settle
-                ParallelAnimation {
-                    NumberAnimation { target: popupCalendarWrapper; property: "targetX"; to: 5; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupCalendarWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                NumberAnimation { 
+                    target: popupTranslate
+                    property: "x"
+                    to: 0 
+                    duration: 250
+                    easing.type: Easing.OutCubic 
+                }
+                NumberAnimation { 
+                    target: popupCalendarWrapper
+                    property: "opacity"
+                    to: 1.0
+                    duration: 180
+                    easing.type: Easing.OutQuad 
                 }
             }
 
-            // ✨ HORIZONTAL EXIT MARGIN TRACKERS
-            Behavior on anchors.leftMargin {
-                enabled: calendarRoot.isVertical
-                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
-            }
-            Behavior on anchors.rightMargin {
-                enabled: !calendarRoot.isVertical
-                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
-            }
-            Behavior on opacity {
-                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+            // ✨ THE IN-REVERSE RETRACTION MOTOR
+            ParallelAnimation {
+                id: slideOutAnimation
+                
+                // Safe Lifecycle Sync: Tells engine to tear down display maps ONLY when geometry is hidden
+                onFinished: calendarRoot.menuOpen = false
+
+                NumberAnimation { 
+                    target: popupTranslate
+                    property: "x"
+                    to: calendarRoot.isVertical ? -popupCalendarWrapper.width : popupCalendarWrapper.width
+                    duration: 220
+                    easing.type: Easing.InCubic 
+                }
+                NumberAnimation { 
+                    target: popupCalendarWrapper
+                    property: "opacity"
+                    to: 0.0
+                    duration: 160
+                    easing.type: Easing.OutQuad 
+                }
             }
 
-            color: "#cc11111b" 
-            border.color: "#898989" 
-            border.width: 1
-            radius: 12
+            // 🎨 EXACT COLOR MATCH: Matches `#9911111b` straight from your shell.qml panel configuration
+            color: "#9911111b" 
+            border.width: 0 
             focus: true
+            
+            // Native smooth anti-aliased border corner scaling
+            antialiasing: true
+            
+            // 📐 FIXED CLIPPER STYLE: Standard radius values without offscreen texture buffer compounding artifacts
+            topLeftRadius: calendarRoot.isVertical ? 0 : 12
+            bottomLeftRadius: calendarRoot.isVertical ? 0 : 12
+            topRightRadius: calendarRoot.isVertical ? 12 : 0
+            bottomRightRadius: calendarRoot.isVertical ? 12 : 0
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -248,50 +270,56 @@ Item {
                 }
             }
 
-            ColumnLayout {
+            // 🌲 CONTAINER FRAMEWORK: Clips nested elements cleanly matching shape geometry
+            Item {
                 anchors.fill: parent
-                anchors.topMargin: 14; anchors.bottomMargin: 14
-                anchors.leftMargin: 12; anchors.rightMargin: 12
-                spacing: 10
+                clip: true
 
-                Text {
-                    text: Qt.formatDateTime(calendarRoot.currentDateTime, "MMMM yyyy")
-                    font.family: "Rubik"
-                    font.pixelSize: 16
-                    font.weight: Font.Bold
-                    color: "#cdd6f4" 
-                    Layout.alignment: Qt.AlignHCenter
-                }
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.topMargin: 14; anchors.bottomMargin: 14
+                    anchors.leftMargin: 12; anchors.rightMargin: 12
+                    spacing: 10
 
-                MonthGrid {
-                    id: grid
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    month: calendarRoot.currentDateTime.getMonth()
-                    year: calendarRoot.currentDateTime.getFullYear()
-                    font.family: "Rubik"; font.pixelSize: 12
+                    Text {
+                        text: Qt.formatDateTime(calendarRoot.currentDateTime, "MMMM yyyy")
+                        font.family: "Rubik"
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        color: "#cdd6f4" 
+                        Layout.alignment: Qt.AlignHCenter
+                    }
 
-                    delegate: Item {
-                        implicitWidth: 32; implicitHeight: 32
-                        readonly property bool isToday: model.day === calendarRoot.currentDateTime.getDate() && model.month === calendarRoot.currentDateTime.getMonth()
+                    MonthGrid {
+                        id: grid
+                        Layout.fillWidth: true; Layout.fillHeight: true
+                        month: calendarRoot.currentDateTime.getMonth()
+                        year: calendarRoot.currentDateTime.getFullYear()
+                        font.family: "Rubik"; font.pixelSize: 12
 
-                        Rectangle {
-                            anchors.fill: parent; anchors.margins: 2
-                            color: "transparent"
-                            border.width: parent.isToday ? 2 : 0 
-                            border.color: "#cdd6f4" 
-                            radius: 6
-                        }
+                        delegate: Item {
+                            implicitWidth: 32; implicitHeight: 32
+                            readonly property bool isToday: model.day === calendarRoot.currentDateTime.getDate() && model.month === calendarRoot.currentDateTime.getMonth()
 
-                        Text {
-                            anchors.centerIn: parent
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            opacity: model.month === grid.month ? 1.0 : 0.3
-                            text: model.day
-                            color: "#cdd6f4" 
-                            font.family: grid.font.family
-                            font.pixelSize: grid.font.pixelSize
-                            font.weight: parent.isToday ? Font.Bold : Font.Normal
+                            Rectangle {
+                                anchors.fill: parent; anchors.margins: 2
+                                color: "transparent"
+                                border.width: parent.isToday ? 2 : 0 
+                                border.color: "#cdd6f4" 
+                                radius: 6
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                opacity: model.month === grid.month ? 1.0 : 0.3
+                                text: model.day
+                                color: "#cdd6f4" 
+                                font.family: grid.font.family
+                                font.pixelSize: grid.font.pixelSize
+                                font.weight: parent.isToday ? Font.Bold : Font.Normal
+                            }
                         }
                     }
                 }
