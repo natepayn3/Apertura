@@ -53,6 +53,7 @@ Item {
 
     // Ticking driver to poll wpctl status safely in user-space
     Timer {
+        id: pollTimer
         interval: 100
         running: true
         repeat: true
@@ -97,46 +98,65 @@ Item {
         visible: hudRoot.visibleActive
         
         screen: hudRoot.targetScreen
-        width: 48
         
+        // Match the module canvas layers
         anchors.left: true
         anchors.top: true
         anchors.bottom: true
-        margins.left: 70
+        anchors.right: true
 
-        WlrLayershell.margins.top: hudRoot.targetScreen ? (hudRoot.targetScreen.height / 2) - 100 : 0
-        WlrLayershell.margins.bottom: hudRoot.targetScreen ? (hudRoot.targetScreen.height / 2) - 100 : 0
+        // 🧠 CHROMATIC SHIFT: 0.4% alpha background pushes compositor edge blur calculations completely off-screen
+        color: "#0111111b"
         
-        color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-hud"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
         WlrLayershell.exclusiveZone: -1
-        mask: Region {}
+
+        // 📐 HARDWARE COORD ANCHOR: 54px (bar width) + 12px (bar margin gap) = 66px offset from display edge
+        WlrLayershell.margins.left: 66
+        WlrLayershell.margins.right: 0
+        WlrLayershell.margins.bottom: 0
+        WlrLayershell.margins.top: 0
 
         Rectangle {
             id: hudCardFrame
+            
+            width: 48
+            height: 200
+            
+            anchors.left: parent.left
             anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            width: parent.width
+            
+            // Replaced the static layer shell offsets with standard vertical centering matrix math
+            anchors.topMargin: hudRoot.targetScreen ? (hudRoot.targetScreen.height / 2) - 100 : 0
             
             property int targetX: -48
             property real targetOpacity: 0.0
             
-            x: targetX
+            // Direct mapping back to target variables for clean 0px resting state
+            anchors.leftMargin: targetX
             opacity: targetOpacity
 
             SequentialAnimation {
                 id: slideInAnimation
-                NumberAnimation { target: hudCardFrame; property: "targetX"; to: 0; duration: 150; easing.type: Easing.OutCubic }
-                NumberAnimation { target: hudCardFrame; property: "targetOpacity"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
+                ParallelAnimation {
+                    // Slide animation lands securely at target 0 positioning flush with the bar boundary
+                    NumberAnimation { target: hudCardFrame; property: "targetX"; to: 0; duration: 150; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: hudCardFrame; property: "targetOpacity"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
+                }
                 PropertyAction { target: dismissTimer; property: "running"; value: true }
             }
 
-            color: "#cc11111b"
-            radius: 12
-            border.width: 1
-            border.color: "#898989"
+            // 🎨 MATCHED CARD STYLING: Borders removed completely, background opacity mapped to #9911111b
+            color: "#9911111b"
+            border.width: 0
+
+            // 📐 GRANULAR CORNER CLIP: Left side corners squared flat flush to the system bar panel boundary
+            topLeftRadius: 0
+            bottomLeftRadius: 0
+            topRightRadius: 12
+            bottomRightRadius: 12
 
             ColumnLayout {
                 anchors.fill: parent
