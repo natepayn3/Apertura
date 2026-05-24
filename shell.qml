@@ -74,11 +74,6 @@ Scope {
         delegate: Item {
             id: displayGroupContext
 
-            LockScreen {
-                lockScreenTarget: modelData
-                visible: rootScope.sessionLocked
-            }
-
             VolumeHudOsd {
                 targetScreen: modelData
             }
