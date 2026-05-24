@@ -69,18 +69,51 @@ Item {
         }
     }
 
-    function getLaunchCommand(binString) {
-        let cleanBin = binString.trim().toLowerCase();
+    // 🚀 STATELESS TOKENS EXECUTION ENGINE
+    function executeApplication(binString) {
+        let cleanBin = binString.trim();
         
-        if (cleanBin === "nautilus" || cleanBin.includes("nautilus")) {
-            return ["gtk-launch", "org.gnome.Nautilus.desktop"];
-        } else if (cleanBin === "thunar") {
-            return ["gtk-launch", "thunar.desktop"];
-        } else if (cleanBin === "firefox") {
-            return ["gtk-launch", "firefox.desktop"];
+        // Match .desktop files handed down via absolute paths
+        if (cleanBin.endsWith(".desktop")) {
+            let filename = cleanBin.substring(cleanBin.lastIndexOf('/') + 1);
+            Quickshell.execDetached(["gtk-launch", filename]);
+            return;
         }
-        
-        return ["/bin/sh", "-c", "export $(dbus-launch); " + binString];
+
+        // Tokenize strings with flags (e.g. Chrome PWAs) into clean system execution arrays
+        // Handles standard space separation while keeping arguments grouped together
+        let argsArray = [];
+        let currentToken = "";
+        let inQuotes = false;
+        let quoteChar = "";
+
+        for (let i = 0; i < cleanBin.length; i++) {
+            let char = cleanBin.charAt(i);
+
+            if ((char === '"' || char === "'") && (i === 0 || cleanBin.charAt(i - 1) !== '\\')) {
+                if (inQuotes && char === quoteChar) {
+                    inQuotes = false;
+                } else if (!inQuotes) {
+                    inQuotes = true;
+                    quoteChar = char;
+                }
+            } else if (char === ' ' && !inQuotes) {
+                if (currentToken.length > 0) {
+                    argsArray.push(currentToken);
+                    currentToken = "";
+                }
+            } else {
+                currentToken += char;
+            }
+        }
+        if (currentToken.length > 0) {
+            argsArray.push(currentToken);
+        }
+
+        // Safely pass tokenized executable + arguments array directly to engine
+        if (argsArray.length > 0) {
+            Quickshell.execDetached(argsArray);
+        }
     }
 
     function filterApps(query) {
@@ -240,8 +273,9 @@ Item {
                 else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     if (appListView.currentIndex >= 0 && appListView.currentIndex < appListView.count) {
                         let targetApp = dynamicAppModel.get(appListView.currentIndex);
-                        globalLauncherRunner.command = getLaunchCommand(targetApp.bin);
-                        globalLauncherRunner.running = true;
+                        
+                        executeApplication(targetApp.bin);
+                        
                         closeMenu();
                     }
                     event.accepted = true;
@@ -411,8 +445,9 @@ Item {
 
                             onClicked: {
                                 appListView.currentIndex = index;
-                                globalLauncherRunner.command = getLaunchCommand(model.bin);
-                                globalLauncherRunner.running = true;
+
+                                executeApplication(model.bin);
+
                                 closeMenu();
                             }
                         }
@@ -420,13 +455,5 @@ Item {
                 }
             }
         }
-    }
-
-    // 🏃 APPLICATION RUNNER INTERFACE
-    Process {
-        id: globalLauncherRunner
-        running: false
-        stdout: StdioCollector { onTextChanged: { console.log("Launcher Exec Stdout:", text.trim()); } }
-        stderr: StdioCollector { onTextChanged: { console.log("Launcher Exec Stderr:", text.trim()); } }
     }
 }
