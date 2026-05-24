@@ -30,17 +30,6 @@ Scope {
         activeModal = null;
     }
 
-    // 🔒 LAZY LOCKSCREEN ENGINE HANDLER
-    Loader {
-        id: lockScreenLoader
-        active: rootScope.sessionLocked
-        source: "LockScreen.qml"
-        
-        onLoaded: {
-            if (item) item.forceActiveFocus();
-        }
-    }
-
     // 🔒 GLOBAL IPC ROUTING MAPS
     IpcHandler {
         target: "session"
@@ -54,7 +43,6 @@ Scope {
         target: "launcher"
         
         function toggle(): void {
-            // Loop over the active registration map keys directly
             for (let screenName in rootScope.instantiatedBars) {
                 let barWindow = rootScope.instantiatedBars[screenName];
                 if (barWindow && barWindow.appLauncherModule) {
@@ -64,11 +52,11 @@ Scope {
         }
     }
 
+    // 🔄 GLOBAL PANEL HANDOFF SWAP LISTENER
     IpcHandler {
         target: "wallpaper"
         
         function toggle(): void {
-            // Loop over the active registration map keys directly
             for (let screenName in rootScope.instantiatedBars) {
                 let barWindow = rootScope.instantiatedBars[screenName];
                 if (barWindow && barWindow.wallpaperModule) {
@@ -86,12 +74,15 @@ Scope {
         delegate: Item {
             id: displayGroupContext
 
-            // Instantiate your dedicated volume overlay
+            LockScreen {
+                lockScreenTarget: modelData
+                visible: rootScope.sessionLocked
+            }
+
             VolumeHudOsd {
                 targetScreen: modelData
             }
 
-            // Your main bar layout remains intact below
             PanelWindow {
                 id: mainBarWindow
                 
@@ -113,7 +104,6 @@ Scope {
                 WlrLayershell.margins.left: 12
                 WlrLayershell.margins.right: 0
 
-                // 🧠 HARDWARE REGISTER COMPONENT: Explicitly bind this window pointer to the root map on birth
                 Component.onCompleted: {
                     if (modelData && modelData.name) {
                         let currentMap = rootScope.instantiatedBars;
@@ -122,7 +112,6 @@ Scope {
                     }
                 }
 
-                // Clean up references when a display node unmaps or unplugs
                 Component.onDestruction: {
                     if (modelData && modelData.name) {
                         let currentMap = rootScope.instantiatedBars;
@@ -158,9 +147,6 @@ Scope {
                         anchors.bottomMargin: 16
                         spacing: 0
 
-                        // ==========================================
-                        // 👆 TOP UTILITIES BLOCK
-                        // ==========================================
                         ColumnLayout {
                             Layout.preferredHeight: 180
                             Layout.fillWidth: true
@@ -180,17 +166,11 @@ Scope {
                             Item { Layout.fillHeight: true }
                         }
 
-                        // ==========================================
-                        // 🎯 CENTER SPACER HOLDER
-                        // ==========================================
                         Item {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                         }
 
-                        // ==========================================
-                        // 👇 BOTTOM STATUS BLOCK
-                        // ==========================================
                         ColumnLayout {
                             Layout.preferredHeight: 320
                             Layout.fillWidth: true
