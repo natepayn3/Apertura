@@ -69,11 +69,9 @@ Item {
         }
     }
 
-    // Helper to determine the best launch token/wrapper for a given binary name
     function getLaunchCommand(binString) {
         let cleanBin = binString.trim().toLowerCase();
         
-        // Map common standard app binaries directly to their system .desktop names
         if (cleanBin === "nautilus" || cleanBin.includes("nautilus")) {
             return ["gtk-launch", "org.gnome.Nautilus.desktop"];
         } else if (cleanBin === "thunar") {
@@ -82,7 +80,6 @@ Item {
             return ["gtk-launch", "firefox.desktop"];
         }
         
-        // Native fallback wrapper that forces active Wayland/DBus runtime scope extraction
         return ["/bin/sh", "-c", "export $(dbus-launch); " + binString];
     }
 
@@ -167,6 +164,9 @@ Item {
                 filterApps("");
                 appListView.currentIndex = 0;
                 appListView.keyboardActive = false; 
+                globalTracker.lastWindowX = -1;
+                globalTracker.lastWindowY = -1;
+                globalTracker.isOverValidItem = false;
                 appListView.positionViewAtBeginning();
                 menuCard.forceActiveFocus();
             }
@@ -240,11 +240,8 @@ Item {
                 else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     if (appListView.currentIndex >= 0 && appListView.currentIndex < appListView.count) {
                         let targetApp = dynamicAppModel.get(appListView.currentIndex);
-                        
-                        // 🚀 GTK-LAUNCH INTERCEPT RUNNER
                         globalLauncherRunner.command = getLaunchCommand(targetApp.bin);
                         globalLauncherRunner.running = true;
-                        
                         closeMenu();
                     }
                     event.accepted = true;
@@ -260,6 +257,51 @@ Item {
                     activeSearchQuery += event.text;
                     filterApps(activeSearchQuery);
                     event.accepted = true;
+                }
+            }
+
+            // 🚀 SCREEN-SPACE COUPLING TRACKER
+            MouseArea {
+                id: globalTracker
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton 
+                z: 10 
+
+                property int lastWindowX: -1
+                property int lastWindowY: -1
+                
+                // Track item target boundaries for changing cursor shapes dynamically
+                property bool isOverValidItem: false
+                cursorShape: isOverValidItem ? Qt.PointingHandCursor : Qt.ArrowCursor
+
+                onPositionChanged: (mouse) => {
+                    let windowPoint = globalTracker.mapToItem(appLauncherModal.contentItem, mouse.x, mouse.y);
+                    
+                    if (lastWindowX === -1) {
+                        lastWindowX = windowPoint.x;
+                        lastWindowY = windowPoint.y;
+                        return;
+                    }
+
+                    if (windowPoint.x !== lastWindowX || windowPoint.y !== lastWindowY) {
+                        lastWindowX = windowPoint.x;
+                        lastWindowY = windowPoint.y;
+
+                        appListView.keyboardActive = false; 
+
+                        let listLocalPoint = appLauncherModal.contentItem.mapToItem(appListView, windowPoint.x, windowPoint.y);
+                        let calculatedIndex = appListView.indexAt(listLocalPoint.x, listLocalPoint.y + appListView.contentY);
+
+                        if (calculatedIndex !== -1) {
+                            isOverValidItem = true;
+                            if (calculatedIndex !== appListView.currentIndex) {
+                                appListView.currentIndex = calculatedIndex;
+                            }
+                        } else {
+                            isOverValidItem = false;
+                        }
+                    }
                 }
             }
 
@@ -299,12 +341,13 @@ Item {
                     highlight: null
 
                     delegate: Item {
+                        id: delegateRoot
                         width: appListView.width
                         height: 36
 
                         Rectangle {
                             anchors.fill: parent
-                            color: (appListView.currentIndex === index || (!appListView.keyboardActive && rowMouse.containsMouse)) ? "#313244" : "transparent"
+                            color: (appListView.currentIndex === index) ? "#313244" : "transparent"
                             radius: 6
                             z: 0 
                         }
@@ -363,30 +406,13 @@ Item {
                         MouseArea {
                             id: rowMouse
                             anchors.fill: parent
-                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            z: 2
+                            z: 2 
 
-                            onEntered: {
-                                if (!appListView.keyboardActive) {
-                                    appListView.currentIndex = index;
-                                }
-                            }
-
-                            onPositionChanged: {
-                                if (appListView.keyboardActive) {
-                                    appListView.keyboardActive = false;
-                                    appListView.currentIndex = index;
-                                }
-                            }
-                            
                             onClicked: {
                                 appListView.currentIndex = index;
-                                
-                                // 🚀 GTK-LAUNCH INTERCEPT RUNNER
                                 globalLauncherRunner.command = getLaunchCommand(model.bin);
                                 globalLauncherRunner.running = true;
-                                
                                 closeMenu();
                             }
                         }
