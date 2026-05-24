@@ -34,7 +34,6 @@ Item {
         interval: 180
         repeat: false
         onTriggered: {
-            // 🔒 FIX: Localized variable mutations prevent background lifecycle interference
             notificationRoot.menuOpen = false;
         }
     }
@@ -49,32 +48,26 @@ Item {
     }
 
     function openMenu(): void {
-        // Reset hidden baseline coordinates before mapping window surface
-        popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
 
         rootScope.requestOpen(notificationOverlayModal);
         menuOpen = true;
 
-        // Drive the entry transition timeline sequentially
-        slideInAnimation.start();
+        fadeInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        // Animate out while the window layer shell surface is still active
-        popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
-
         closeTimer.start();
     }
 
     // Helper logic to cleanly handle user presence changes
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse || listContainerMouse.containsMouse) {
-            osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
+            osdAutohideTimer.stop(); 
         } else if (notificationOverlayModal.visible && menuOpen) {
-            osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
+            osdAutohideTimer.restart(); 
         }
     }
 
@@ -97,12 +90,11 @@ Item {
             notification.tracked = true;
             notificationRoot.updateCount();
 
-            // Store raw mutable references for fallback tracking
             notificationRoot.activeHistoryReferences = [...notificationRoot.activeHistoryReferences, notification];
             notificationRoot.visibleBanners = [...notificationRoot.visibleBanners, notification];
 
-            // Trigger a separate horizontal slide entry sequence specifically for the new toast alert element
-            toastSlideIn.restart();
+            // Direct fade-in transition block
+            toastFadeIn.restart();
 
             // Auto-evict the banner slot from the floating HUD after 5 seconds
             let toastTimer = Qt.createQmlObject('import QtQuick; Timer { interval: 5000; running: true; repeat: false }', notificationRoot);
@@ -128,7 +120,7 @@ Item {
         id: notificationHitbox
         anchors.fill: parent
         color: notificationMouseArea.containsMouse ? "#313244" : "transparent"
-        radius: 8
+        radius: 0 
 
         Text {
             anchors.centerIn: parent
@@ -140,7 +132,7 @@ Item {
 
         // Alert Pill Counter Badge Accent
         Rectangle {
-            width: 14; height: 14; radius: 7; color: "#f38ba8"
+            width: 14; height: 14; radius: 0; color: "#f38ba8" 
             visible: notificationRoot.unreadCount > 0
             anchors.top: parent.top; anchors.right: parent.right
             anchors.topMargin: 2; anchors.rightMargin: 2
@@ -196,7 +188,6 @@ Item {
         anchors.left: true
         anchors.right: true
         
-        // Pass-through notification layers completely ignore keyboard interaction states
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-notifications"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -208,16 +199,13 @@ Item {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.bottomMargin: 12
-            
-            property int targetX: 0
-            anchors.leftMargin: targetX
             spacing: 8
 
-            // Floating alert banners slide in natively on creation pass
-            NumberAnimation { id: toastSlideIn; target: toastColumn; property: "targetX"; from: -320; to: 0; duration: 180; easing.type: Easing.OutCubic }
+            // 🎯 THE FIX: Changed from targetX horizontal slide to a clean, vertical fade transition
+            NumberAnimation { id: toastFadeIn; target: toastColumn; property: "opacity"; from: 0.0; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
 
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            Behavior on opacity {
+                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
             Repeater {
@@ -227,15 +215,13 @@ Item {
                     Layout.fillWidth: true
                     implicitHeight: Math.max(60, tSummary.implicitHeight + tBody.implicitHeight + 20)
                     
-                    // 🎨 MATCHED BANNER STYLING: Borders dropped, color shifted clean to #9911111b
                     color: "#9911111b" 
                     border.width: 0
                     
-                    // 📐 GRANULAR CORNER CLIP: Left side squared flat, right side handles system roundings
                     topLeftRadius: 0
                     bottomLeftRadius: 0
-                    topRightRadius: 12
-                    bottomRightRadius: 12
+                    topRightRadius: 0
+                    bottomRightRadius: 0
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -299,43 +285,27 @@ Item {
             anchors.left: parent.left
             anchors.bottomMargin: 12
             
-            // Mutable animation target maps
-            property int targetX: -655
             property real targetOpacity: 0.0
-
-            anchors.leftMargin: targetX
             opacity: targetOpacity
 
-            // ✨ ENTRY SEQUENCE: Solves the birth frame asset mapping bug
+            // 🎯 THE FIX: Purged targetX horizontal layout steps; runs localized opacity sequencing exclusively
             SequentialAnimation {
-                id: slideInAnimation
+                id: fadeInAnimation
                 PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    // 📐 HORIZONTAL ALIGNMENT FIX: Direct landing vector fixed clean to 0px left margin offset bounds
-                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
-                }
-            }
-
-            // ✨ EXIT SLIDE IMPLICIT TRACKER
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+                NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
             }
             
-            // ✨ EXIT FADE IMPLICIT TRACKER
             Behavior on opacity {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
-            // 🎨 EXACT VALUE MATCHING: Outer boundaries stripped of borders, background color tracking bound to #9911111b
             color: "#9911111b"
             border.width: 0
             
-            // 📐 GRANULAR CORNER CLIP: Left edges flattened perfectly straight flush to the system bar
             topLeftRadius: 0
             bottomLeftRadius: 0
-            topRightRadius: 12
-            bottomRightRadius: 12
+            topRightRadius: 0
+            bottomRightRadius: 0
             
             height: notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300)
             
@@ -436,7 +406,7 @@ Item {
                                 color: "#11111b"
                                 border.color: cellMouseArea.containsMouse ? "#898989" : "#313244" 
                                 border.width: 1
-                                radius: 8
+                                radius: 0 
 
                                 ColumnLayout {
                                     anchors.fill: parent; anchors.margins: 10; spacing: 2
