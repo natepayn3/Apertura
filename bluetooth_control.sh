@@ -5,24 +5,37 @@ case "$1" in
     "scan")
         bluetoothctl -t 8 scan on > /dev/null 2>&1
         ;;
+
     "paired")
-        # 🎯 THE FIX: Uses 'devices' but filters strictly by 'Trusted: yes' to find bonded endpoints instantly
-        bluetoothctl devices | while read -r _ mac name; do
-            info=$(bluetoothctl info "$mac" 2>/dev/null)
-            if echo "$info" | grep -q "Trusted: yes"; then
-                conn=$(echo "$info" | grep -q "Connected: yes" && echo "true" || echo "false")
-                echo "$mac|$conn|$name"
+        # 🎯 THE FIX: Verify column 2 is an actual MAC address before outputting
+        bluetoothctl paired-devices | while read -r _ mac name; do
+            # Ensure mac string matches standard hexadecimal byte formatting bounds
+            if [[ "$mac" =~ ^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$ ]]; then
+                info=$(bluetoothctl info "$mac" 2>/dev/null)
+                if echo "$info" | grep -q "Connected: yes"; then
+                    echo "$mac|true|$name"
+                else
+                    echo "$mac|false|$name"
+                fi
             fi
         done
         ;;
+
     "discover")
-        # 🎯 THE FIX: Excludes trusted items so only new local signals land in the discover tab
+        declare -A paired_macs
+        while read -r _ mac _; do
+            if [[ "$mac" =~ ^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$ ]]; then
+                paired_macs["$mac"]=1
+            fi
+        done < <(bluetoothctl paired-devices 2>/dev/null)
+
         bluetoothctl devices | while read -r _ mac name; do
-            if ! bluetoothctl info "$mac" 2>/dev/null | grep -q "Trusted: yes"; then
+            if [[ "$mac" =~ ^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$ ]] && [ -z "${paired_macs["$mac"]}" ] && [ -n "$name" ]; then
                 echo "$mac|$name"
             fi
         done
         ;;
+
     "toggle")
         STATUS=$(bluetoothctl show | grep "Powered:" | awk '{print $2}')
         if [ "$STATUS" = "yes" ]; then
@@ -35,6 +48,7 @@ case "$1" in
             echo "{\"powered\": true, \"connected\": $([ "$CONNECTED" = "yes" ] && echo "true" || echo "false")}"
         fi
         ;;
+
     "status"|*)
         SHOW_OUT=$(bluetoothctl show 2>/dev/null)
         if [ -z "$SHOW_OUT" ]; then
