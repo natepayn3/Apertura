@@ -16,10 +16,13 @@ Scope {
     // 🔒 GLOBAL SAFELOCK REGISTER: Tracks when the GUI volume slider is being dragged
     property bool audioSliderActive: false
 
+    // 🗺️ ABSOLUTE INSTANCE TRACKER: Maps explicit panel window pointers by unique hardware names
+    property var instantiatedBars: ({})
+
+    // 🔒 LAZY LOCKSCREEN CONTROLLER STATE
+    property bool sessionLocked: false
+
     function requestOpen(modalName) {
-        if (activeModal !== null && activeModal !== modalName) {
-            activeModal = null;
-        }
         activeModal = modalName;
     }
 
@@ -27,14 +30,35 @@ Scope {
         activeModal = null;
     }
 
+    // 🔒 LAZY LOCKSCREEN ENGINE HANDLER
+    Loader {
+        id: lockScreenLoader
+        active: rootScope.sessionLocked
+        source: "LockScreen.qml"
+        
+        onLoaded: {
+            if (item) item.forceActiveFocus();
+        }
+    }
+
     // 🔒 GLOBAL IPC ROUTING MAPS
     IpcHandler {
+        target: "session"
+        
+        function lock(): void {
+            rootScope.sessionLocked = true;
+        }
+    }
+
+    IpcHandler {
         target: "launcher"
+        
         function toggle(): void {
-            for (let i = 0; i < barWindows.count; i++) {
-                let bar = barWindows.objectAt(i);
-                if (bar && bar.appLauncherModule) {
-                    bar.appLauncherModule.toggleMenu();
+            // Loop over the active registration map keys directly
+            for (let screenName in rootScope.instantiatedBars) {
+                let barWindow = rootScope.instantiatedBars[screenName];
+                if (barWindow && barWindow.appLauncherModule) {
+                    barWindow.appLauncherModule.toggleMenu();
                 }
             }
         }
@@ -42,11 +66,13 @@ Scope {
 
     IpcHandler {
         target: "wallpaper"
+        
         function toggle(): void {
-            for (let i = 0; i < barWindows.count; i++) {
-                let bar = barWindows.objectAt(i);
-                if (bar && bar.wallpaperModule) {
-                    bar.wallpaperModule.toggleMenu();
+            // Loop over the active registration map keys directly
+            for (let screenName in rootScope.instantiatedBars) {
+                let barWindow = rootScope.instantiatedBars[screenName];
+                if (barWindow && barWindow.wallpaperModule) {
+                    barWindow.wallpaperModule.toggleMenu();
                 }
             }
         }
@@ -59,9 +85,6 @@ Scope {
 
         delegate: Item {
             id: displayGroupContext
-
-            property alias appLauncherModule: mainBarWindow.appLauncherModule
-            property alias wallpaperModule: mainBarWindow.wallpaperModule
 
             // Instantiate your dedicated volume overlay
             VolumeHudOsd {
@@ -89,6 +112,24 @@ Scope {
                 WlrLayershell.margins.bottom: 12
                 WlrLayershell.margins.left: 12
                 WlrLayershell.margins.right: 0
+
+                // 🧠 HARDWARE REGISTER COMPONENT: Explicitly bind this window pointer to the root map on birth
+                Component.onCompleted: {
+                    if (modelData && modelData.name) {
+                        let currentMap = rootScope.instantiatedBars;
+                        currentMap[modelData.name] = mainBarWindow;
+                        rootScope.instantiatedBars = currentMap;
+                    }
+                }
+
+                // Clean up references when a display node unmaps or unplugs
+                Component.onDestruction: {
+                    if (modelData && modelData.name) {
+                        let currentMap = rootScope.instantiatedBars;
+                        delete currentMap[modelData.name];
+                        rootScope.instantiatedBars = currentMap;
+                    }
+                }
 
                 Rectangle {
                     anchors.fill: parent
