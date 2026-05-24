@@ -1,182 +1,479 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
-import Quickshell.Io
+import Quickshell.Wayland
+import Quickshell.Services.Notifications
 
 Item {
-    id: workspaceContainer
+    id: notificationRoot
+    implicitWidth: 32
+    implicitHeight: 32
+
+    property int unreadCount: 0
     
-    // 🎛️ ORIENTATION TOGGLE
-    property bool isVertical: true
+    // Custom storage arrays to keep references clean and mutable
+    property var visibleBanners: []
+    property var activeHistoryReferences: [] 
 
-    // 🔒 FIXED: Read sizes dynamically out of the active instantiated loader item context instead of a broken component ID
-    implicitWidth: isVertical ? 22 : (layoutLoader.item ? layoutLoader.item.implicitWidth : 0)
-    implicitHeight: isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight : 0) : 22
+    // Controls actual history card PanelWindow visibility
+    property bool menuOpen: false
 
-    property int activeWorkspace: 1
-    property var activeWorkspaceList: [1, 2]
-    property var occupiedMap: ({})
-
-    // 🔄 HYPRLAND POLLING LOGIC
-    Process {
-        id: queryWorkspaceList
-        command: ["hyprctl", "workspaces", "-j"]
-        running: true
-        stdout: StdioCollector {
-            onTextChanged: {
-                try {
-                    const cleaned = text.trim();
-                    if (cleaned.length === 0) return;
-                    const json = JSON.parse(cleaned);
-                    if (Array.isArray(json)) {
-                        let ids = json.map(ws => ws.id).filter(id => id > 0);
-                        let occupied = {};
-                        json.forEach(ws => {
-                            if (ws.windows > 0) occupied[ws.id] = true;
-                        });
-                        workspaceContainer.occupiedMap = occupied;
-                        if (!ids.includes(workspaceContainer.activeWorkspace)) ids.push(workspaceContainer.activeWorkspace);
-                        let maxId = Math.max(...ids, 0);
-                        if (!ids.includes(maxId + 1)) ids.push(maxId + 1);
-                        ids.sort((a, b) => a - b);
-                        workspaceContainer.activeWorkspaceList = ids;
-                    }
-                } catch (e) {}
-            }
-        }
-    }
-
-    Process {
-        id: queryActiveWorkspace
-        command: ["hyprctl", "activeworkspace", "-j"]
-        running: true
-        stdout: StdioCollector {
-            onTextChanged: {
-                try {
-                    const cleaned = text.trim();
-                    if (cleaned.length === 0) return;
-                    const json = JSON.parse(cleaned);
-                    if (json && json.id !== undefined) {
-                        workspaceContainer.activeWorkspace = json.id;
-                        queryWorkspaceList.running = false;
-                        queryWorkspaceList.running = true;
-                    }
-                } catch (e) {}
-            }
-        }
-    }
-
+    // Smart auto-hide countdown tracker
     Timer {
-        interval: 100; running: true; repeat: true
+        id: osdAutohideTimer
+        interval: 3500
+        running: false
+        repeat: false
+        onTriggered: closeMenu()
+    }
+
+    // 🎬 CLOSE FINALIZER
+    Timer {
+        id: closeTimer
+        interval: 180
+        repeat: false
         onTriggered: {
-            queryActiveWorkspace.running = false; queryActiveWorkspace.running = true;
-            queryWorkspaceList.running = false; queryWorkspaceList.running = true;
+            // 🔒 FIX: Localized variable mutations prevent background lifecycle interference
+            notificationRoot.menuOpen = false;
         }
     }
 
-    // ==========================================
-    // 🎨 DYNAMIC LAYOUT CELL FRAMEWORK
-    // ==========================================
-    Loader {
-        id: layoutLoader
-        anchors.fill: parent
-        sourceComponent: workspaceContainer.isVertical ? verticalLayoutComponent : horizontalLayoutComponent
-    }
-
-    // 🔄 VERTICAL ORIENTATION (Column Layout Engine)
-    Component {
-        id: verticalLayoutComponent
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 10
-            
-            Repeater {
-                model: workspaceContainer.activeWorkspaceList
-                delegate: workspaceButtonDelegate
-            }
+    // 🔓 PUBLIC INTERFACE (Targeted by manual toggles)
+    function toggleMenu(): void {
+        if (menuOpen) {
+            closeMenu();
+        } else {
+            openMenu();
         }
     }
 
-    // ↔️ HORIZONTAL ORIENTATION (Original Row Layout Engine)
-    Component {
-        id: horizontalLayoutComponent
-        RowLayout {
-            anchors.fill: parent
-            spacing: 10
-            
-            Repeater {
-                model: workspaceContainer.activeWorkspaceList
-                delegate: workspaceButtonDelegate
-            }
+    function openMenu(): void {
+        // Reset hidden baseline coordinates before mapping window surface
+        popupMenuFrame.targetX = -655;
+        popupMenuFrame.targetOpacity = 0.0;
+
+        rootScope.requestOpen(notificationOverlayModal);
+        menuOpen = true;
+
+        // Drive the entry transition timeline sequentially
+        slideInAnimation.start();
+        checkUserActivity();
+    }
+
+    function closeMenu(): void {
+        // Animate out while the window layer shell surface is still active
+        popupMenuFrame.targetX = -655;
+        popupMenuFrame.targetOpacity = 0.0;
+
+        closeTimer.start();
+    }
+
+    // Helper logic to cleanly handle user presence changes
+    function checkUserActivity() {
+        if (cardHoverTracker.containsMouse || listContainerMouse.containsMouse) {
+            osdAutohideTimer.stop(); // Interacting: Freeze dismissal rule
+        } else if (notificationOverlayModal.visible && menuOpen) {
+            osdAutohideTimer.restart(); // Left environment bounds: Start countdown ticking
         }
     }
 
-    // ==========================================
-    // 🪴 CELL REPEATER DELEGATE TEMPLATE
-    // ==========================================
-    Component {
-        id: workspaceButtonDelegate
+    // Updated system-to-model proxy handler safely executing on main state synchronization bounds
+    function updateCount() {
+        if (nativeServer && nativeServer.trackedNotifications) {
+            notificationRoot.unreadCount = nativeServer.trackedNotifications.rowCount();
+        }
+    }
+
+    // 📡 NATIVE DESKTOP NOTIFICATION SERVER
+    NotificationServer {
+        id: nativeServer
         
+        bodySupported: true
+        actionsSupported: true
+        keepOnReload: true
+
+        onNotification: (notification) => {
+            notification.tracked = true;
+            notificationRoot.updateCount();
+
+            // Store raw mutable references for fallback tracking
+            notificationRoot.activeHistoryReferences = [...notificationRoot.activeHistoryReferences, notification];
+            notificationRoot.visibleBanners = [...notificationRoot.visibleBanners, notification];
+
+            // Trigger a separate horizontal slide entry sequence specifically for the new toast alert element
+            toastSlideIn.restart();
+
+            // Auto-evict the banner slot from the floating HUD after 5 seconds
+            let toastTimer = Qt.createQmlObject('import QtQuick; Timer { interval: 5000; running: true; repeat: false }', notificationRoot);
+            toastTimer.triggered.connect(() => {
+                notificationRoot.visibleBanners = notificationRoot.visibleBanners.filter(item => item !== notification);
+                toastTimer.destroy();
+            });
+        }
+    }
+
+    // Steady state scan loop to verify cache allocations
+    Timer {
+        interval: 500
+        running: true
+        repeat: true
+        onTriggered: notificationRoot.updateCount()
+    }
+
+    // ==========================================
+    // 🔔 NOTIFICATION ICON TRIGGER MODULE
+    // ==========================================
+    Rectangle {
+        id: notificationHitbox
+        anchors.fill: parent
+        color: notificationMouseArea.containsMouse ? "#313244" : "transparent"
+        radius: 8
+
+        Text {
+            anchors.centerIn: parent
+            text: notificationRoot.unreadCount > 0 ? "󱅫" : "󰂚"
+            font.family: "Rubik"
+            font.pixelSize: 20
+            color: notificationRoot.unreadCount > 0 ? "#f38ba8" : "#cdd6f4"
+        }
+
+        // Alert Pill Counter Badge Accent
+        Rectangle {
+            width: 14; height: 14; radius: 7; color: "#f38ba8"
+            visible: notificationRoot.unreadCount > 0
+            anchors.top: parent.top; anchors.right: parent.right
+            anchors.topMargin: 2; anchors.rightMargin: 2
+
+            Text {
+                anchors.centerIn: parent
+                text: notificationRoot.unreadCount.toString()
+                font.family: "Rubik"; font.pixelSize: 9; font.weight: Font.Bold; color: "#11111b"
+            }
+        }
+
         MouseArea {
-            id: workspaceButton
-            property int wsId: modelData
-            property bool isActive: workspaceContainer.activeWorkspace === wsId
-            property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
-
-            implicitWidth: workspaceContainer.isVertical ? 22 : (isActive ? 50 : 30)
-            implicitHeight: workspaceContainer.isVertical ? (isActive ? 50 : 30) : 22
+            id: notificationMouseArea
+            anchors.fill: parent
+            hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-
-            Behavior on implicitWidth {
-                enabled: !workspaceContainer.isVertical
-                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+            onClicked: toggleMenu()
+            
+            onDoubleClicked: {
+                try { nativeServer.clear(); } catch(e) {}
+                try { nativeServer.dismissAll(); } catch(e) {}
+                for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
+                    try { notificationRoot.activeHistoryReferences[i].dismiss(); } catch(e) {}
+                    try { nativeServer.dismiss(notificationRoot.activeHistoryReferences[i].id); } catch(e) {}
+                }
+                notificationRoot.visibleBanners = [];
+                notificationRoot.activeHistoryReferences = [];
+                notificationRoot.updateCount();
             }
-            Behavior on implicitHeight {
-                enabled: workspaceContainer.isVertical
-                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+        }
+    }
+
+    // 🔄 GLOBAL CLEANUP LISTENER
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== notificationOverlayModal && menuOpen) {
+                closeMenu();
+            }
+        }
+    }
+
+    // ==========================================
+    // 🪟 1. FLOATING DESKTOP BANNER POPUPS (Bubbly HUD)
+    // ==========================================
+    PanelWindow {
+        id: popupToastWindow
+        visible: notificationRoot.visibleBanners.length > 0 && !notificationOverlayModal.visible
+        color: "transparent"
+        
+        anchors.top: true
+        anchors.bottom: true
+        anchors.left: true
+        anchors.right: true
+        
+        // Pass-through notification layers completely ignore keyboard interaction states
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "quickshell-notifications"
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+        ColumnLayout {
+            id: toastColumn
+            width: 300 
+            
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.bottomMargin: 12
+            
+            property int targetX: 0
+            anchors.leftMargin: targetX
+            spacing: 8
+
+            // Floating alert banners slide in natively on creation pass
+            NumberAnimation { id: toastSlideIn; target: toastColumn; property: "targetX"; from: -320; to: 0; duration: 180; easing.type: Easing.OutCubic }
+
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
             }
 
-            onClicked: {
-                workspaceContainer.activeWorkspace = wsId;
-                switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + wsId + "\" })"];
-                switchWorkspace.running = true;
+            Repeater {
+                model: notificationRoot.visibleBanners
+
+                delegate: Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: Math.max(60, tSummary.implicitHeight + tBody.implicitHeight + 20)
+                    
+                    // 🎨 MATCHED BANNER STYLING: Borders dropped, color shifted clean to #9911111b
+                    color: "#9911111b" 
+                    border.width: 0
+                    
+                    // 📐 GRANULAR CORNER CLIP: Left side squared flat, right side handles system roundings
+                    topLeftRadius: 0
+                    bottomLeftRadius: 0
+                    topRightRadius: 12
+                    bottomRightRadius: 12
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 4
+
+                        Text {
+                            id: tSummary
+                            text: modelData.summary
+                            font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#cdd6f4"
+                            Layout.fillWidth: true; elide: Text.ElideRight
+                        }
+
+                        Text {
+                            id: tBody
+                            text: modelData.body
+                            font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"
+                            Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 4; elide: Text.ElideRight
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            notificationRoot.visibleBanners = notificationRoot.visibleBanners.filter(item => item !== modelData);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ==========================================
+    // 🪟 2. NATIVE HISTORY OVERLAY MENU CARD
+    // ==========================================
+    PanelWindow {
+        id: notificationOverlayModal
+        visible: notificationRoot.menuOpen
+        color: "transparent"
+        
+        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "quickshell-overlay"
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+        onVisibleChanged: {
+            if (visible && notificationRoot.menuOpen) {
+                popupMenuFrame.forceActiveFocus();
+            }
+        }
+
+        MouseArea { anchors.fill: parent; onClicked: closeMenu() }
+
+        Rectangle {
+            id: popupMenuFrame
+            width: 300 
+            
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.bottomMargin: 12
+            
+            // Mutable animation target maps
+            property int targetX: -655
+            property real targetOpacity: 0.0
+
+            anchors.leftMargin: targetX
+            opacity: targetOpacity
+
+            // ✨ ENTRY SEQUENCE: Solves the birth frame asset mapping bug
+            SequentialAnimation {
+                id: slideInAnimation
+                PauseAnimation { duration: 16 }
+                ParallelAnimation {
+                    // 📐 HORIZONTAL ALIGNMENT FIX: Direct landing vector fixed clean to 0px left margin offset bounds
+                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                }
             }
 
-            Process { id: switchWorkspace; running: false }
+            // ✨ EXIT SLIDE IMPLICIT TRACKER
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            }
+            
+            // ✨ EXIT FADE IMPLICIT TRACKER
+            Behavior on opacity {
+                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+            }
 
-            Rectangle {
+            // 🎨 EXACT VALUE MATCHING: Outer boundaries stripped of borders, background color tracking bound to #9911111b
+            color: "#9911111b"
+            border.width: 0
+            
+            // 📐 GRANULAR CORNER CLIP: Left edges flattened perfectly straight flush to the system bar
+            topLeftRadius: 0
+            bottomLeftRadius: 0
+            topRightRadius: 12
+            bottomRightRadius: 12
+            
+            height: notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300)
+            
+            focus: true
+            Keys.onPressed: (event) => {
+                if (event.key === Qt.Key_Escape) {
+                    closeMenu();
+                    event.accepted = true;
+                }
+            }
+            
+            Component.onCompleted: popupMenuFrame.forceActiveFocus()
+            
+            MouseArea {
+                id: cardHoverTracker
                 anchors.fill: parent
-                radius: workspaceContainer.isVertical ? width / 2 : height / 2
-                
-                // 🎨 TRANSPARENT DOTS STYLE: Only fill the active workspace circle. All others are transparent wireframes.
-                color: isActive ? "#cdd6f4" : "transparent"
-                
-                border.width: 1
-                // 🎨 WIREFRAME OUTLINE HIERARCHY: Active solid capsule, occupied has clear prominence, placeholder is a lighter ghost ring.
-                border.color: isActive   ? "#cdd6f4" : 
-                              isOccupied ? "#b4befe" : "#6c7086"
+                hoverEnabled: true
+                onContainsMouseChanged: checkUserActivity()
+            }
 
-                Behavior on color { ColorAnimation { duration: 120 } }
-                Behavior on border.color { ColorAnimation { duration: 120 } }
+            MouseArea { 
+                anchors.fill: parent
+                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } 
+            }
 
-                Text {
-                    text: workspaceButton.wsId.toString()
-                    font.family: "Rubik"
-                    font.pixelSize: 12
-                    font.bold: true
-                    color: workspaceButton.isActive ? "#11111b" : (workspaceButton.isOccupied ? "#b4befe" : "#6c7086")
-                    
-                    width: parent.width
-                    height: parent.height
-                    
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    
-                    // Show text for active/occupied, keep it completely transparent for empty new workspace slots
-                    opacity: (workspaceButton.isActive || workspaceButton.isOccupied) ? 1.0 : 0.0
+            ColumnLayout {
+                anchors.fill: parent; anchors.margins: 14; spacing: 10
 
-                    Behavior on opacity { NumberAnimation { duration: 100 } }
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" } 
+                    Item { Layout.fillWidth: true }
+                    
+                    Text {
+                        text: "Clear All"
+                        font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
+                        color: clearAllMouse.containsMouse ? "#f38ba8" : "#585b70"
+                        visible: notificationRoot.unreadCount > 0
+                        
+                        MouseArea {
+                            id: clearAllMouse
+                            anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                try { nativeServer.clear(); } catch(e) {}
+                                try { nativeServer.dismissAll(); } catch(e) {}
+                                
+                                for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
+                                    let item = notificationRoot.activeHistoryReferences[i];
+                                    if (item) {
+                                        try { item.dismiss(); } catch(e) {}
+                                        try { nativeServer.dismiss(item.id); } catch(e) {}
+                                    }
+                                }
+                                
+                                notificationRoot.visibleBanners = [];
+                                notificationRoot.activeHistoryReferences = [];
+                                notificationRoot.updateCount();
+                                checkUserActivity();
+                            }
+                        }
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
+
+                Item {
+                    id: listContainer
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    MouseArea {
+                        id: listContainerMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.NoButton
+                        onContainsMouseChanged: checkUserActivity()
+                    }
+
+                    ListView {
+                        id: notifListView
+                        anchors.fill: parent
+                        clip: true; spacing: 8
+                        model: nativeServer.trackedNotifications
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "No new notifications"
+                            font.family: "Rubik"; font.pixelSize: 13; color: "#a6adc8" 
+                            visible: notifListView.count === 0
+                        }
+
+                        delegate: Item {
+                            width: notifListView.width
+                            height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "#11111b"
+                                border.color: cellMouseArea.containsMouse ? "#898989" : "#313244" 
+                                border.width: 1
+                                radius: 8
+
+                                ColumnLayout {
+                                    anchors.fill: parent; anchors.margins: 10; spacing: 2
+
+                                    Text {
+                                        id: summaryLabel
+                                        text: modelData.summary
+                                        font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
+                                        color: "#cdd6f4" 
+                                        Layout.fillWidth: true; elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        id: bodyLabel
+                                        text: modelData.body
+                                        font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"
+                                        Layout.fillWidth: true; wrapMode: Text.WordWrap; 
+                                        maximumLineCount: 3
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                                
+                                MouseArea {
+                                    id: cellMouseArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        try { nativeServer.dismiss(modelData.id); } catch(e) {}
+                                        try { modelData.dismiss(); } catch(e) {}
+                                        notificationRoot.updateCount();
+                                        checkUserActivity();
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
