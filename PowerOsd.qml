@@ -93,8 +93,6 @@ Item {
             text: "\u23FB"
             font.family: "Rubik"
             font.pixelSize: 20
-            
-            // 🔒 FIX: Reverted and locked permanently to the primary system color palette target string
             color: "#cdd6f4"
             anchors.centerIn: parent
         }
@@ -115,11 +113,11 @@ Item {
         id: globalPowerModal
         visible: powerRoot.menuOpen
 
-        width: 160
-        height: menuContentLayout.implicitHeight + 28 + 12 // Content + margins
-
-        anchors.bottom: true
+        // FULL SCREEN INTERCEPT CANVAS
         anchors.left: true
+        anchors.top: true
+        anchors.bottom: true
+        anchors.right: true
         
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
@@ -146,10 +144,24 @@ Item {
             sysCmd.running = true;
         }
 
+        // GLOBAL CAPTURE SHIELD
+        MouseArea {
+            anchors.fill: parent
+            onPressed: (mouse) => {
+                closeMenu();
+                mouse.accepted = true;
+            }
+        }
+
         Rectangle {
             id: popupPowerWrapper
-            anchors.fill: parent
+            
+            width: 160
+            height: 200
+            
+            anchors.bottom: parent.bottom
             anchors.bottomMargin: 12
+            anchors.left: parent.left
             
             // Explicit animation targets
             property int targetX: -655
@@ -163,7 +175,6 @@ Item {
                 id: slideInAnimation
                 PauseAnimation { duration: 16 }
                 ParallelAnimation {
-                    // 📐 HORIZONTAL ALIGNMENT FIX: Slide destination set to 0px left margin offset
                     NumberAnimation { target: popupPowerWrapper; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: popupPowerWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
@@ -177,12 +188,10 @@ Item {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
-            // 🎨 EXACT VALUE MATCHING: Borders stripped completely and opacity color code locked down to #9911111b
             color: "#9911111b" 
             border.width: 0
             focus: true
 
-            // 📐 GRANULAR CORNER CLIP: Square left edges flush to the bar, round the right outer corners
             topLeftRadius: 0
             bottomLeftRadius: 0
             topRightRadius: 12
@@ -201,10 +210,9 @@ Item {
                 id: cardHoverTracker
                 anchors.fill: parent
                 hoverEnabled: true
-                z: -1
                 
-                onContainsMouseChanged: checkUserActivity()
                 onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
+                onContainsMouseChanged: checkUserActivity()
             }
 
             // ==========================================
@@ -212,11 +220,12 @@ Item {
             // ==========================================
             ColumnLayout {
                 id: menuContentLayout
+                
+                // 🔒 FIXED LAYOUT ANCHORING: Constrain text layout inside the visible card boundaries, not the full display surface
                 anchors.fill: parent
                 anchors.margins: 14
                 spacing: 10
 
-                // Title Header Block
                 RowLayout {
                     Layout.fillWidth: true
                     Text { 
@@ -229,14 +238,12 @@ Item {
                     Item { Layout.fillWidth: true }
                 }
 
-                // Separation Accent Line
                 Rectangle { 
                     Layout.fillWidth: true
                     height: 1 
                     color: "#313244" 
                 }
 
-                // Interactive Options Array
                 ColumnLayout {
                     id: menuLayout
                     Layout.fillWidth: true
@@ -244,37 +251,41 @@ Item {
 
                     Repeater {
                         model: [
-                            { label: "󰌾  Lock",     cmd: ["hyprlock"] },
+                            { label: "󰌾  Lock",      cmd: ["hyprlock"] },
                             { label: "󰤄  Suspend",  cmd: ["systemctl", "suspend"] },
                             { label: "󰜉  Reboot",   cmd: ["systemctl", "reboot"] },
                             { label: "󰐥  Shutdown", cmd: ["systemctl", "poweroff"] }
                         ]
 
-                        delegate: MouseArea {
-                            id: menuBtn
+                        delegate: Item {
                             Layout.fillWidth: true
-                            implicitHeight: 30
-                            cursorShape: Qt.PointingHandCursor
-                            hoverEnabled: true
+                            height: 30
 
-                            onClicked: globalPowerModal.runCommand(modelData.cmd)
-
-                            Rectangle {
-                                id: btnBg
+                            MouseArea {
+                                id: menuBtn
                                 anchors.fill: parent
-                                color: menuBtn.containsMouse ? "#313244" : "transparent"
-                                radius: 6
+                                cursorShape: Qt.PointingHandCursor
+                                hoverEnabled: true
 
-                                Text {
-                                    text: modelData.label
-                                    font.family: "Rubik"
-                                    font.pixelSize: 13
-                                    font.weight: Font.Regular
-                                    color: menuBtn.containsMouse ? "#cdd6f4" : "#a6adc8"
-                                    
-                                    anchors.verticalCenter: btnBg.verticalCenter
-                                    anchors.left: btnBg.left
-                                    anchors.leftMargin: 8
+                                onClicked: globalPowerModal.runCommand(modelData.cmd)
+
+                                Rectangle {
+                                    id: btnBg
+                                    anchors.fill: parent
+                                    color: menuBtn.containsMouse ? "#313244" : "transparent"
+                                    radius: 6
+
+                                    Text {
+                                        text: modelData.label
+                                        font.family: "Rubik"
+                                        font.pixelSize: 13
+                                        font.weight: Font.Normal
+                                        
+                                        color: menuBtn.containsMouse ? "#cdd6f4" : "#a6adc8"
+                                        anchors.verticalCenter: btnBg.verticalCenter
+                                        anchors.left: btnBg.left
+                                        anchors.leftMargin: 8
+                                    }
                                 }
                             }
                         }
