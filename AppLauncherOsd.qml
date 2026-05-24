@@ -26,7 +26,6 @@ Item {
         interval: 180
         repeat: false
         onTriggered: {
-            // 🔒 FIX: Purely localized mutation matching NotificationOsd logic loop
             launcherModuleRoot.menuOpen = false;
         }
     }
@@ -41,14 +40,12 @@ Item {
     }
 
     function openMenu(): void {
-        // Reset hidden baseline coordinates before mapping
         menuCard.targetX = -655;
         menuCard.targetOpacity = 0.0;
 
         rootScope.requestOpen(appLauncherModal);
         menuOpen = true;
 
-        // Drive the entry transition timeline sequentially
         slideInAnimation.start();
 
         appScanner.running = false;
@@ -56,7 +53,6 @@ Item {
     }
 
     function closeMenu(): void {
-        // Animate out while the window layer shell is still active
         menuCard.targetX = -655;
         menuCard.targetOpacity = 0.0;
 
@@ -67,11 +63,27 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            // 🧠 CORRECT INTERACTION BOUNDS: Close immediately if focus shifts to a separate sister layout node
             if (rootScope.activeModal !== appLauncherModal && menuOpen) {
                 closeMenu();
             }
         }
+    }
+
+    // Helper to determine the best launch token/wrapper for a given binary name
+    function getLaunchCommand(binString) {
+        let cleanBin = binString.trim().toLowerCase();
+        
+        // Map common standard app binaries directly to their system .desktop names
+        if (cleanBin === "nautilus" || cleanBin.includes("nautilus")) {
+            return ["gtk-launch", "org.gnome.Nautilus.desktop"];
+        } else if (cleanBin === "thunar") {
+            return ["gtk-launch", "thunar.desktop"];
+        } else if (cleanBin === "firefox") {
+            return ["gtk-launch", "firefox.desktop"];
+        }
+        
+        // Native fallback wrapper that forces active Wayland/DBus runtime scope extraction
+        return ["/bin/sh", "-c", "export $(dbus-launch); " + binString];
     }
 
     function filterApps(query) {
@@ -154,12 +166,12 @@ Item {
                 activeSearchQuery = "";
                 filterApps("");
                 appListView.currentIndex = 0;
+                appListView.keyboardActive = false; 
                 appListView.positionViewAtBeginning();
                 menuCard.forceActiveFocus();
             }
         }
 
-        // Backdrop click dismiss handling
         MouseArea {
             anchors.fill: parent
             onClicked: closeMenu()
@@ -170,45 +182,37 @@ Item {
             width: 300 
             height: 300 
             
-            // Anchored top-left, matching the Wallpaper panel behavior
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.topMargin: 12
             
-            // Explicit animation property mappings
             property int targetX: -655
             property real targetOpacity: 0.0
 
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
-            // ✨ ENTRY SEQUENCE: Bypasses window map race conditions
             SequentialAnimation {
                 id: slideInAnimation
-                PauseAnimation { duration: 16 } // Let the layer-shell unmap resolve
+                PauseAnimation { duration: 16 } 
                 ParallelAnimation {
-                    // 📐 HORIZONTAL ALIGNMENT FIX: Direct landing location fixed cleanly to 0px left margin offset
                     NumberAnimation { target: menuCard; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: menuCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
             }
 
-            // ✨ EXIT SLIDE IMPLICIT TRACKER
             Behavior on anchors.leftMargin {
                 NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
             }
             
-            // ✨ EXIT FADE IMPLICIT TRACKER
             Behavior on opacity {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
-            // 🎨 EXACT VALUE MATCHING: Outer border removed completely, background opacity mapped to #9911111b
             color: "#9911111b" 
             border.width: 0
             focus: true
 
-            // 📐 GRANULAR CORNER CLIP: Left side corners squared flat flush to the system bar panel boundary
             topLeftRadius: 0
             bottomLeftRadius: 0
             topRightRadius: 12
@@ -220,12 +224,14 @@ Item {
                     event.accepted = true;
                 } 
                 else if (event.key === Qt.Key_Down) {
+                    appListView.keyboardActive = true; 
                     if (appListView.currentIndex < appListView.count - 1) {
                         appListView.currentIndex++;
                     }
                     event.accepted = true;
                 }
                 else if (event.key === Qt.Key_Up) {
+                    appListView.keyboardActive = true; 
                     if (appListView.currentIndex > 0) {
                         appListView.currentIndex--;
                     }
@@ -235,7 +241,8 @@ Item {
                     if (appListView.currentIndex >= 0 && appListView.currentIndex < appListView.count) {
                         let targetApp = dynamicAppModel.get(appListView.currentIndex);
                         
-                        globalLauncherRunner.command = ["/bin/sh", "-c", targetApp.bin];
+                        // 🚀 GTK-LAUNCH INTERCEPT RUNNER
+                        globalLauncherRunner.command = getLaunchCommand(targetApp.bin);
                         globalLauncherRunner.running = true;
                         
                         closeMenu();
@@ -285,25 +292,29 @@ Item {
                     spacing: 2
                     model: dynamicAppModel
                     
+                    property bool keyboardActive: false
+
                     highlightFollowsCurrentItem: true
                     highlightMoveDuration: 60 
-                    highlight: Rectangle {
-                        width: appListView.width
-                        height: 36
-                        color: "#313244"
-                        radius: 6
-                        z: 0 
-                    }
+                    highlight: null
 
                     delegate: Item {
                         width: appListView.width
                         height: 36
+
+                        Rectangle {
+                            anchors.fill: parent
+                            color: (appListView.currentIndex === index || (!appListView.keyboardActive && rowMouse.containsMouse)) ? "#313244" : "transparent"
+                            radius: 6
+                            z: 0 
+                        }
 
                         RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: 10
                             anchors.rightMargin: 10
                             spacing: 12
+                            z: 1
 
                             Item {
                                 width: 22
@@ -354,11 +365,26 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            
-                            onPositionChanged: appListView.currentIndex = index
+                            z: 2
+
+                            onEntered: {
+                                if (!appListView.keyboardActive) {
+                                    appListView.currentIndex = index;
+                                }
+                            }
+
+                            onPositionChanged: {
+                                if (appListView.keyboardActive) {
+                                    appListView.keyboardActive = false;
+                                    appListView.currentIndex = index;
+                                }
+                            }
                             
                             onClicked: {
-                                globalLauncherRunner.command = ["/bin/sh", "-c", model.bin];
+                                appListView.currentIndex = index;
+                                
+                                // 🚀 GTK-LAUNCH INTERCEPT RUNNER
+                                globalLauncherRunner.command = getLaunchCommand(model.bin);
                                 globalLauncherRunner.running = true;
                                 
                                 closeMenu();
