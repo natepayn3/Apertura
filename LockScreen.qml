@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import Qt5Compat.GraphicalEffects // 🛠️ Crucial for native hardware blur effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
@@ -9,11 +10,9 @@ import Quickshell.Services.Pam
 PanelWindow {
     id: lockWindow
 
-    // Binds the screen parameters directly from the parent instantiation delegate loop
     required property var lockScreenTarget
     screen: lockScreenTarget
 
-    // 📐 ABSOLUTE COORDINATE CANVAS OVERRIDE
     anchors.top: true
     anchors.bottom: true
     anchors.left: true
@@ -24,17 +23,24 @@ PanelWindow {
     WlrLayershell.margins.left: 0
     WlrLayershell.margins.right: 0
 
-    color: "#11111b" 
+    // Set a solid background color globally to ensure visibility across all displays
+    color: "#11111b"
 
-    // 👑 HYPRLAND LAYER STACK INTRUSION OVERRIDE
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
     WlrLayershell.namespace: "lockscreen"
-    
-    // 🛠️ THE EXACT SYNTAX FIX: Bypasses exclusive constraints using Quickshell's root enum mapping
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
     property string passwordBuffer: ""
+    property var currentDateTime: new Date()
+
+    Timer {
+        id: lockClockTicker
+        interval: 1000
+        running: true
+        repeat: true
+        onTriggered: lockWindow.currentDateTime = new Date()
+    }
 
     PamContext {
         id: pamDriver
@@ -61,38 +67,89 @@ PanelWindow {
         }
     }
 
-    onVisibleChanged: {
-        if (visible) {
+    Component.onCompleted: {
+        if (lockScreenTarget && lockScreenTarget.primary) {
             passwordInput.forceActiveFocus();
         }
     }
 
+    onVisibleChanged: {
+        if (visible && lockScreenTarget && lockScreenTarget.primary) {
+            passwordInput.forceActiveFocus();
+        }
+    }
+
+    // ==========================================
+    // 🎨 NATIVE VISUAL BACKGROUND (PRIMARY ONLY)
+    // ==========================================
+    // This loads your wallpaper file directly and runs a heavy blur shader pass on it
+    Item {
+        anchors.fill: parent
+        visible: lockScreenTarget ? lockScreenTarget.primary : false
+
+        Image {
+            id: bgSource
+            anchors.fill: parent
+            // Points to your wallpaper file or a cache file
+            source: "file://" + Quickshell.env("HOME") + "/.config/background" 
+            fillMode: Image.PreserveAspectCrop
+            visible: false // Hidden because the blur effect element handles the draw loop
+        }
+
+        FastBlur {
+            anchors.fill: parent
+            source: bgSource
+            radius: 64 // Smooth frosted appearance
+            
+            // Subtle dark overlay tint so your white text remains sharp and legible
+            Rectangle {
+                anchors.fill: parent
+                color: "#000000"
+                opacity: 0.4
+            }
+        }
+    }
+
+    // ==========================================
+    // 📋 RICED AUTHENTICATION USER INTERFACE
+    // ==========================================
     ColumnLayout {
+        id: authFormContainer
+        visible: lockScreenTarget ? lockScreenTarget.primary : false
         anchors.centerIn: parent
-        spacing: 24
+        spacing: 28
+        z: 1
 
-        Text {
-            text: "󰌾"
-            font.family: "Rubik"
-            font.pixelSize: 64
-            color: "#cdd6f4"
+        ColumnLayout {
             Layout.alignment: Qt.AlignHCenter
+            spacing: 2
+
+            Text {
+                text: Qt.formatDateTime(lockWindow.currentDateTime, "h:mm")
+                font.family: "Rubik"
+                font.pixelSize: 150
+                font.weight: Font.ExtraBold
+                color: "#cdd6f4" 
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: Qt.formatDateTime(lockWindow.currentDateTime, "dddd, MMMM d")
+                font.family: "Rubik"
+                font.pixelSize: 30
+                font.weight: Font.Medium
+                color: "#f5c2e7" 
+                Layout.alignment: Qt.AlignHCenter
+            }
         }
 
-        Text {
-            text: Quickshell.env("USER") ? Quickshell.env("USER").toUpperCase() : "AUTHENTICATION REQUIRED"
-            font.family: "Rubik"
-            font.pixelSize: 18
-            font.bold: true
-            color: "#a6adc8"
-            Layout.alignment: Qt.AlignHCenter
-        }
+        Item { Layout.preferredHeight: 10 }
 
         Rectangle {
-            width: 260
-            height: 40
+            width: 320
+            height: 56
             color: "#1e1e2e"
-            radius: 8
+            radius: 12
             border.width: passwordInput.activeFocus ? 1 : 0
             border.color: "#b4befe"
             Layout.alignment: Qt.AlignHCenter
@@ -100,20 +157,23 @@ PanelWindow {
             TextField {
                 id: passwordInput
                 anchors.fill: parent
-                anchors.leftMargin: 12
+                anchors.leftMargin: 20
                 anchors.rightMargin: 12
                 
+                verticalAlignment: TextInput.AlignVCenter
+                horizontalAlignment: TextInput.AlignHCenter
+                
                 font.family: "Rubik"
-                font.pixelSize: 14
+                font.pixelSize: 28
                 color: "#cdd6f4"
                 echoMode: TextInput.Password
-                passwordCharacter: "•"
+                passwordCharacter: "●"
+                font.letterSpacing: 6
                 
                 background: null
-                focus: true
 
-                placeholderText: "Enter Password..."
-                placeholderTextColor: "#6c7086"
+                placeholderText: ""
+                placeholderTextColor: "#585b70"
 
                 onAccepted: {
                     if (text.length > 0) {
@@ -129,9 +189,9 @@ PanelWindow {
             id: errorText
             text: ""
             font.family: "Rubik"
-            font.pixelSize: 13
-            font.bold: true
-            color: text === "Authenticating..." ? "#a6e3a1" : "#f38ba8"
+            font.pixelSize: 20
+            font.weight: Font.Bold
+            color: text === "Authenticating..." ? "#a6e3a1" : "#f38ba8" 
             Layout.alignment: Qt.AlignHCenter
         }
     }
