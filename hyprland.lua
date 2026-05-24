@@ -384,32 +384,32 @@ hl.layer_rule({
     name  = "quickshell-bar-blur",
     match = { namespace = "quickshell-bar" },
     blur  = true,
-    xray  = false,
+    xray  = false, -- Bar stays normal; blends smoothly over open windows
 })
 
 -- Calendar Card Pipeline
 hl.layer_rule({
-    name  = "quickshell-overlay-blur",
-    match = { namespace = "quickshell-overlay" },
-    blur  = true,
-    xray  = false,
-    ignore_alpha = 0.1,
+    name         = "quickshell-overlay-blur",
+    match        = { namespace = "quickshell-overlay" },
+    blur         = true,
+    xray         = true,   -- 🧠 ISOLATED XRAY: Drops window edge-blending only for this overlay canvas
+    ignore_alpha = 0.5,    -- Cuts off the blur calculation step at your panel threshold
 })
 
 -- Wallpaper Card Pipeline
 hl.layer_rule({
-    name  = "quickshell-wallpapers-blur",
-    match = { namespace = "quickshell-wallpapers" },
-    blur  = true,
-    xray  = false,
-    ignore_alpha = 0.1,
+    name         = "quickshell-wallpapers-blur",
+    match        = { namespace = "quickshell-wallpapers" },
+    blur         = true,
+    xray         = true,   -- 🎯 Strips out the dark 1px line artifact natively by looking straight to the wallpaper
+    ignore_alpha = 0.5,
 })
 
 -- App Launcher Pipeline
 hl.layer_rule({
-    name  = "quickshell-launcher-blur",
-    match = { namespace = "quickshell-launcher" },
-    blur  = true,
-    xray  = false,
-    ignore_alpha = 0.1,
+    name         = "quickshell-launcher-blur",
+    match        = { namespace = "quickshell-launcher" },
+    blur         = true,
+    xray         = true,   -- Keeps your launcher container crisp and artifact-free
+    ignore_alpha = 0.5,
 })
