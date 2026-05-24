@@ -42,20 +42,17 @@ Item {
     }
 
     function openMenu(): void {
-        popupPowerWrapper.targetX = -655;
         popupPowerWrapper.targetOpacity = 0.0;
 
         rootScope.requestOpen("power");
         menuOpen = true;
 
-        slideInAnimation.start();
+        fadeInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        popupPowerWrapper.targetX = -655;
         popupPowerWrapper.targetOpacity = 0.0;
-
         closeTimer.start();
     }
 
@@ -72,7 +69,7 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (menuOpen && rootScope.activeModal !== "power" && !slideInAnimation.running) {
+            if (menuOpen && rootScope.activeModal !== "power" && !fadeInAnimation.running) {
                 closeMenu();
             }
         }
@@ -86,7 +83,7 @@ Item {
         width: 32
         height: 32
         color: powerMouseArea.containsMouse || menuOpen ? "#313244" : "transparent"
-        radius: 8
+        radius: 0 // 📐 REMOVED ROUNDING
 
         Text {
             id: powerIcon
@@ -138,10 +135,15 @@ Item {
             running: false
         }
 
+        // 🧠 FIXED COMMAND INTERCEPT ROUTER
         function runCommand(args) {
             closeMenu();
-            sysCmd.command = args;
-            sysCmd.running = true;
+            if (args[0] === "INTERNAL_LOCK") {
+                rootScope.sessionLocked = true;
+            } else {
+                sysCmd.command = args;
+                sysCmd.running = true;
+            }
         }
 
         // GLOBAL CAPTURE SHIELD
@@ -164,26 +166,17 @@ Item {
             anchors.left: parent.left
             
             // Explicit animation targets
-            property int targetX: -655
             property real targetOpacity: 0.0
-
-            anchors.leftMargin: targetX
             opacity: targetOpacity
 
-            // ✨ ENTRY TIMELINE SEQUENCER
+            // ✨ ENTRY SEQUENCE: Swapped targetX horizontal transition to clean opacity sequencing
             SequentialAnimation {
-                id: slideInAnimation
+                id: fadeInAnimation
                 PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    NumberAnimation { target: popupPowerWrapper; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupPowerWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
-                }
+                NumberAnimation { target: popupPowerWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
             }
 
             // ✨ IMPLICIT EXIT MECHANISMS
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-            }
             Behavior on opacity {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
@@ -194,8 +187,8 @@ Item {
 
             topLeftRadius: 0
             bottomLeftRadius: 0
-            topRightRadius: 12
-            bottomRightRadius: 12
+            topRightRadius: 0
+            bottomRightRadius: 0
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -221,7 +214,6 @@ Item {
             ColumnLayout {
                 id: menuContentLayout
                 
-                // 🔒 FIXED LAYOUT ANCHORING: Constrain text layout inside the visible card boundaries, not the full display surface
                 anchors.fill: parent
                 anchors.margins: 14
                 spacing: 10
@@ -251,7 +243,7 @@ Item {
 
                     Repeater {
                         model: [
-                            { label: "󰌾  Lock",      cmd: ["hyprlock"] },
+                            { label: "󰌾  Lock",      cmd: ["INTERNAL_LOCK"] },
                             { label: "󰤄  Suspend",  cmd: ["systemctl", "suspend"] },
                             { label: "󰜉  Reboot",   cmd: ["systemctl", "reboot"] },
                             { label: "󰐥  Shutdown", cmd: ["systemctl", "poweroff"] }
@@ -273,7 +265,7 @@ Item {
                                     id: btnBg
                                     anchors.fill: parent
                                     color: menuBtn.containsMouse ? "#313244" : "transparent"
-                                    radius: 6
+                                    radius: 0 // 📐 REMOVED ROUNDING
 
                                     Text {
                                         text: modelData.label
