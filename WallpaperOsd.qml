@@ -29,8 +29,8 @@ Item {
         interval: 180
         repeat: false
         onTriggered: {
+            // 🔒 FIX: Purely localized mutation matching NotificationOsd logic loop
             wallpaperModuleRoot.menuOpen = false;
-            rootScope.dismissAll();
         }
     }
 
@@ -74,7 +74,8 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (menuOpen && rootScope.activeModal !== wallpaperModal && !slideRightAnimation.running) {
+            // 🧠 CORRECT INTERACTION BOUNDS: Close immediately if focus shifts to a separate sister layout node
+            if (rootScope.activeModal !== wallpaperModal && menuOpen) {
                 closeMenu();
             }
         }
@@ -142,11 +143,19 @@ Item {
         anchors.bottom: true
         anchors.left: true
         anchors.right: true
-        color: "transparent"
+        
+        // 🧠 CHROMATIC SHIFT: 0.4% alpha background pushes compositor edge blur calculations completely off-screen
+        color: "#0111111b"
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-wallpapers"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+        // Standard zero alignment bounds
+        WlrLayershell.margins.left: 0
+        WlrLayershell.margins.right: 0
+        WlrLayershell.margins.bottom: 0
+        WlrLayershell.margins.top: 0
 
         onVisibleChanged: {
             if (visible && wallpaperModuleRoot.menuOpen) {
@@ -177,6 +186,7 @@ Item {
             property int targetX: -216
             property real targetOpacity: 0.0
 
+            // Direct mapping back to target variable for clean 0px resting state
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
@@ -184,7 +194,7 @@ Item {
                 id: slideRightAnimation
                 PauseAnimation { duration: 16 }
                 ParallelAnimation {
-                    // 📐 HORIZONTAL ALIGNMENT FIX: Slide target updated to lock precisely at 0px left margin offset
+                    // Slide animation lands securely at target 0 positioning
                     NumberAnimation { target: wallpaperCard; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: wallpaperCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
@@ -193,9 +203,10 @@ Item {
             Behavior on anchors.leftMargin { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
             Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
 
-            // 🎨 EXACT VALUE MATCHING: Borders dropped completely and opacity color code locked down to #9911111b
+            // 🎨 EXACT VALUE MATCHING: Transparent borders explicitly assigned to kill edge blending artifacts
             color: "#9911111b"
             border.width: 0
+            border.color: "transparent"
             focus: true
 
             // 📐 GRANULAR CORNER CLIP: Square left edges flush to the bar, round the right outer corners
@@ -282,7 +293,7 @@ Item {
                     boundsBehavior: Flickable.StopAtBounds
 
                     property int activeKeyIndex: -1
-                    property int logicalMouseIndexStore: -1 // 🔒 FIXED: Lowercase property name to align with QML compiler specification limits
+                    property int logicalMouseIndexStore: -1
                     
                     // Evaluates whether the mouse is actively permitted to request visual layout changes
                     property int activeMouseIndex: (activeKeyIndex === -1) ? logicalMouseIndexStore : -1
