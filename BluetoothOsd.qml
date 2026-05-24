@@ -36,7 +36,6 @@ Item {
         interval: 180
         repeat: false
         onTriggered: {
-            // 🔒 FIXED: Isolate modifications to local context properties to prevent killing active panels on focus swap
             bluetoothRoot.menuOpen = false;
         }
     }
@@ -51,14 +50,12 @@ Item {
     }
 
     function openMenu(): void {
-        // Reset hidden baseline coordinates before window mapping
         popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
 
         rootScope.requestOpen(bluetoothOverlayModal);
         menuOpen = true;
 
-        // Drive entry transition timeline sequentially
         slideInAnimation.start();
         bluetoothRoot.currentTab = "paired";
         refreshPairedList();
@@ -66,16 +63,15 @@ Item {
     }
 
     function closeMenu(): void {
-        // Animate out while layer surface remains active
         popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
 
         closeTimer.start();
     }
 
-    // Helper logic to cleanly handle user presence changes
+    // 🛠️ RELIABLE PRESENCE DETECTOR
     function checkUserActivity() {
-        if (cardHoverTracker.containsMouse) {
+        if (cardHoverTracker.containsMouse || pairedListView.isHoveringItems) {
             osdAutohideTimer.stop(); 
         } else if (bluetoothOverlayModal.visible && menuOpen) {
             osdAutohideTimer.restart(); 
@@ -88,7 +84,6 @@ Item {
         }
     }
 
-    // Remaining script processes left intact for background script pipelines...
     function refreshPairedList() {
         if (!bluetoothRoot.isPowered) return;
         if (!deviceScraper.running) {
@@ -150,7 +145,8 @@ Item {
                         pairedDevicesModel.append({
                             macAddress: segments[0],
                             isDeviceConnected: segments[1] === "true",
-                            deviceName: segments[2]
+                            deviceName: segments[2],
+                            isTransitioning: false 
                         });
                     }
                 }
@@ -209,6 +205,12 @@ Item {
     }
     Process { 
         id: pairAction 
+        onExited: { running = false; refreshStatus(); refreshPairedList(); }
+    }
+    
+    // 🗑️ FORGET DEVICE PIPE
+    Process {
+        id: unpairAction
         onExited: { running = false; refreshStatus(); refreshPairedList(); }
     }
 
@@ -306,36 +308,31 @@ Item {
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
-            // ✨ ENTRY SEQUENCE: Bypasses layer initialization race conditions
             SequentialAnimation {
                 id: slideInAnimation
                 PauseAnimation { duration: 16 }
                 ParallelAnimation {
-                    // 📐 HORIZONTAL ALIGNMENT FIX: Direct slide target shifted clean to 0px left margin offset
                     NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
             }
 
-            // ✨ EXIT SLIDE IMPLICIT TRACKER
             Behavior on anchors.leftMargin {
                 NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
             }
             
-            // ✨ EXIT FADE IMPLICIT TRACKER
             Behavior on opacity {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
 
-            // 🎨 EXACT VALUE MATCHING: Borders dropped completely and color matrix tracking bound to #9911111b
             color: "#9911111b" 
             border.width: 0
             
-            // 📐 GRANULAR CORNER CLIP: Symmetrical flat left edge execution matching your system panel modules
+            antialiasing: false
             topLeftRadius: 0
             bottomLeftRadius: 0
-            topRightRadius: 12
-            bottomRightRadius: 12
+            topRightRadius: 0
+            bottomRightRadius: 0
 
             height: !bluetoothRoot.isPowered ? 92 : Math.min(100 + ((currentTab === "paired" ? pairedDevicesModel.count : discoveredDevicesModel.count) * 42), 300)
 
@@ -445,9 +442,11 @@ Item {
                     // PANE 1: PAIRED LIST
                     ListView {
                         id: pairedListView
-                        anchors.fill: parent; clip: true; spacing: 4
+                        anchors.fill: parent; spacing: 4
                         model: pairedDevicesModel
                         visible: bluetoothRoot.currentTab === "paired" && bluetoothRoot.isPowered
+
+                        property bool isHoveringItems: false
 
                         Text { 
                             anchors.centerIn: parent; 
@@ -456,24 +455,120 @@ Item {
                             visible: pairedListView.count === 0 || !bluetoothRoot.isPowered 
                         }
                         delegate: Item {
+                            id: delegateRoot
                             width: pairedListView.width; height: 36
+                            
                             Rectangle {
-                                anchors.fill: parent; color: pArea.containsMouse ? "#313244" : "transparent"; radius: 6
+                                id: rowBox
+                                anchors.fill: parent; color: rowMasterArea.containsMouse ? "#313244" : "transparent"; radius: 6
+                                
                                 RowLayout {
-                                    anchors.fill: parent; anchors.margins: 8; spacing: 10
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: model.isTransitioning ? 82 : 122 
+                                    spacing: 10
+                                    
                                     Text { text: model.isDeviceConnected ? "󰂱" : "󰂯"; font.family: "Rubik"; font.pixelSize: 16; color: model.isDeviceConnected ? "#a6e3a1" : "#a6adc8" }
                                     Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#cdd6f4"; Layout.fillWidth: true; elide: Text.ElideRight }
-                                    Text { text: model.isDeviceConnected ? "Disconnect" : "Connect"; font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: model.isDeviceConnected ? "#f38ba8" : "#cdd6f4"; visible: pArea.containsMouse }
                                 }
+                                
+                                Item {
+                                    id: staticOptionsWrapper
+                                    width: model.isTransitioning ? 70 : 110
+                                    height: parent.height
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 8
+                                    opacity: rowMasterArea.containsMouse ? 1.0 : 0.0
+                                    z: 20 
+
+                                    Item {
+                                        id: connectButtonFrame
+                                        width: actionLabel.implicitWidth
+                                        height: parent.height
+                                        anchors.left: parent.left
+
+                                        Text {
+                                            id: actionLabel
+                                            text: model.isTransitioning ? "Connecting..." : (model.isDeviceConnected ? "Disconnect" : "Connect")
+                                            font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
+                                            color: model.isDeviceConnected ? "#f38ba8" : "#cdd6f4"
+                                            anchors.centerIn: parent
+                                        }
+                                    }
+
+                                    Text { 
+                                        id: pipeDivider
+                                        text: "|" 
+                                        font.family: "Rubik"; font.pixelSize: 11; color: "#45475a"
+                                        anchors.left: connectButtonFrame.right
+                                        anchors.leftMargin: 6
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        visible: !model.isTransitioning
+                                    }
+                                    
+                                    Item {
+                                        id: forgetButtonFrame
+                                        width: forgetLabel.implicitWidth
+                                        height: parent.height
+                                        anchors.left: pipeDivider.right
+                                        anchors.leftMargin: 6
+                                        visible: !model.isTransitioning
+
+                                        Text {
+                                            id: forgetLabel
+                                            text: "Forget"
+                                            font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#f38ba8"
+                                            anchors.centerIn: parent
+                                        }
+                                    }
+                                }
+
+                                // 🎯 SINGLE ROW CONTROLLER MOUSEAREA
                                 MouseArea {
-                                    id: pArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        if (!deviceConnectionAction.running) {
+                                    id: rowMasterArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    
+                                    // Map boundaries inside a flat coordinate pass to protect the timer status loops
+                                    onContainsMouseChanged: {
+                                        pairedListView.isHoveringItems = rowMasterArea.containsMouse;
+                                        bluetoothRoot.checkUserActivity();
+                                    }
+
+                                    cursorShape: {
+                                        if (!containsMouse) return Qt.ArrowCursor;
+                                        let localX = mouseX - staticOptionsWrapper.x;
+                                        
+                                        if (model.isTransitioning) {
+                                            return (localX >= connectButtonFrame.x && localX <= (connectButtonFrame.x + connectButtonFrame.width)) ? Qt.PointingHandCursor : Qt.ArrowCursor;
+                                        } else {
+                                            let overConnect = (localX >= connectButtonFrame.x && localX <= (connectButtonFrame.x + connectButtonFrame.width));
+                                            let overForget = (localX >= forgetButtonFrame.x && localX <= (forgetButtonFrame.x + forgetButtonFrame.width));
+                                            return (overConnect || overForget) ? Qt.PointingHandCursor : Qt.ArrowCursor;
+                                        }
+                                    }
+
+                                    onClicked: (mouse) => {
+                                        let localX = mouseX - staticOptionsWrapper.x;
+                                        let overConnect = (localX >= connectButtonFrame.x && localX <= (connectButtonFrame.x + connectButtonFrame.width));
+                                        let overForget = (!model.isTransitioning && localX >= forgetButtonFrame.x && localX <= (forgetButtonFrame.x + forgetButtonFrame.width));
+
+                                        if (overConnect && !deviceConnectionAction.running) {
                                             const actionType = model.isDeviceConnected ? "disconnect" : "connect";
                                             deviceConnectionAction.command = ["bluetoothctl", actionType, model.macAddress];
                                             deviceConnectionAction.running = true;
-                                            pairedDevicesModel.setProperty(index, "isDeviceConnected", !model.isDeviceConnected);
-                                            checkUserActivity();
+                                            
+                                            if (!model.isDeviceConnected) {
+                                                pairedDevicesModel.setProperty(index, "isTransitioning", true);
+                                            } else {
+                                                pairedDevicesModel.setProperty(index, "isDeviceConnected", false);
+                                            }
+                                            bluetoothRoot.checkUserActivity();
+                                        } 
+                                        else if (overForget && !unpairAction.running) {
+                                            unpairAction.command = ["bluetoothctl", "remove", model.macAddress];
+                                            unpairAction.running = true;
+                                            bluetoothRoot.checkUserActivity();
                                         }
                                     }
                                 }
@@ -484,7 +579,7 @@ Item {
                     // PANE 2: DISCOVERY LIVE LIST
                     ListView {
                         id: discoveryListView
-                        anchors.fill: parent; clip: true; spacing: 4
+                        anchors.fill: parent; spacing: 4
                         model: discoveredDevicesModel
                         visible: bluetoothRoot.currentTab === "discover" && bluetoothRoot.isPowered
 
