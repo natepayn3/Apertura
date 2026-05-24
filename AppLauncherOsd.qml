@@ -81,7 +81,6 @@ Item {
         }
 
         // Tokenize strings with flags (e.g. Chrome PWAs) into clean system execution arrays
-        // Handles standard space separation while keeping arguments grouped together
         let argsArray = [];
         let currentToken = "";
         let inQuotes = false;
@@ -246,10 +245,12 @@ Item {
             border.width: 0
             focus: true
 
+            // 📐 SQUARE CORNER OPTIMIZATION
+            antialiasing: false
             topLeftRadius: 0
             bottomLeftRadius: 0
-            topRightRadius: 12
-            bottomRightRadius: 12
+            topRightRadius: 0
+            bottomRightRadius: 0
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -273,9 +274,7 @@ Item {
                 else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     if (appListView.currentIndex >= 0 && appListView.currentIndex < appListView.count) {
                         let targetApp = dynamicAppModel.get(appListView.currentIndex);
-                        
                         executeApplication(targetApp.bin);
-                        
                         closeMenu();
                     }
                     event.accepted = true;
@@ -305,7 +304,6 @@ Item {
                 property int lastWindowX: -1
                 property int lastWindowY: -1
                 
-                // Track item target boundaries for changing cursor shapes dynamically
                 property bool isOverValidItem: false
                 cursorShape: isOverValidItem ? Qt.PointingHandCursor : Qt.ArrowCursor
 
@@ -405,7 +403,6 @@ Item {
                                     visible: model.iconPath !== ""
                                     source: model.iconPath ? "file://" + model.iconPath : ""
                                     fillMode: Image.PreserveAspectFit
-                                    clip: true
                                 }
 
                                 Rectangle {
@@ -445,9 +442,7 @@ Item {
 
                             onClicked: {
                                 appListView.currentIndex = index;
-
                                 executeApplication(model.bin);
-
                                 closeMenu();
                             }
                         }
