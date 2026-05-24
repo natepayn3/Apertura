@@ -26,8 +26,8 @@ Item {
         interval: 180
         repeat: false
         onTriggered: {
+            // 🔒 FIX: Purely localized mutation matching NotificationOsd logic loop
             launcherModuleRoot.menuOpen = false;
-            rootScope.dismissAll();
         }
     }
 
@@ -67,8 +67,8 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            // Added check to ensure entry transitions don't trip premature closure
-            if (menuOpen && rootScope.activeModal !== appLauncherModal && !slideInAnimation.running) {
+            // 🧠 CORRECT INTERACTION BOUNDS: Close immediately if focus shifts to a separate sister layout node
+            if (rootScope.activeModal !== appLauncherModal && menuOpen) {
                 closeMenu();
             }
         }
