@@ -6,9 +6,6 @@ import Quickshell.Wayland
 
 Item {
     id: calendarRoot
-    
-    // 🎛️ ORIENTATION TOGGLE
-    property bool isVertical: true
 
     implicitWidth: clockHitbox.width
     implicitHeight: clockHitbox.height
@@ -56,11 +53,10 @@ Item {
 
     // 🎬 ANIMATION-DRIVEN ENGAGEMENT TIMELINE
     function openMenu(): void {
-        // Stop any unfinished exit tracking before mapping state changes
         slideOutAnimation.stop();
 
         // Compress container completely offscreen relative to screen margin alignments
-        popupTranslate.x = calendarRoot.isVertical ? -popupCalendarWrapper.width : popupCalendarWrapper.width;
+        popupTranslate.x = -popupCalendarWrapper.width;
         popupCalendarWrapper.opacity = 0.0;
 
         rootScope.requestOpen(globalCalendarModal);
@@ -86,63 +82,43 @@ Item {
     }
 
     // ==========================================
-    // 🕒 CLOCK TRIGGER MODULE
+    // 🕒 CLOCK TRIGGER MODULE (FIXED VERTICAL)
     // ==========================================
     Rectangle {
         id: clockHitbox
-        width: calendarRoot.isVertical ? 50 : (layoutLoader.item ? layoutLoader.item.implicitWidth + 16 : 0)
-        height: calendarRoot.isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight + 12 : 0) : 32
+        width: 50
+        height: verticalLayout.implicitHeight + 12
         color: clockMouseArea.containsMouse ? "#313244" : "transparent"
         radius: 8
 
-        Loader {
-            id: layoutLoader
-            anchors.centerIn: parent
-            anchors.verticalCenterOffset: calendarRoot.isVertical ? 0 : 1
-            sourceComponent: calendarRoot.isVertical ? verticalLayout : horizontalLayout
-        }
-
-        Component {
+        ColumnLayout {
             id: verticalLayout
-            ColumnLayout {
-                spacing: 1
-                Text {
-                    text: Qt.formatDateTime(calendarRoot.currentDateTime, "ddd")
-                    font.family: "Rubik"
-                    font.pixelSize: 14
-                    font.weight: Font.Bold
-                    color: "#a6adc8"
-                    Layout.alignment: Qt.AlignHCenter
-                }
-                Text {
-                    text: Qt.formatDateTime(calendarRoot.currentDateTime, "h:mm ap").replace(/\s*[aApP][mM]\s*/g, "")
-                    font.family: "Rubik"
-                    font.pixelSize: 16
-                    font.weight: Font.Bold
-                    color: "#cdd6f4"
-                    Layout.alignment: Qt.AlignHCenter
-                }
-                Text {
-                    text: Qt.formatDateTime(calendarRoot.currentDateTime, "ap")
-                    font.family: "Rubik"
-                    font.pixelSize: 12
-                    font.weight: Font.Bold
-                    color: "#f5c2e7"
-                    Layout.alignment: Qt.AlignHCenter
-                }
+            anchors.centerIn: parent
+            spacing: 1
+            
+            Text {
+                text: Qt.formatDateTime(calendarRoot.currentDateTime, "ddd")
+                font.family: "Rubik"
+                font.pixelSize: 14
+                font.weight: Font.Bold
+                color: "#a6adc8"
+                Layout.alignment: Qt.AlignHCenter
             }
-        }
-
-        Component {
-            id: horizontalLayout
-            RowLayout {
-                Text {
-                    text: Qt.formatDateTime(calendarRoot.currentDateTime, "ddd • h:mm ap")
-                    font.family: "Rubik"
-                    font.pixelSize: 16
-                    font.weight: Font.Bold
-                    color: "#cdd6f4"
-                }
+            Text {
+                text: Qt.formatDateTime(calendarRoot.currentDateTime, "h:mm ap").replace(/\s*[aApP][mM]\s*/g, "")
+                font.family: "Rubik"
+                font.pixelSize: 16
+                font.weight: Font.Bold
+                color: "#cdd6f4"
+                Layout.alignment: Qt.AlignHCenter
+            }
+            Text {
+                text: Qt.formatDateTime(calendarRoot.currentDateTime, "ap")
+                font.family: "Rubik"
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                color: "#f5c2e7"
+                Layout.alignment: Qt.AlignHCenter
             }
         }
 
@@ -162,7 +138,6 @@ Item {
         id: globalCalendarModal
         visible: calendarRoot.menuOpen
         
-        // 🌀 BLUR HOOK: Tells Hyprland to target the overlay window for background blur passes
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -170,7 +145,6 @@ Item {
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         color: "transparent"
 
-        // Shifts the entire layershell window region 1px to the left
         WlrLayershell.margins.left: -1
         WlrLayershell.margins.right: 1
         WlrLayershell.margins.bottom: 0
@@ -197,20 +171,14 @@ Item {
             
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 12 
-            anchors.left: calendarRoot.isVertical ? parent.left : undefined
-            anchors.right: calendarRoot.isVertical ? undefined : parent.right
-            
-            // Adjust wrapper internal margins to compensate for layershell bounds shift
-            anchors.leftMargin: calendarRoot.isVertical ? 1 : 0
-            anchors.rightMargin: calendarRoot.isVertical ? 0 : -1
+            anchors.left: parent.left
+            anchors.leftMargin: 1
 
-            // 🛠️ TRANSFORM LAYER: Handles translation cleanly away from the monitor edge bounds
             transform: Translate {
                 id: popupTranslate
-                x: calendarRoot.isVertical ? -popupCalendarWrapper.width : popupCalendarWrapper.width
+                x: -popupCalendarWrapper.width
             }
 
-            // ✨ THE EMERGING SLIDE-IN MOTOR
             ParallelAnimation {
                 id: slideInAnimation
                 NumberAnimation { 
@@ -229,17 +197,14 @@ Item {
                 }
             }
 
-            // ✨ THE IN-REVERSE RETRACTION MOTOR
             ParallelAnimation {
                 id: slideOutAnimation
-                
-                // Safe Lifecycle Sync: Tells engine to tear down display maps ONLY when geometry is hidden
                 onFinished: calendarRoot.menuOpen = false
 
                 NumberAnimation { 
                     target: popupTranslate
                     property: "x"
-                    to: calendarRoot.isVertical ? -popupCalendarWrapper.width : popupCalendarWrapper.width
+                    to: -popupCalendarWrapper.width
                     duration: 220
                     easing.type: Easing.InCubic 
                 }
@@ -252,19 +217,15 @@ Item {
                 }
             }
 
-            // 🎨 EXACT COLOR MATCH: Matches `#9911111b` straight from your shell.qml panel configuration
             color: "#9911111b" 
             border.width: 0 
             focus: true
             
-            // Native smooth anti-aliased border corner scaling
-            antialiasing: true
-            
-            // 📐 FIXED CLIPPER STYLE: Standard radius values without offscreen texture buffer compounding artifacts
-            topLeftRadius: calendarRoot.isVertical ? 0 : 12
-            bottomLeftRadius: calendarRoot.isVertical ? 0 : 12
-            topRightRadius: calendarRoot.isVertical ? 12 : 0
-            bottomRightRadius: calendarRoot.isVertical ? 12 : 0
+            antialiasing: false
+            topLeftRadius: 0
+            bottomLeftRadius: 0
+            topRightRadius: 0
+            bottomRightRadius: 0
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -273,10 +234,8 @@ Item {
                 }
             }
 
-            // 🌲 CONTAINER FRAMEWORK: Clips nested elements cleanly matching shape geometry
             Item {
                 anchors.fill: parent
-                clip: true
 
                 ColumnLayout {
                     anchors.fill: parent
