@@ -164,7 +164,7 @@ PanelWindow {
                 horizontalAlignment: TextInput.AlignHCenter
                 
                 font.family: "Rubik"
-                font.pixelSize: 28
+                font.pixelSize: 35
                 color: "#cdd6f4"
                 echoMode: TextInput.Password
                 passwordCharacter: "●"
