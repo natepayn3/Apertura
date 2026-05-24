@@ -170,10 +170,11 @@ Item {
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         color: "transparent"
 
-        WlrLayershell.margins.left: 0
+        // Shifts the entire layershell window region 1px to the left
+        WlrLayershell.margins.left: -1
+        WlrLayershell.margins.right: 1
         WlrLayershell.margins.bottom: 0
         WlrLayershell.margins.top: 0
-        WlrLayershell.margins.right: 0
 
         onVisibleChanged: {
             if (visible && calendarRoot.menuOpen) {
@@ -183,7 +184,7 @@ Item {
 
         MouseArea { 
             anchors.fill: parent
-            onPressed: {
+            onPressed: (mouse) => {
                 closeMenu();
                 mouse.accepted = true;
             }
@@ -198,8 +199,10 @@ Item {
             anchors.bottomMargin: 12 
             anchors.left: calendarRoot.isVertical ? parent.left : undefined
             anchors.right: calendarRoot.isVertical ? undefined : parent.right
-            anchors.leftMargin: 0
-            anchors.rightMargin: 0
+            
+            // Adjust wrapper internal margins to compensate for layershell bounds shift
+            anchors.leftMargin: calendarRoot.isVertical ? 1 : 0
+            anchors.rightMargin: calendarRoot.isVertical ? 0 : -1
 
             // 🛠️ TRANSFORM LAYER: Handles translation cleanly away from the monitor edge bounds
             transform: Translate {
