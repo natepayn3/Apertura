@@ -60,8 +60,6 @@ Scope {
         delegate: Item {
             id: displayGroupContext
 
-            // 🌟 FIX: Forward the module aliases to the root delegate item
-            // This exposes them directly to barWindows.objectAt(i)
             property alias appLauncherModule: mainBarWindow.appLauncherModule
             property alias wallpaperModule: mainBarWindow.wallpaperModule
 
@@ -96,8 +94,8 @@ Scope {
                     anchors.fill: parent
                     color: "#9911111b"          
                     border.color: "#898989"   
-                    border.width: 1
-                    radius: 12
+                    border.width: 0
+                    radius: 0
 
                     MouseArea {
                         id: mainBarMouseTracker
@@ -108,11 +106,9 @@ Scope {
                         onPressed: rootScope.dismissAll()
                     }
 
-                    // 🔒 FIX: Workspaces pulled completely out of the layout engine constraints.
-                    // This guarantees it centers flawlessly based on absolute display dimensions.
                     Workspaces {
                         anchors.centerIn: parent
-                        z: 1 // Keeps it safely layered on top of the background mouse handling zones
+                        z: 1 
                     }
 
                     ColumnLayout {
@@ -146,9 +142,6 @@ Scope {
                         // ==========================================
                         // 🎯 CENTER SPACER HOLDER
                         // ==========================================
-                        // 🔒 FIX: Replacing the Workspaces module wrapper inside the layout tree 
-                        // with a pure greedy spacer. This keeps the top and bottom utility blocks 
-                        // perfectly pinned to their respective screen edges without pushing the workspaces.
                         Item {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
