@@ -9,10 +9,11 @@ import Quickshell.Services.Pam
 PanelWindow {
     id: lockWindow
 
-    // 🖥️ BIND TO BASE SCREEN ARRAY
-    screen: Quickshell.screens
+    // Binds the screen parameters directly from the parent instantiation delegate loop
+    required property var lockScreenTarget
+    screen: lockScreenTarget
 
-    // 📐 GLOBAL COORDINATE STRETCH
+    // 📐 ABSOLUTE COORDINATE CANVAS OVERRIDE
     anchors.top: true
     anchors.bottom: true
     anchors.left: true
@@ -25,13 +26,13 @@ PanelWindow {
 
     color: "#11111b" 
 
-    // 👑 HYPRLAND SYSTEM EXCLUSIVE OVERRIDE
+    // 👑 HYPRLAND LAYER STACK INTRUSION OVERRIDE
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-    WlrLayershell.exclusionMode: WlrExclusionMode.None
-    
-    // 🛠️ THE CRITICAL FIX: Changing this namespace to exactly "lockscreen" triggers Hyprland's full-screen bypass rule
     WlrLayershell.namespace: "lockscreen"
+    
+    // 🛠️ THE EXACT SYNTAX FIX: Bypasses exclusive constraints using Quickshell's root enum mapping
+    WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
     property string passwordBuffer: ""
 
