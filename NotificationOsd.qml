@@ -48,17 +48,23 @@ Item {
     }
 
     function openMenu(): void {
+        // Reset hidden baseline coordinates before mapping window surface
+        popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
 
         rootScope.requestOpen(notificationOverlayModal);
         menuOpen = true;
 
-        fadeInAnimation.start();
+        // Drive the entry transition timeline sequentially
+        slideInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
+        // Animate out while the window layer shell surface is still active
+        popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
+
         closeTimer.start();
     }
 
@@ -90,11 +96,12 @@ Item {
             notification.tracked = true;
             notificationRoot.updateCount();
 
+            // Store raw mutable references for fallback tracking
             notificationRoot.activeHistoryReferences = [...notificationRoot.activeHistoryReferences, notification];
             notificationRoot.visibleBanners = [...notificationRoot.visibleBanners, notification];
 
-            // Direct fade-in transition block
-            toastFadeIn.restart();
+            // Trigger a separate horizontal slide entry sequence specifically for the new toast alert element
+            toastSlideIn.restart();
 
             // Auto-evict the banner slot from the floating HUD after 5 seconds
             let toastTimer = Qt.createQmlObject('import QtQuick; Timer { interval: 5000; running: true; repeat: false }', notificationRoot);
@@ -199,13 +206,16 @@ Item {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.bottomMargin: 12
+            
+            property int targetX: 0
+            anchors.leftMargin: targetX
             spacing: 8
 
-            // 🎯 THE FIX: Changed from targetX horizontal slide to a clean, vertical fade transition
-            NumberAnimation { id: toastFadeIn; target: toastColumn; property: "opacity"; from: 0.0; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+            // 🎯 RESTORED TOAST SLIDE ANIMATION
+            NumberAnimation { id: toastSlideIn; target: toastColumn; property: "targetX"; from: -320; to: 0; duration: 180; easing.type: Easing.OutCubic }
 
-            Behavior on opacity {
-                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
             }
 
             Repeater {
@@ -285,14 +295,24 @@ Item {
             anchors.left: parent.left
             anchors.bottomMargin: 12
             
+            property int targetX: -655
             property real targetOpacity: 0.0
+
+            // 🎯 RESTORED OVERLAY CARD SLIDE ANIMATION
+            anchors.leftMargin: targetX
             opacity: targetOpacity
 
-            // 🎯 THE FIX: Purged targetX horizontal layout steps; runs localized opacity sequencing exclusively
             SequentialAnimation {
-                id: fadeInAnimation
+                id: slideInAnimation
                 PauseAnimation { duration: 16 }
-                NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                ParallelAnimation {
+                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                }
+            }
+            
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
             }
             
             Behavior on opacity {
