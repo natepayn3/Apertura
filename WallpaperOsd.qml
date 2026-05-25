@@ -29,7 +29,6 @@ Item {
         interval: 180
         repeat: false
         onTriggered: {
-            // 🔒 FIX: Purely localized mutation matching NotificationOsd logic loop
             wallpaperModuleRoot.menuOpen = false;
         }
     }
@@ -74,7 +73,6 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            // 🧠 CORRECT INTERACTION BOUNDS: Close immediately if focus shifts to a separate sister layout node
             if (rootScope.activeModal !== wallpaperModal && menuOpen) {
                 closeMenu();
             }
@@ -114,7 +112,7 @@ Item {
     Rectangle {
         id: triggerButton
         anchors.fill: parent
-        radius: 8
+        radius: 0 // 📐 REMOVED ROUNDING
         color: wallpaperMouseArea.containsMouse ? "#313244" : "transparent"
 
         Text {
@@ -144,14 +142,12 @@ Item {
         anchors.left: true
         anchors.right: true
         
-        // 🧠 CHROMATIC SHIFT: 0.4% alpha background pushes compositor edge blur calculations completely off-screen
         color: "#0111111b"
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-wallpapers"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
-        // Standard zero alignment bounds
         WlrLayershell.margins.left: 0
         WlrLayershell.margins.right: 0
         WlrLayershell.margins.bottom: 0
@@ -178,7 +174,6 @@ Item {
             width: 216
             height: 600
             
-            // 📐 VERTICAL ORIENTATION FIX: Sits cleanly at the top of the screen framework bounds
             anchors.top: parent.top
             anchors.topMargin: 12
             anchors.left: parent.left
@@ -186,7 +181,7 @@ Item {
             property int targetX: -216
             property real targetOpacity: 0.0
 
-            // Direct mapping back to target variable for clean 0px resting state
+            // 🎯 RESTORED SLIDING ANIMATION TRACKERS
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
@@ -194,7 +189,6 @@ Item {
                 id: slideRightAnimation
                 PauseAnimation { duration: 16 }
                 ParallelAnimation {
-                    // Slide animation lands securely at target 0 positioning
                     NumberAnimation { target: wallpaperCard; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: wallpaperCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
@@ -203,17 +197,16 @@ Item {
             Behavior on anchors.leftMargin { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
             Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
 
-            // 🎨 EXACT VALUE MATCHING: Transparent borders explicitly assigned to kill edge blending artifacts
             color: "#9911111b"
             border.width: 0
             border.color: "transparent"
             focus: true
 
-            // 📐 GRANULAR CORNER CLIP: Square left edges flush to the bar, round the right outer corners
+            // 📐 GRANULAR CORNER CLIP: All frame sides flattened perfectly clean
             topLeftRadius: 0
             bottomLeftRadius: 0
-            topRightRadius: 12
-            bottomRightRadius: 12
+            topRightRadius: 0
+            bottomRightRadius: 0
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -295,7 +288,6 @@ Item {
                     property int activeKeyIndex: -1
                     property int logicalMouseIndexStore: -1
                     
-                    // Evaluates whether the mouse is actively permitted to request visual layout changes
                     property int activeMouseIndex: (activeKeyIndex === -1) ? logicalMouseIndexStore : -1
 
                     delegate: Item {
@@ -306,7 +298,7 @@ Item {
                             width: 192
                             height: 132
                             anchors.horizontalCenter: parent.horizontalCenter
-                            radius: 8
+                            radius: 0 // 📐 REMOVED ROUNDING
                             
                             readonly property bool isHighlighted: (wallpaperListView.activeKeyIndex === index && wallpaperCard.activeFocus) || 
                                                                   (wallpaperListView.activeMouseIndex === index)
@@ -330,7 +322,6 @@ Item {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             
-                            // Track real hardware motions relative to system display geometry bounds
                             function verifyTruePointerAction() {
                                 var currentGlobalPoint = gridMouse.mapToItem(wallpaperModuleRoot, gridMouse.mouseX, gridMouse.mouseY);
                                 if (wallpaperModuleRoot.globalMousePos.x !== currentGlobalPoint.x || wallpaperModuleRoot.globalMousePos.y !== currentGlobalPoint.y) {
