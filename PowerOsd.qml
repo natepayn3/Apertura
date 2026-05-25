@@ -42,16 +42,21 @@ Item {
     }
 
     function openMenu(): void {
+        // Reset hidden baseline coordinates before mapping window surface
+        popupPowerWrapper.targetX = -320;
         popupPowerWrapper.targetOpacity = 0.0;
 
         rootScope.requestOpen("power");
         menuOpen = true;
 
-        fadeInAnimation.start();
+        // Drive the entry transition timeline sequentially matching NotificationOsd setup
+        slideInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
+        // Animate out while the window layer shell surface is still active
+        popupPowerWrapper.targetX = -320;
         popupPowerWrapper.targetOpacity = 0.0;
         closeTimer.start();
     }
@@ -69,7 +74,7 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (menuOpen && rootScope.activeModal !== "power" && !fadeInAnimation.running) {
+            if (menuOpen && rootScope.activeModal !== "power" && !slideInAnimation.running) {
                 closeMenu();
             }
         }
@@ -83,7 +88,7 @@ Item {
         width: 32
         height: 32
         color: powerMouseArea.containsMouse || menuOpen ? "#313244" : "transparent"
-        radius: 0 // 📐 REMOVED ROUNDING
+        radius: 0 
 
         Text {
             id: powerIcon
@@ -165,18 +170,27 @@ Item {
             anchors.bottomMargin: 12
             anchors.left: parent.left
             
-            // Explicit animation targets
+            property int targetX: -320
             property real targetOpacity: 0.0
+            
+            // 🎯 MATCHED OVERLAY CARD SLIDE ANIMATION
+            anchors.leftMargin: targetX
             opacity: targetOpacity
 
-            // ✨ ENTRY SEQUENCE: Swapped targetX horizontal transition to clean opacity sequencing
             SequentialAnimation {
-                id: fadeInAnimation
+                id: slideInAnimation
                 PauseAnimation { duration: 16 }
-                NumberAnimation { target: popupPowerWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                ParallelAnimation {
+                    // Slide animation lands securely at target 0 positioning tracking NotificationOsd constraints
+                    NumberAnimation { target: popupPowerWrapper; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: popupPowerWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                }
             }
 
-            // ✨ IMPLICIT EXIT MECHANISMS
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            }
+
             Behavior on opacity {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
@@ -265,7 +279,7 @@ Item {
                                     id: btnBg
                                     anchors.fill: parent
                                     color: menuBtn.containsMouse ? "#313244" : "transparent"
-                                    radius: 0 // 📐 REMOVED ROUNDING
+                                    radius: 0 
 
                                     Text {
                                         text: modelData.label
