@@ -20,16 +20,19 @@ Item {
         interval: 2000
         repeat: false
         onTriggered: {
-            slideOutAnimation.start();
+            fadeOutAnimation.start();
         }
     }
 
     // 🎬 ANIMATION OUTRO FINALIZER
     SequentialAnimation {
-        id: slideOutAnimation
-        ParallelAnimation {
-            NumberAnimation { target: hudCardFrame; property: "targetX"; to: -48; duration: 150; easing.type: Easing.OutCubic }
-            NumberAnimation { target: hudCardFrame; property: "targetOpacity"; to: 0.0; duration: 120; easing.type: Easing.OutQuad }
+        id: fadeOutAnimation
+        NumberAnimation { target: innerContentCard; property: "opacity"; to: 0.0; duration: 120; easing.type: Easing.OutQuad }
+        PropertyAction { 
+            target: hudWindowSurface; 
+            property: "WlrLayershell.layer"; 
+            // 🎯 THE FIX: Sends the idle window to the bottom of the stack to keep click-through fully interactive
+            value: WlrLayer.Background 
         }
         PropertyAction { target: hudRoot; property: "visibleActive"; value: false }
     }
@@ -38,14 +41,15 @@ Item {
         hudRoot.volumeLevel = newVol;
         hudRoot.isMuted = muteState;
         
-        // 🔒 FIXED: Read the master slider interlock from rootScope.
-        // If you are actively dragging the slider, the OSD will remain hidden.
         if (!hudRoot.visibleActive && !rootScope.audioSliderActive) {
-            slideOutAnimation.stop();
-            hudCardFrame.targetX = -48;
-            hudCardFrame.targetOpacity = 0.0;
+            fadeOutAnimation.stop();
+            
+            // 🎯 THE FIX: Instantly lift back to the top overlay layer before executing the fade pass
+            hudWindowSurface.WlrLayershell.layer = WlrLayer.Overlay;
+            
+            innerContentCard.opacity = 0.0;
             hudRoot.visibleActive = true;
-            slideInAnimation.start();
+            fadeInAnimation.start();
         } else if (hudRoot.visibleActive && !rootScope.audioSliderActive) {
             dismissTimer.restart();
         }
@@ -95,68 +99,56 @@ Item {
     // ==========================================
     PanelWindow {
         id: hudWindowSurface
-        visible: hudRoot.visibleActive
         
-        screen: hudRoot.targetScreen
+        // 🎯 THE FIX: Visible stays permanently true. Unmapping routines are completely bypassed 
+        // to prevent Hyprland's birth-frame alpha checks from occasionally failing.
+        visible: true
+        screen: hudRoot.targetScreen ? hudRoot.targetScreen : screen
         
-        // Match the module canvas layers
+        implicitWidth: 48
+        implicitHeight: 200
+        
         anchors.left: true
-        anchors.top: true
-        anchors.bottom: true
-        anchors.right: true
+        anchors.top: false
+        anchors.bottom: false
+        anchors.right: false
 
-        // 🧠 CHROMATIC SHIFT: 0.4% alpha background pushes compositor edge blur calculations completely off-screen
-        color: "#0111111b"
+        color: "transparent"
         
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "quickshell-hud"
+        // Initializes as a background layer until an active audio pulse triggers it
+        WlrLayershell.layer: WlrLayer.Background
+        WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
         WlrLayershell.exclusiveZone: -1
 
-        // 📐 HARDWARE COORD ANCHOR: 54px (bar width) + 12px (bar margin gap) = 66px offset from display edge
+        // 📐 POSITIONING MATRIX: 54px (bar width) + 12px (bar gap) = 66px left margin offset
         WlrLayershell.margins.left: 66
         WlrLayershell.margins.right: 0
         WlrLayershell.margins.bottom: 0
-        WlrLayershell.margins.top: 0
+        WlrLayershell.margins.top: hudWindowSurface.screen ? (hudWindowSurface.screen.height / 2) - 100 : 0
+
+        // ✨ ENTRY SEQUENCE
+        SequentialAnimation {
+            id: fadeInAnimation
+            NumberAnimation { target: innerContentCard; property: "opacity"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
+            PropertyAction { target: dismissTimer; property: "running"; value: true }
+        }
 
         Rectangle {
-            id: hudCardFrame
-            
-            width: 48
-            height: 200
-            
-            anchors.left: parent.left
-            anchors.top: parent.top
-            
-            // Replaced the static layer shell offsets with standard vertical centering matrix math
-            anchors.topMargin: hudRoot.targetScreen ? (hudRoot.targetScreen.height / 2) - 100 : 0
-            
-            property int targetX: -48
-            property real targetOpacity: 0.0
-            
-            // Direct mapping back to target variables for clean 0px resting state
-            anchors.leftMargin: targetX
-            opacity: targetOpacity
-
-            SequentialAnimation {
-                id: slideInAnimation
-                ParallelAnimation {
-                    // Slide animation lands securely at target 0 positioning flush with the bar boundary
-                    NumberAnimation { target: hudCardFrame; property: "targetX"; to: 0; duration: 150; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: hudCardFrame; property: "targetOpacity"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
-                }
-                PropertyAction { target: dismissTimer; property: "running"; value: true }
-            }
-
-            // 🎨 MATCHED CARD STYLING: Borders removed completely, background opacity mapped to #9911111b
+            id: innerContentCard
+            anchors.fill: parent
             color: "#9911111b"
             border.width: 0
+            opacity: 0.0
 
-            // 📐 GRANULAR CORNER CLIP: Left side corners squared flat flush to the system bar panel boundary
             topLeftRadius: 0
             bottomLeftRadius: 0
-            topRightRadius: 12
-            bottomRightRadius: 12
+            topRightRadius: 0
+            bottomRightRadius: 0
+
+            Behavior on opacity {
+                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
+            }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -169,7 +161,7 @@ Item {
                     Layout.fillHeight: true
                     Layout.alignment: Qt.AlignHCenter
                     color: "#313244"
-                    radius: 5
+                    radius: 0 
                     clip: true
 
                     Rectangle {
@@ -177,7 +169,7 @@ Item {
                         width: parent.width
                         height: parent.height * Math.min(hudRoot.volumeLevel, 1.0)
                         color: hudRoot.isMuted ? "#f38ba8" : "#cdd6f4"
-                        radius: 5
+                        radius: 0 
                         anchors.bottom: parent.bottom
 
                         Behavior on height {
