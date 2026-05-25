@@ -31,7 +31,6 @@ Item {
         PropertyAction { 
             target: hudWindowSurface; 
             property: "WlrLayershell.layer"; 
-            // 🎯 THE FIX: Sends the idle window to the bottom of the stack to keep click-through fully interactive
             value: WlrLayer.Background 
         }
         PropertyAction { target: hudRoot; property: "visibleActive"; value: false }
@@ -43,10 +42,7 @@ Item {
         
         if (!hudRoot.visibleActive && !rootScope.audioSliderActive) {
             fadeOutAnimation.stop();
-            
-            // 🎯 THE FIX: Instantly lift back to the top overlay layer before executing the fade pass
             hudWindowSurface.WlrLayershell.layer = WlrLayer.Overlay;
-            
             innerContentCard.opacity = 0.0;
             hudRoot.visibleActive = true;
             fadeInAnimation.start();
@@ -99,9 +95,6 @@ Item {
     // ==========================================
     PanelWindow {
         id: hudWindowSurface
-        
-        // 🎯 THE FIX: Visible stays permanently true. Unmapping routines are completely bypassed 
-        // to prevent Hyprland's birth-frame alpha checks from occasionally failing.
         visible: true
         screen: hudRoot.targetScreen ? hudRoot.targetScreen : screen
         
@@ -115,7 +108,6 @@ Item {
 
         color: "transparent"
         
-        // Initializes as a background layer until an active audio pulse triggers it
         WlrLayershell.layer: WlrLayer.Background
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -152,25 +144,36 @@ Item {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 8
                 spacing: 8
+                
+                // 🎯 THE FIX: Split side margins out from top/bottom offsets to inject cleaner vertical padding space
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                anchors.topMargin: 16
+                anchors.bottomMargin: 16
 
+                // THE TRACK
                 Rectangle {
                     id: barTrack
                     Layout.preferredWidth: 10
                     Layout.fillHeight: true
                     Layout.alignment: Qt.AlignHCenter
                     color: "#313244"
-                    radius: 0 
+                    radius: 5
                     clip: true
 
+                    // THE FILL
                     Rectangle {
                         id: barFill
                         width: parent.width
                         height: parent.height * Math.min(hudRoot.volumeLevel, 1.0)
                         color: hudRoot.isMuted ? "#f38ba8" : "#cdd6f4"
-                        radius: 0 
                         anchors.bottom: parent.bottom
+
+                        bottomLeftRadius: 5
+                        bottomRightRadius: 5
+                        topLeftRadius: hudRoot.volumeLevel >= 0.95 ? 5 : 0
+                        topRightRadius: hudRoot.volumeLevel >= 0.95 ? 5 : 0
 
                         Behavior on height {
                             NumberAnimation { duration: 80; easing.type: Easing.OutCubic }
