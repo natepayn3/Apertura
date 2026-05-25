@@ -12,11 +12,9 @@ Item {
 
     property int unreadCount: 0
     
-    // Custom storage arrays to keep references clean and mutable
     property var visibleBanners: []
     property var activeHistoryReferences: [] 
 
-    // Controls actual history card PanelWindow visibility
     property bool menuOpen: false
 
     // Smart auto-hide countdown tracker
@@ -38,7 +36,6 @@ Item {
         }
     }
 
-    // 🔓 PUBLIC INTERFACE (Targeted by manual toggles)
     function toggleMenu(): void {
         if (menuOpen) {
             closeMenu();
@@ -48,27 +45,22 @@ Item {
     }
 
     function openMenu(): void {
-        // Reset hidden baseline coordinates before mapping window surface
         popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
 
         rootScope.requestOpen(notificationOverlayModal);
         menuOpen = true;
 
-        // Drive the entry transition timeline sequentially
         slideInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        // Animate out while the window layer shell surface is still active
         popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
-
         closeTimer.start();
     }
 
-    // Helper logic to cleanly handle user presence changes
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse || listContainerMouse.containsMouse) {
             osdAutohideTimer.stop(); 
@@ -77,7 +69,6 @@ Item {
         }
     }
 
-    // Updated system-to-model proxy handler safely executing on main state synchronization bounds
     function updateCount() {
         if (nativeServer && nativeServer.trackedNotifications) {
             notificationRoot.unreadCount = nativeServer.trackedNotifications.rowCount();
@@ -96,14 +87,11 @@ Item {
             notification.tracked = true;
             notificationRoot.updateCount();
 
-            // Store raw mutable references for fallback tracking
             notificationRoot.activeHistoryReferences = [...notificationRoot.activeHistoryReferences, notification];
             notificationRoot.visibleBanners = [...notificationRoot.visibleBanners, notification];
 
-            // Trigger a separate horizontal slide entry sequence specifically for the new toast alert element
             toastSlideIn.restart();
 
-            // Auto-evict the banner slot from the floating HUD after 5 seconds
             let toastTimer = Qt.createQmlObject('import QtQuick; Timer { interval: 5000; running: true; repeat: false }', notificationRoot);
             toastTimer.triggered.connect(() => {
                 notificationRoot.visibleBanners = notificationRoot.visibleBanners.filter(item => item !== notification);
@@ -112,7 +100,6 @@ Item {
         }
     }
 
-    // Steady state scan loop to verify cache allocations
     Timer {
         interval: 500
         running: true
@@ -130,25 +117,12 @@ Item {
         radius: 0 
 
         Text {
+            id: notificationIcon
             anchors.centerIn: parent
             text: notificationRoot.unreadCount > 0 ? "󱅫" : "󰂚"
             font.family: "Rubik"
             font.pixelSize: 20
-            color: notificationRoot.unreadCount > 0 ? "#f38ba8" : "#cdd6f4"
-        }
-
-        // Alert Pill Counter Badge Accent
-        Rectangle {
-            width: 14; height: 14; radius: 0; color: "#f38ba8" 
-            visible: notificationRoot.unreadCount > 0
-            anchors.top: parent.top; anchors.right: parent.right
-            anchors.topMargin: 2; anchors.rightMargin: 2
-
-            Text {
-                anchors.centerIn: parent
-                text: notificationRoot.unreadCount.toString()
-                font.family: "Rubik"; font.pixelSize: 9; font.weight: Font.Bold; color: "#11111b"
-            }
+            color: notificationRoot.unreadCount > 0 ? "#f38ba8" : "#a6adc8"
         }
 
         MouseArea {
@@ -172,7 +146,6 @@ Item {
         }
     }
 
-    // 🔄 GLOBAL CLEANUP LISTENER
     Connections {
         target: rootScope
         function onActiveModalChanged() {
@@ -196,7 +169,7 @@ Item {
         anchors.right: true
         
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "quickshell-notifications"
+        WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
         ColumnLayout {
@@ -211,7 +184,6 @@ Item {
             anchors.leftMargin: targetX
             spacing: 8
 
-            // 🎯 RESTORED TOAST SLIDE ANIMATION
             NumberAnimation { id: toastSlideIn; target: toastColumn; property: "targetX"; from: -320; to: 0; duration: 180; easing.type: Easing.OutCubic }
 
             Behavior on anchors.leftMargin {
@@ -298,7 +270,6 @@ Item {
             property int targetX: -655
             property real targetOpacity: 0.0
 
-            // 🎯 RESTORED OVERLAY CARD SLIDE ANIMATION
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
@@ -362,7 +333,7 @@ Item {
                     Text {
                         text: "Clear All"
                         font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
-                        color: clearAllMouse.containsMouse ? "#f38ba8" : "#585b70"
+                        color: clearAllMouse.containsMouse ? "#f38ba8" : "#cdd6f4"
                         visible: notificationRoot.unreadCount > 0
                         
                         MouseArea {
@@ -423,8 +394,11 @@ Item {
 
                             Rectangle {
                                 anchors.fill: parent
-                                color: "#11111b"
-                                border.color: cellMouseArea.containsMouse ? "#898989" : "#313244" 
+                                
+                                // 🎯 THE FIX: Nudged alpha to 35% opacity (#59) for a perfectly subtle tint over the blur pipeline
+                                color: "#5911111b"
+                                
+                                border.color: cellMouseArea.containsMouse ? "#cdd6f4" : "#313244" 
                                 border.width: 1
                                 radius: 0 
 
