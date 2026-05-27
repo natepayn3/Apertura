@@ -26,7 +26,6 @@ Item {
         running: true
         
         onExited: (code) => {
-            // Exit code 0 means the file exists (it is a laptop)
             if (code === 0) {
                 batRoot.isLaptop = true;
                 capReader.reload();
@@ -139,6 +138,36 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: toggleMenu()
+
+            // 🎯 Fixed Battery Tooltip
+            ToolTip {
+                id: batTooltip
+                visible: parent.containsMouse
+                delay: 400
+                
+                // 🎯 THE FIX: Adds a comfortable padding buffer safely without touching read-only metrics
+                leftPadding: 8
+                rightPadding: 8
+                topPadding: 4
+                bottomPadding: 4
+
+                contentItem: Text {
+                    text: batRoot.isCharging ? "Charging (" + batRoot.capacity + "%)" : batRoot.capacity + "%"
+                    font.family: "Rubik"
+                    font.weight: Font.Regular
+                    font.pixelSize: 14
+                    color: "#cdd6f4"
+                    textFormat: Text.PlainText
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                background: Rectangle {
+                    color: "#11111b"
+                    border.color: "#313244"
+                    border.width: 1
+                    radius: 4
+                }
+            }
         }
     }
 
@@ -181,41 +210,23 @@ Item {
 
         Rectangle {
             id: popupMenuFrame
-            width: 300
-            height: 96 
-            
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.bottomMargin: 12
-            
-            property int targetX: -655
-            property real targetOpacity: 0.0
-
-            anchors.leftMargin: targetX
-            opacity: targetOpacity
+            width: 300; height: 96 
+            anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.bottomMargin: 12
+            property int targetX: -655; property real targetOpacity: 0.0
+            anchors.leftMargin: targetX; opacity: targetOpacity
 
             SequentialAnimation {
-                id: slideInAnimation
-                PauseAnimation { duration: 16 }
+                id: slideInAnimation; PauseAnimation { duration: 16 }
                 ParallelAnimation {
                     NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
             }
             
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-            }
-            
-            Behavior on opacity {
-                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
-            }
+            Behavior on anchors.leftMargin { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
 
-            color: "#9911111b"
-            border.width: 0
-            radius: 0
-            
-            focus: true
+            color: "#9911111b"; border.width: 0; radius: 0; focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
                     closeMenu();
@@ -229,38 +240,23 @@ Item {
             }
 
             ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 14
-                spacing: 10
+                anchors.fill: parent; anchors.margins: 14; spacing: 10
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { 
-                        text: "Battery"
-                        font.family: "Rubik"
-                        font.pixelSize: 16
-                        font.weight: Font.Bold
-                        color: "#cdd6f4" 
-                    }
+                    Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" }
                     Item { Layout.fillWidth: true }
                     Text { 
                         text: batRoot.isCharging ? "󱐋 Charging" : "Discharging"
-                        font.family: "Rubik"
-                        font.pixelSize: 12
+                        font.family: "Rubik"; font.pixelSize: 12
                         color: batRoot.isCharging ? "#a6e3a1" : "#a6adc8"
                     }
                 }
 
-                Rectangle { 
-                    Layout.fillWidth: true
-                    height: 1
-                    color: "#313244" 
-                }
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
 
                 ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 4
-
+                    Layout.fillWidth: true; spacing: 4
                     RowLayout {
                         Layout.fillWidth: true
                         Text { text: "Current Charge:"; font.family: "Rubik"; font.pixelSize: 13; color: "#a6adc8" }
