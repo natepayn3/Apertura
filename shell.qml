@@ -178,6 +178,14 @@ Scope {
                                 Layout.alignment: Qt.AlignHCenter
                             }
 
+                            WifiOsd {
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+
+                            BatteryOsd {
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+
                             NotificationOsd {
                                 Layout.alignment: Qt.AlignHCenter
                             }
