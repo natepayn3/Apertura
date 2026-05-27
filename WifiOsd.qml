@@ -194,7 +194,6 @@ Item {
             Behavior on anchors.leftMargin { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
             Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
             
-            // 🎯 THE FIX: Changed from #ee11111b to #9911111b to allow compositor blur to shine through
             color: "#9911111b"; border.width: 0; radius: 0; focus: true
             Keys.onPressed: (event) => { if (event.key === Qt.Key_Escape) { closeMenu(); event.accepted = true; } }
             MouseArea { anchors.fill: parent; onPressed: (mouse) => { mouse.accepted = true; } }
@@ -207,7 +206,26 @@ Item {
                     Layout.fillWidth: true
                     Text { text: "Wi-Fi"; font.family: "Rubik"; font.pixelSize: 15; font.weight: Font.Bold; color: "#cdd6f4" }
                     Item { Layout.fillWidth: true }
-                    Text { text: wifiRoot.ssid; font.family: "Rubik"; font.pixelSize: 11; color: wifiRoot.signalStrength > 0 ? "#a6e3a1" : "#a6adc8"; elide: Text.ElideRight; Layout.maximumWidth: 160 }
+                    
+                    // 🎯 DYNAMIC STATUS TRACKER HEADER
+                    RowLayout {
+                        spacing: 4
+                        Text { 
+                            text: "Connected to:"
+                            font.family: "Rubik"
+                            font.pixelSize: 11
+                            color: "#a6adc8" 
+                        }
+                        Text { 
+                            text: wifiRoot.ssid
+                            font.family: "Rubik"
+                            font.pixelSize: 11
+                            font.weight: Font.Bold
+                            color: wifiRoot.signalStrength > 0 ? "#a6e3a1" : "#a6adc8"
+                            elide: Text.ElideRight
+                            Layout.maximumWidth: 100 
+                        }
+                    }
                 }
 
                 Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
