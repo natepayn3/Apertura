@@ -21,6 +21,21 @@ Item {
     ListModel { id: pairedDevicesModel }
     ListModel { id: discoveredDevicesModel }
 
+    // 🎯 THE FIX: Resolves the local absolute path safely using standard QML URL translation
+    Component.onCompleted: {
+        const localUri = Qt.resolvedUrl(".").toString();
+        const basePath = localUri.replace("file://", "");
+        
+        bluetoothWatcher.command = [basePath + "/bluetooth_control.sh", "status"];
+        deviceScraper.command = [basePath + "/bluetooth_control.sh", "paired"];
+        scanAction.command = ["timeout", "5s", basePath + "/bluetooth_control.sh", "scan"];
+        discoveryScraper.command = [basePath + "/bluetooth_control.sh", "discover"];
+        bluetoothToggleAction.command = [basePath + "/bluetooth_control.sh", "toggle"];
+        
+        // Safe operational bootstrap trigger
+        bluetoothWatcher.running = true;
+    }
+
     // Smart auto-hide countdown tracker
     Timer {
         id: osdAutohideTimer
@@ -79,21 +94,21 @@ Item {
     }
 
     function refreshStatus() {
-        if (!bluetoothWatcher.running) {
+        if (bluetoothWatcher.command && bluetoothWatcher.command.length > 0 && !bluetoothWatcher.running) {
             bluetoothWatcher.running = true;
         }
     }
 
     function refreshPairedList() {
         if (!bluetoothRoot.isPowered) return;
-        if (!deviceScraper.running) {
+        if (deviceScraper.command && deviceScraper.command.length > 0 && !deviceScraper.running) {
             deviceScraper.running = true;
         }
     }
 
     function refreshDiscoverList() {
         if (!bluetoothRoot.isPowered) return;
-        if (!discoveryScraper.running) {
+        if (discoveryScraper.command && discoveryScraper.command.length > 0 && !discoveryScraper.running) {
             discoveryScraper.running = true;
         }
     }
@@ -109,8 +124,8 @@ Item {
     // 📡 STATUS WATCHER
     Process {
         id: bluetoothWatcher
-        command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "status"]
-        running: true
+        command: ["true"]
+        running: false
         onExited: running = false 
         stdout: StdioCollector {
             onTextChanged: {
@@ -128,7 +143,7 @@ Item {
     // 📡 PAIRED REFRESHER
     Process {
         id: deviceScraper
-        command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "paired"]
+        command: ["true"]
         running: false
         onExited: running = false 
         stdout: StdioCollector {
@@ -157,7 +172,7 @@ Item {
     // 📡 DISCOVERY LIVE SCANNER RUNNER
     Process {
         id: scanAction
-        command: ["timeout", "5s", "/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "scan"]
+        command: ["true"]
         running: false
         onExited: {
             running = false;
@@ -169,7 +184,7 @@ Item {
     // 📡 DISCOVERED REFRESHER
     Process {
         id: discoveryScraper
-        command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "discover"]
+        command: ["true"]
         running: false
         onExited: running = false 
         stdout: StdioCollector {
@@ -195,27 +210,34 @@ Item {
 
     // 🔄 CORE OPERATION ACTIONS
     Process { 
-        id: bluetoothToggleAction; 
-        command: ["/home/nick/.config/quickshell/vibez/bluetooth_control.sh", "toggle"] 
+        id: bluetoothToggleAction
+        command: ["true"]
+        running: false
         onExited: { running = false; refreshStatus(); }
     }
     Process { 
         id: deviceConnectionAction 
+        command: ["true"]
+        running: false
         onExited: { running = false; refreshStatus(); refreshPairedList(); }
     }
     Process { 
         id: pairAction 
+        command: ["true"]
+        running: false
         onExited: { running = false; refreshStatus(); refreshPairedList(); }
     }
     
     // 🗑️ FORGET DEVICE PIPE
     Process {
         id: unpairAction
+        command: ["true"]
+        running: false
         onExited: { running = false; refreshStatus(); refreshPairedList(); }
     }
 
     function triggerScan() {
-        if (!bluetoothRoot.isPowered || bluetoothRoot.isScanning) return;
+        if (!bluetoothRoot.isPowered || bluetoothRoot.isScanning || !scanAction.command || scanAction.command.length === 0) return;
         bluetoothRoot.isScanning = true;
         scanAction.running = true;
     }
@@ -241,20 +263,22 @@ Item {
         onTriggered: refreshStatus()
     }
 
+    // ==========================================
     // 🎨 UI PANEL TRIGGER BUTTON
+    // ==========================================
     Rectangle {
         id: triggerBox
         anchors.fill: parent
-        color: bluetoothMouseArea.containsMouse ? "#313244" : "transparent"
-        radius: 8
+        color: bluetoothMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        radius: 0 
 
         Text {
             anchors.centerIn: parent
             text: bluetoothRoot.isPowered ? (bluetoothRoot.isConnected ? "󰂱" : "󰂯") : "󰂲"
             font.family: "Rubik"
             font.pixelSize: 20
-            color: bluetoothRoot.isConnected ? "#74c7ec" : 
-                   bluetoothRoot.isPowered   ? "#cdd6f4" : "#585b70"
+            color: bluetoothRoot.isConnected ? "#ffffff" : 
+                   bluetoothRoot.isPowered   ? "#ffffff" : "#59ffffff"
         }
 
         MouseArea {
@@ -329,10 +353,7 @@ Item {
             border.width: 0
             
             antialiasing: false
-            topLeftRadius: 0
-            bottomLeftRadius: 0
-            topRightRadius: 0
-            bottomRightRadius: 0
+            topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
 
             height: !bluetoothRoot.isPowered ? 92 : Math.min(100 + ((currentTab === "paired" ? pairedDevicesModel.count : discoveredDevicesModel.count) * 42), 300)
 
@@ -366,17 +387,20 @@ Item {
                 // HEADER SECTION
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Bluetooth"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" } 
+                    Text { text: "Bluetooth"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" } 
                     Item { Layout.fillWidth: true }
+                    
                     Rectangle {
                         width: 50; height: 24; radius: 12
-                        color: bluetoothRoot.isPowered ? "#a6e3a1" : "#313244"
+                        color: bluetoothRoot.isPowered ? "#45ffffff" : "#26ffffff"
+                        
                         Rectangle {
                             width: 18; height: 18; radius: 9; color: "#11111b"
                             anchors.verticalCenter: parent.verticalCenter
                             x: bluetoothRoot.isPowered ? 28 : 4
                             Behavior on x { NumberAnimation { duration: 120 } }
                         }
+                        
                         MouseArea {
                             anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                             onClicked: {
@@ -402,26 +426,27 @@ Item {
                     // Tab Button: My Devices
                     Rectangle {
                         Layout.fillWidth: true; height: 26; radius: 6
-                        color: bluetoothRoot.currentTab === "paired" ? "#313244" : "transparent"
-                        Text { text: "My Devices"; font.family: "Rubik"; font.pixelSize: 12; color: "#cdd6f4"; anchors.centerIn: parent }
+                        color: bluetoothRoot.currentTab === "paired" ? "#26ffffff" : "transparent"
+                        Text { text: "My Devices"; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff"; anchors.centerIn: parent }
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { bluetoothRoot.currentTab = "paired"; checkUserActivity(); } }
                     }
 
                     // Tab Button: Discover New Devices
                     Rectangle {
                         Layout.fillWidth: true; height: 26; radius: 6
-                        color: bluetoothRoot.currentTab === "discover" ? "#313244" : "transparent"
+                        color: bluetoothRoot.currentTab === "discover" ? "#26ffffff" : "transparent"
                         RowLayout {
                             anchors.centerIn: parent; spacing: 6
-                            Text { text: "Discover"; font.family: "Rubik"; font.pixelSize: 12; color: "#cdd6f4" }
+                            Text { text: "Discover"; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff" }
                             Text {
                                 text: ""; font.family: "FontAwesome"
-                                font.pixelSize: 10; color: "#a6e3a1"
+                                font.pixelSize: 10; color: "#ffffff"
                                 visible: bluetoothRoot.isScanning
                                 RotationAnimator on rotation { loops: Animation.Infinite; from: 0; to: 360; running: bluetoothRoot.isScanning; duration: 1000 }
                             }
                         }
                         MouseArea {
+                            id: tabDiscoverMouse
                             anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 bluetoothRoot.currentTab = "discover";
@@ -433,10 +458,11 @@ Item {
                 }
 
                 // SUBSECTION SEPARATOR
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#313244"; visible: bluetoothRoot.isPowered }
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff"; visible: bluetoothRoot.isPowered }
 
                 // PANE MULTIPLEXER STACK
                 Item {
+                    id: multiplexStackContainer
                     Layout.fillWidth: true; Layout.fillHeight: true
 
                     // PANE 1: PAIRED LIST
@@ -451,16 +477,17 @@ Item {
                         Text { 
                             anchors.centerIn: parent; 
                             text: bluetoothRoot.isPowered ? "No paired devices found" : "Bluetooth is turned off"; 
-                            font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"; 
+                            font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"; 
                             visible: pairedListView.count === 0 || !bluetoothRoot.isPowered 
                         }
+                        
                         delegate: Item {
                             id: delegateRoot
                             width: pairedListView.width; height: 36
                             
                             Rectangle {
                                 id: rowBox
-                                anchors.fill: parent; color: rowMasterArea.containsMouse ? "#313244" : "transparent"; radius: 6
+                                anchors.fill: parent; color: rowMasterArea.containsMouse ? "#26ffffff" : "transparent"; radius: 6
                                 
                                 RowLayout {
                                     anchors.fill: parent
@@ -468,8 +495,8 @@ Item {
                                     anchors.rightMargin: model.isTransitioning ? 82 : 122 
                                     spacing: 10
                                     
-                                    Text { text: model.isDeviceConnected ? "󰂱" : "󰂯"; font.family: "Rubik"; font.pixelSize: 16; color: model.isDeviceConnected ? "#a6e3a1" : "#a6adc8" }
-                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#cdd6f4"; Layout.fillWidth: true; elide: Text.ElideRight }
+                                    Text { text: model.isDeviceConnected ? "󰂱" : "󰂯"; font.family: "Rubik"; font.pixelSize: 16; color: "#ffffff" }
+                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight }
                                 }
                                 
                                 Item {
@@ -491,7 +518,7 @@ Item {
                                             id: actionLabel
                                             text: model.isTransitioning ? "Connecting..." : (model.isDeviceConnected ? "Disconnect" : "Connect")
                                             font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
-                                            color: model.isDeviceConnected ? "#f38ba8" : "#cdd6f4"
+                                            color: "#ffffff"
                                             anchors.centerIn: parent
                                         }
                                     }
@@ -499,7 +526,7 @@ Item {
                                     Text { 
                                         id: pipeDivider
                                         text: "|" 
-                                        font.family: "Rubik"; font.pixelSize: 11; color: "#45475a"
+                                        font.family: "Rubik"; font.pixelSize: 11; color: "#26ffffff"
                                         anchors.left: connectButtonFrame.right
                                         anchors.leftMargin: 6
                                         anchors.verticalCenter: parent.verticalCenter
@@ -517,19 +544,17 @@ Item {
                                         Text {
                                             id: forgetLabel
                                             text: "Forget"
-                                            font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#f38ba8"
+                                            font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#59ffffff"
                                             anchors.centerIn: parent
                                         }
                                     }
                                 }
 
-                                // 🎯 SINGLE ROW CONTROLLER MOUSEAREA
                                 MouseArea {
                                     id: rowMasterArea
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     
-                                    // Map boundaries inside a flat coordinate pass to protect the timer status loops
                                     onContainsMouseChanged: {
                                         pairedListView.isHoveringItems = rowMasterArea.containsMouse;
                                         bluetoothRoot.checkUserActivity();
@@ -586,19 +611,31 @@ Item {
                         Text { 
                             anchors.centerIn: parent; 
                             text: bluetoothRoot.isPowered ? (bluetoothRoot.isScanning ? "Scanning for local signals..." : "No new devices found") : "Bluetooth is turned off"; 
-                            font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"; 
+                            font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"; 
                             visible: discoveryListView.count === 0 || !bluetoothRoot.isPowered 
                         }
+                        
                         delegate: Item {
                             width: discoveryListView.width; height: 36
+                            
                             Rectangle {
-                                anchors.fill: parent; color: dArea.containsMouse ? "#313244" : "transparent"; radius: 6
+                                anchors.fill: parent; color: dArea.containsMouse ? "#26ffffff" : "transparent"; radius: 6
+                                
                                 RowLayout {
                                     anchors.fill: parent; anchors.margins: 8; spacing: 10
-                                    Text { text: ""; font.family: "Rubik"; font.pixelSize: 14; color: "#cdd6f4" } 
-                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#cdd6f4"; Layout.fillWidth: true; elide: Text.ElideRight } 
-                                    Text { text: "Pair"; font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#cdd6f4"; visible: dArea.containsMouse } 
+                                    
+                                    Item {
+                                        width: 14; height: 14
+                                        Layout.alignment: Qt.AlignVCenter
+                                        
+                                        Rectangle { width: 10; height: 2; color: "#ffffff"; anchors.centerIn: parent }
+                                        Rectangle { width: 2; height: 10; color: "#ffffff"; anchors.centerIn: parent }
+                                    }
+                                    
+                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight } 
+                                    Text { text: "Pair"; font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#ffffff"; visible: dArea.containsMouse } 
                                 }
+                                
                                 MouseArea {
                                     id: dArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                     onClicked: {
