@@ -122,8 +122,11 @@ Item {
             property int wsId: modelData
             property bool isActive: workspaceContainer.activeWorkspace === wsId
             property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
+            
+            // New dot tracker checks if this item sits at the end of the calculated workspace array
+            property bool isNewIndicatorSlot: index === (workspaceContainer.activeWorkspaceList.length - 1)
 
-            // 🎯 ENLARGED HITBOX TARGETS: Expanded bounds to 24px to completely shield scaled up nodes
+            // Large, easy-to-click hitboxes
             implicitWidth: workspaceContainer.isVertical ? 24 : (isActive ? 44 : 24)
             implicitHeight: workspaceContainer.isVertical ? (isActive ? 44 : 24) : 24
             cursorShape: Qt.PointingHandCursor
@@ -135,7 +138,7 @@ Item {
                 NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
             }
 
-            // Preserved original Lua dispatch syntax
+            // Preserved original Lua dispatcher syntax
             onClicked: {
                 workspaceContainer.activeWorkspace = wsId;
                 switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + wsId + "\" })"];
@@ -147,20 +150,25 @@ Item {
             Rectangle {
                 anchors.centerIn: parent
                 
-                // 🎯 ENLARGED GEOMETRY ENGINE: Active pills stretch to 44x14px; inactive items scale to 12x12px dots
                 width: workspaceContainer.isVertical ? (isActive ? 14 : 12) : (isActive ? 44 : 12)
                 height: workspaceContainer.isVertical ? (isActive ? 44 : 12) : (isActive ? 14 : 12)
                 
-                // Radius auto-adjusts to maintain smooth caps on the thicker nodes
                 radius: 6
 
                 Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 Behavior on height { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 
-                color: isActive   ? "#a6e3a1" : 
-                       isOccupied ? "#cdd6f4" : "#45475a"
+                // 🎯 THE FIX: Evaluates to "transparent" if it's the empty placeholder node, otherwise fills properly
+                color: isActive           ? "#a6e3a1" : 
+                       isNewIndicatorSlot ? "transparent" : 
+                       isOccupied         ? "#cdd6f4" : "#45475a"
                 
+                // Enforces a solid, clean text-colored boundary stroke to compose the hollow ring shape
+                border.width: (isNewIndicatorSlot && !isActive) ? 1.5 : 0
+                border.color: (isNewIndicatorSlot && !isActive) ? "#cdd6f4" : "transparent"
+
                 Behavior on color { ColorAnimation { duration: 140 } }
+                Behavior on border.color { ColorAnimation { duration: 140 } }
 
                 Text {
                     text: workspaceButton.wsId.toString()
