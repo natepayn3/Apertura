@@ -74,7 +74,7 @@ Scope {
         delegate: Item {
             id: displayGroupContext
 
-            VolumeHudOsd {
+            VolumeHud {
                 targetScreen: modelData
             }
 
@@ -149,12 +149,12 @@ Scope {
                             Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
                             spacing: 12
 
-                            AppLauncherOsd {
+                            AppLauncher {
                                 id: appLauncherItem
                                 Layout.alignment: Qt.AlignHCenter
                             }
 
-                            WallpaperOsd {
+                            Wallpaper {
                                 id: wallpaperItem
                                 Layout.alignment: Qt.AlignHCenter
                             }
@@ -178,7 +178,7 @@ Scope {
                             spacing: 12
 
                             // Controller state track flag variable
-                            property bool isExpanded: true
+                            property bool isExpanded: false
 
                             // 📅 1. Calendar (Always Visible / Top Priority)
                             CalendarModule {
@@ -239,27 +239,27 @@ Scope {
                                     spacing: 12 
 
                                     // 🎯 PRESERVED CRITICAL STACK ORDER (TOP TO BOTTOM)
-                                    WifiOsd {
+                                    Wifi {
                                         Layout.alignment: Qt.AlignHCenter
                                     }
 
-                                    BatteryOsd {
+                                    Battery {
                                         Layout.alignment: Qt.AlignHCenter
                                     }
 
-                                    NotificationOsd {
+                                    Notification {
                                         Layout.alignment: Qt.AlignHCenter
                                     }
 
-                                    BluetoothOsd {
+                                    Bluetooth {
                                         Layout.alignment: Qt.AlignHCenter
                                     }
 
-                                    AudioModule {
+                                    Audio {
                                         Layout.alignment: Qt.AlignHCenter
                                     }
 
-                                    PowerOsd {
+                                    Power {
                                         Layout.alignment: Qt.AlignHCenter
                                     }
                                 }
