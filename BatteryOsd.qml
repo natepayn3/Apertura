@@ -41,9 +41,12 @@ Item {
         id: capReader
         path: batRoot.isLaptop ? "/sys/class/power_supply/BAT1/capacity" : ""
         onTextChanged: {
-            let cleanText = text().trim();
-            if (cleanText.length > 0) {
-                batRoot.capacity = parseInt(cleanText) || 100;
+            // 🎯 THE FIX: Gated type-check completely eliminates the [undefined] assignment warning on init
+            if (typeof text === "function" && text()) {
+                let cleanText = text().trim();
+                if (cleanText.length > 0) {
+                    batRoot.capacity = parseInt(cleanText) || 100;
+                }
             }
         }
     }
@@ -53,7 +56,9 @@ Item {
         id: statusReader
         path: batRoot.isLaptop ? "/sys/class/power_supply/BAT1/status" : ""
         onTextChanged: {
-            batRoot.isCharging = (text().trim() === "Charging");
+            if (typeof text === "function" && text()) {
+                batRoot.isCharging = (text().trim() === "Charging");
+            }
         }
     }
 
@@ -138,36 +143,6 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: toggleMenu()
-
-            // 🎯 Fixed Battery Tooltip
-            ToolTip {
-                id: batTooltip
-                visible: parent.containsMouse
-                delay: 400
-                
-                // 🎯 THE FIX: Adds a comfortable padding buffer safely without touching read-only metrics
-                leftPadding: 8
-                rightPadding: 8
-                topPadding: 4
-                bottomPadding: 4
-
-                contentItem: Text {
-                    text: batRoot.isCharging ? "Charging (" + batRoot.capacity + "%)" : batRoot.capacity + "%"
-                    font.family: "Rubik"
-                    font.weight: Font.Regular
-                    font.pixelSize: 14
-                    color: "#cdd6f4"
-                    textFormat: Text.PlainText
-                    horizontalAlignment: Text.AlignHCenter
-                }
-
-                background: Rectangle {
-                    color: "#11111b"
-                    border.color: "#313244"
-                    border.width: 1
-                    radius: 4
-                }
-            }
         }
     }
 
