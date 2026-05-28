@@ -142,6 +142,7 @@ Scope {
                         anchors.bottomMargin: 16
                         spacing: 0
 
+                        // Top Stack Layout Window Block
                         ColumnLayout {
                             Layout.preferredHeight: 180
                             Layout.fillWidth: true
@@ -161,45 +162,107 @@ Scope {
                             Item { Layout.fillHeight: true }
                         }
 
+                        // Center Layout Spacer Box
                         Item {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                         }
 
+                        // ==========================================
+                        // 📦 BOTTOM INDENT INDICATOR DRAWER CONTEXT
+                        // ==========================================
                         ColumnLayout {
-                            Layout.preferredHeight: 320
+                            id: bottomGroupControls
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
                             spacing: 12
 
-                            Item { Layout.fillHeight: true }
+                            // Controller state track flag variable
+                            property bool isExpanded: true
 
+                            // 📅 1. Calendar (Always Visible / Top Priority)
                             CalendarModule {
                                 Layout.alignment: Qt.AlignHCenter
                             }
 
-                            WifiOsd {
+                            // 🧭 2. Collapsible Control Arrow Trigger Block
+                            Rectangle {
+                                id: toggleButton
+                                Layout.preferredWidth: 32
+                                Layout.preferredHeight: 32
                                 Layout.alignment: Qt.AlignHCenter
+                                color: toggleMouseArea.containsMouse ? "#313244" : "transparent"
+                                radius: 4
+
+                                Text {
+                                    id: toggleChevron
+                                    anchors.centerIn: parent
+                                    
+                                    // 🎯 CIRCLED CHEVRONS: Swapped to the explicit circular boundary vectors
+                                    text: bottomGroupControls.isExpanded ? "expand_circle_down" : "expand_circle_up"
+                                    
+                                    font.family: "Material Symbols Outlined"
+                                    font.pixelSize: 22 
+                                    // 🎯 NEUTRAL TEXT COLOR: Locked to #bac2de for both states
+                                    color: "#bac2de"
+                                }
+
+                                MouseArea {
+                                    id: toggleMouseArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: bottomGroupControls.isExpanded = !bottomGroupControls.isExpanded
+                                }
                             }
 
-                            BatteryOsd {
-                                Layout.alignment: Qt.AlignHCenter
-                            }
+                            // 🗃️ 3. Animated Masked Sub-Column Clipping Container
+                            Item {
+                                id: drawerClipWrapper
+                                Layout.fillWidth: true
+                                
+                                implicitHeight: bottomGroupControls.isExpanded ? modulesSubColumn.implicitHeight : 0
+                                opacity: bottomGroupControls.isExpanded ? 1.0 : 0.0
+                                clip: true
 
-                            NotificationOsd {
-                                Layout.alignment: Qt.AlignHCenter
-                            }
+                                Behavior on implicitHeight {
+                                    NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+                                }
+                                Behavior on opacity {
+                                    NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
+                                }
 
-                            BluetoothOsd {
-                                Layout.alignment: Qt.AlignHCenter
-                            }
+                                ColumnLayout {
+                                    id: modulesSubColumn
+                                    anchors.top: parent.top
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    spacing: 12 
 
-                            AudioModule {
-                                Layout.alignment: Qt.AlignHCenter
-                            }
+                                    // 🎯 PRESERVED CRITICAL STACK ORDER (TOP TO BOTTOM):
+                                    WifiOsd {
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
 
-                            PowerOsd {
-                                Layout.alignment: Qt.AlignHCenter
+                                    BatteryOsd {
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
+
+                                    NotificationOsd {
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
+
+                                    BluetoothOsd {
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
+
+                                    AudioModule {
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
+
+                                    PowerOsd {
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
+                                }
                             }
                         }
                     }
