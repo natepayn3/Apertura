@@ -118,7 +118,7 @@ PanelWindow {
         if (active) openMenu(); else closeMenu();
     }
 
-    // UNIVERSAL IPC ENGINE
+    // UNIVERSAL IPC LAYOUT ENGINE
     Process {
         id: layoutIpcQuery
         command: ["hyprctl", "clients", "-j"]
@@ -153,11 +153,23 @@ PanelWindow {
 
                             var localX = rawX - mX;
                             var localY = rawY - mY;
+                            
+                            var rawClass = client.class || "Window";
+                            var normClass = rawClass.toLowerCase().trim();
 
-                            // ⚡ Pass down the hex mapping address identifier string cleanly
+                            // ⚡ THE ICON THEME ALIAS MAPPER
+                            // Strips URL handlers and sub-class strings to ensure theme match execution
+                            if (normClass.indexOf("vscodium") !== -1 || normClass === "codium") {
+                                normClass = "vscodium";
+                            } else if (normClass === "kitty-dropterm") {
+                                normClass = "kitty";
+                            } else if (normClass.indexOf("chrome") !== -1) {
+                                normClass = "google-chrome";
+                            }
+
                             parsedWindows.push({
-                                "address": String(client.address || "").toLowerCase().trim(),
-                                "class": client.class || "Window",
+                                "class": rawClass,
+                                "icon_class": normClass, // Store normalized alias reference string
                                 "title": client.title || "",
                                 "is_focused": client.focusHistoryID === 0,
                                 "x_pct": Math.max(0.0, Math.min(1.0, localX / monitorWidth)),
@@ -269,16 +281,7 @@ PanelWindow {
                     Rectangle {
                         anchors.fill: parent
                         color: "#1e1e2e"
-                        radius: 3
-                        visible: windowRepeater.count === 0
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Empty Workspace"
-                            color: "#a6adc8"
-                            font.family: "Rubik"
-                            font.pixelSize: 12
-                        }
+                        radius: 6
                     }
                     
                     Repeater {
@@ -293,66 +296,49 @@ PanelWindow {
 
                             Rectangle {
                                 anchors.fill: parent
-                                color: modelData.is_focused ? "#313244" : "#1e1e2e"
-                                radius: 4
-                                z: 0
+                                anchors.margins: 2
                                 
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: modelData.class
-                                    color: "#a6adc8"
-                                    font.family: "Rubik"
-                                    font.pixelSize: Math.min(11, parent.width * 0.12)
-                                    elide: Text.ElideRight
-                                    width: parent.width - 8
-                                    horizontalAlignment: Text.AlignHCenter
-                                    visible: screencopyElement.status !== ScreencopyView.Ready
-                                }
-                            }
-
-                            ScreencopyView {
-                                id: screencopyElement
-                                anchors.fill: parent
-                                live: previewOverlayModal.menuOpen && previewOverlayModal.visible
-                                z: 1
-
-                                // ⚡ THE CORE ADDRESS MATCH FIX: Safely extract the hex address key 
-                                // directly out of the base object description strings, bypassing custom layer blocks.
-                                captureSource: {
-                                    if (!modelData || !modelData.address) return null;
-                                    
-                                    var pool = ToplevelManager.toplevels.values;
-                                    for (var i = 0; i < pool.length; i++) {
-                                        var win = pool[i];
-                                        if (win) {
-                                            // Convert the internal engine context descriptor string into a clean matching hex signature
-                                            var objectDescription = String(win).toLowerCase();
-                                            if (objectDescription.indexOf(modelData.address) !== -1) {
-                                                return win;
-                                            }
-                                        }
-                                    }
-                                    
-                                    // Soft fallback path to prevent black boxes if a connection slips
-                                    for (var j = 0; j < pool.length; j++) {
-                                        var fallbackWin = pool[j];
-                                        if (fallbackWin && fallbackWin.appId && fallbackWin.appId.toLowerCase() === modelData.class.toLowerCase()) {
-                                            return fallbackWin;
-                                        }
-                                    }
-                                    return null;
-                                }
-                            }
-
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "transparent"
-                                border.width: 1
-                                border.color: "#414559"
+                                color: modelData.is_focused ? "#313244" : "#181825"
+                                border.width: modelData.is_focused ? 2 : 1
+                                border.color: modelData.is_focused ? "#cba6f7" : "#45475a"
                                 radius: 4
-                                z: 2
+                                
+                                ColumnLayout {
+                                    anchors.centerIn: parent
+                                    width: parent.width - 12
+                                    spacing: 4
+
+                                    Image {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        source: "image://icon/" + modelData.icon_class // Direct binding routing to the mapped string
+                                        sourceSize.width: Math.min(24, parent.parent.height * 0.4)
+                                        sourceSize.height: Math.min(24, parent.parent.height * 0.4)
+                                        cache: true
+                                        fillMode: Image.PreserveAspectFit
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: modelData.class
+                                        color: modelData.is_focused ? "#cdd6f4" : "#a6adc8"
+                                        font.family: "Rubik"
+                                        font.weight: modelData.is_focused ? Font.Medium : Font.Normal
+                                        font.pixelSize: Math.max(8, Math.min(11, parent.parent.width * 0.09))
+                                        elide: Text.ElideRight
+                                        horizontalAlignment: Text.AlignHCenter
+                                    }
+                                }
                             }
                         }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Empty Workspace"
+                        color: "#585b70"
+                        font.family: "Rubik"
+                        font.pixelSize: 12
+                        visible: windowRepeater.count === 0
                     }
 
                     MouseArea {
