@@ -113,7 +113,8 @@ Item {
     Rectangle {
         id: notificationHitbox
         anchors.fill: parent
-        color: notificationMouseArea.containsMouse ? "#313244" : "transparent"
+        // Monochrome subtle alpha hover overlay mask
+        color: notificationMouseArea.containsMouse ? "#26ffffff" : "transparent"
         radius: 0 
 
         Text {
@@ -122,7 +123,7 @@ Item {
             text: notificationRoot.unreadCount > 0 ? "󱅫" : "󰂚"
             font.family: "Rubik"
             font.pixelSize: 20
-            color: notificationRoot.unreadCount > 0 ? "#f38ba8" : "#a6adc8"
+            color: "#ffffff"
         }
 
         MouseArea {
@@ -163,10 +164,7 @@ Item {
         visible: notificationRoot.visibleBanners.length > 0 && !notificationOverlayModal.visible
         color: "transparent"
         
-        anchors.top: true
-        anchors.bottom: true
-        anchors.left: true
-        anchors.right: true
+        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
@@ -200,10 +198,7 @@ Item {
                     color: "#9911111b" 
                     border.width: 0
                     
-                    topLeftRadius: 0
-                    bottomLeftRadius: 0
-                    topRightRadius: 0
-                    bottomRightRadius: 0
+                    topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -213,14 +208,14 @@ Item {
                         Text {
                             id: tSummary
                             text: modelData.summary
-                            font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#cdd6f4"
+                            font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#ffffff"
                             Layout.fillWidth: true; elide: Text.ElideRight
                         }
 
                         Text {
                             id: tBody
                             text: modelData.body
-                            font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"
+                            font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"
                             Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 4; elide: Text.ElideRight
                         }
                     }
@@ -293,10 +288,7 @@ Item {
             color: "#9911111b"
             border.width: 0
             
-            topLeftRadius: 0
-            bottomLeftRadius: 0
-            topRightRadius: 0
-            bottomRightRadius: 0
+            topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
             
             height: notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300)
             
@@ -317,129 +309,127 @@ Item {
                 onContainsMouseChanged: checkUserActivity()
             }
 
-            MouseArea { 
+            // 🎯 THE FIX: Structural mouse block shield opened here
+            MouseArea {
                 anchors.fill: parent
                 onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } 
-            }
 
-            ColumnLayout {
-                anchors.fill: parent; anchors.margins: 14; spacing: 10
+                ColumnLayout {
+                    anchors.fill: parent; anchors.margins: 14; spacing: 10
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" } 
-                    Item { Layout.fillWidth: true }
-                    
-                    Text {
-                        text: "Clear All"
-                        font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
-                        color: clearAllMouse.containsMouse ? "#f38ba8" : "#cdd6f4"
-                        visible: notificationRoot.unreadCount > 0
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" } 
+                        Item { Layout.fillWidth: true }
                         
-                        MouseArea {
-                            id: clearAllMouse
-                            anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                try { nativeServer.clear(); } catch(e) {}
-                                try { nativeServer.dismissAll(); } catch(e) {}
-                                
-                                for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
-                                    let item = notificationRoot.activeHistoryReferences[i];
-                                    if (item) {
-                                        try { item.dismiss(); } catch(e) {}
-                                        try { nativeServer.dismiss(item.id); } catch(e) {}
-                                    }
-                                }
-                                
-                                notificationRoot.visibleBanners = [];
-                                notificationRoot.activeHistoryReferences = [];
-                                notificationRoot.updateCount();
-                                checkUserActivity();
-                            }
-                        }
-                    }
-                }
-
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
-
-                Item {
-                    id: listContainer
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-
-                    MouseArea {
-                        id: listContainerMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        acceptedButtons: Qt.NoButton
-                        onContainsMouseChanged: checkUserActivity()
-                    }
-
-                    ListView {
-                        id: notifListView
-                        anchors.fill: parent
-                        clip: true; spacing: 8
-                        model: nativeServer.trackedNotifications
-
                         Text {
-                            anchors.centerIn: parent
-                            text: "No new notifications"
-                            font.family: "Rubik"; font.pixelSize: 13; color: "#a6adc8" 
-                            visible: notifListView.count === 0
+                            text: "Clear All"
+                            font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
+                            color: clearAllMouse.containsMouse ? "#ffffff" : "#59ffffff"
+                            visible: notificationRoot.unreadCount > 0
+                            
+                            MouseArea {
+                                id: clearAllMouse
+                                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    try { nativeServer.clear(); } catch(e) {}
+                                    try { nativeServer.dismissAll(); } catch(e) {}
+                                    
+                                    for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
+                                        let item = notificationRoot.activeHistoryReferences[i];
+                                        if (item) {
+                                            try { item.dismiss(); } catch(e) {}
+                                            try { nativeServer.dismiss(item.id); } catch(e) {}
+                                        }
+                                    }
+                                    
+                                    notificationRoot.visibleBanners = [];
+                                    notificationRoot.activeHistoryReferences = [];
+                                    notificationRoot.updateCount();
+                                    checkUserActivity();
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
+
+                    Item {
+                        id: listContainer
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        MouseArea {
+                            id: listContainerMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.NoButton
+                            onContainsMouseChanged: checkUserActivity()
                         }
 
-                        delegate: Item {
-                            width: notifListView.width
-                            height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
+                        ListView {
+                            id: notifListView
+                            anchors.fill: parent
+                            clip: true; spacing: 8
+                            model: nativeServer.trackedNotifications
 
-                            Rectangle {
-                                anchors.fill: parent
-                                
-                                // 🎯 THE FIX: Nudged alpha to 35% opacity (#59) for a perfectly subtle tint over the blur pipeline
-                                color: "#5911111b"
-                                
-                                border.color: cellMouseArea.containsMouse ? "#cdd6f4" : "#313244" 
-                                border.width: 1
-                                radius: 0 
+                            Text {
+                                anchors.centerIn: parent
+                                text: "No new notifications"
+                                font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff" 
+                                visible: notifListView.count === 0
+                            }
 
-                                ColumnLayout {
-                                    anchors.fill: parent; anchors.margins: 10; spacing: 2
+                            delegate: Item {
+                                width: notifListView.width
+                                height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
 
-                                    Text {
-                                        id: summaryLabel
-                                        text: modelData.summary
-                                        font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
-                                        color: "#cdd6f4" 
-                                        Layout.fillWidth: true; elide: Text.ElideRight
-                                    }
-
-                                    Text {
-                                        id: bodyLabel
-                                        text: modelData.body
-                                        font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"
-                                        Layout.fillWidth: true; wrapMode: Text.WordWrap; 
-                                        maximumLineCount: 3
-                                        elide: Text.ElideRight
-                                    }
-                                }
-                                
-                                MouseArea {
-                                    id: cellMouseArea
+                                Rectangle {
                                     anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        try { nativeServer.dismiss(modelData.id); } catch(e) {}
-                                        try { modelData.dismiss(); } catch(e) {}
-                                        notificationRoot.updateCount();
-                                        checkUserActivity();
+                                    color: "#5911111b"
+                                    border.color: cellMouseArea.containsMouse ? "#ffffff" : "#26ffffff" 
+                                    border.width: 1
+                                    radius: 0 
+
+                                    ColumnLayout {
+                                        anchors.fill: parent; anchors.margins: 10; spacing: 2
+
+                                        Text {
+                                            id: summaryLabel
+                                            text: modelData.summary
+                                            font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
+                                            color: "#ffffff" 
+                                            Layout.fillWidth: true; elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            id: bodyLabel
+                                            text: modelData.body
+                                            font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"
+                                            Layout.fillWidth: true; wrapMode: Text.WordWrap; 
+                                            maximumLineCount: 3
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+                                    
+                                    MouseArea {
+                                        id: cellMouseArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            try { nativeServer.dismiss(modelData.id); } catch(e) {}
+                                            try { modelData.dismiss(); } catch(e) {}
+                                            notificationRoot.updateCount();
+                                            checkUserActivity();
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
+            } // 🎯 THE FIX: Correctly seals the structural mouse block layout tree layer
         }
     }
 }
