@@ -63,7 +63,7 @@ Item {
 
     // 🕒 Sync hardware nodes every 15 seconds if on a laptop setup
     Timer {
-        interval: 15000
+        interval: 1000
         running: batRoot.isLaptop
         repeat: true
         onTriggered: {
@@ -124,15 +124,21 @@ Item {
                 id: batteryIcon
                 Layout.alignment: Qt.AlignHCenter
                 
-                text: batRoot.isCharging     ? "battery_charging_full" : 
-                    batRoot.capacity < 25    ? "battery_android_1" : 
-                    batRoot.capacity < 50    ? "battery_android_3" : 
-                    batRoot.capacity < 75    ? "battery_android_6" : 
-                                               "battery_android_full" 
+                text: batRoot.isCharging     ? "battery_android_frame_bolt" : 
+                    batRoot.capacity < 10    ? "battery_android_0" :
+                    batRoot.capacity < 20    ? "battery_android_1" : 
+                    batRoot.capacity < 30    ? "battery_android_2" : 
+                    batRoot.capacity < 40    ? "battery_android_3" : 
+                    batRoot.capacity < 50    ? "battery_android_4" : 
+                    batRoot.capacity < 60    ? "battery_android_5" : 
+                    batRoot.capacity < 70    ? "battery_android_6" : 
+                    batRoot.capacity < 80    ? "battery_android_7" : 
+                    batRoot.capacity < 90    ? "battery_android_8" : 
+                    batRoot.capacity < 98    ? "battery_android_9" : 
+                                            "battery_android_full" 
                                                     
                 font.family: "Material Symbols Outlined" 
                 font.pixelSize: 20
-                // Uniform white output
                 color: "#ffffff"
                 horizontalAlignment: Text.AlignHCenter
             }
