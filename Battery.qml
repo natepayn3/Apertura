@@ -124,7 +124,9 @@ Item {
                 id: batteryIcon
                 Layout.alignment: Qt.AlignHCenter
                 
-                text: batRoot.isCharging     ? "battery_android_frame_bolt" : 
+                // 📊 Check mouse hover first: if true, show percentage string; if false, show the android glyphs
+                text: batteryMouseArea.containsMouse ? batRoot.capacity + "%" : (
+                    batRoot.isCharging       ? "battery_android_frame_bolt" : 
                     batRoot.capacity < 10    ? "battery_android_0" :
                     batRoot.capacity < 20    ? "battery_android_1" : 
                     batRoot.capacity < 30    ? "battery_android_2" : 
@@ -135,10 +137,13 @@ Item {
                     batRoot.capacity < 80    ? "battery_android_7" : 
                     batRoot.capacity < 90    ? "battery_android_8" : 
                     batRoot.capacity < 98    ? "battery_android_9" : 
-                                            "battery_android_full" 
+                                            "battery_android_full"
+                )
                                                     
-                font.family: "Material Symbols Outlined" 
-                font.pixelSize: 20
+                // Dynamic styling layout to handle the transition between the icon font and regular text digits cleanly
+                font.family: batteryMouseArea.containsMouse ? "Rubik" : "Material Symbols Outlined" 
+                font.pixelSize: batteryMouseArea.containsMouse ? 12 : 20
+                font.weight: batteryMouseArea.containsMouse ? Font.Bold : Font.Normal
                 color: "#ffffff"
                 horizontalAlignment: Text.AlignHCenter
             }
