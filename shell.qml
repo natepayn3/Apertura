@@ -118,7 +118,7 @@ Scope {
                 Rectangle {
                     anchors.fill: parent
                     color: "#9911111b"          
-                    border.color: "#898989"   
+                    border.color: "transparent"   
                     border.width: 0
                     radius: 0
 
@@ -191,20 +191,20 @@ Scope {
                                 Layout.preferredWidth: 32
                                 Layout.preferredHeight: 32
                                 Layout.alignment: Qt.AlignHCenter
-                                color: toggleMouseArea.containsMouse ? "#313244" : "transparent"
+                                // Subtle white alpha hover overlay mask
+                                color: toggleMouseArea.containsMouse ? "#26ffffff" : "transparent"
                                 radius: 4
 
                                 Text {
                                     id: toggleChevron
                                     anchors.centerIn: parent
                                     
-                                    // 🎯 CIRCLED CHEVRONS: Swapped to the explicit circular boundary vectors
                                     text: bottomGroupControls.isExpanded ? "expand_circle_down" : "expand_circle_up"
                                     
                                     font.family: "Material Symbols Outlined"
                                     font.pixelSize: 22 
-                                    // 🎯 NEUTRAL TEXT COLOR: Locked to #bac2de for both states
-                                    color: "#bac2de"
+                                    // High-visibility pure white text element
+                                    color: "#ffffff"
                                 }
 
                                 MouseArea {
@@ -238,7 +238,7 @@ Scope {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     spacing: 12 
 
-                                    // 🎯 PRESERVED CRITICAL STACK ORDER (TOP TO BOTTOM):
+                                    // 🎯 PRESERVED CRITICAL STACK ORDER (TOP TO BOTTOM)
                                     WifiOsd {
                                         Layout.alignment: Qt.AlignHCenter
                                     }
