@@ -9,7 +9,6 @@ Item {
     // 🎛️ ORIENTATION TOGGLE
     property bool isVertical: true
 
-    // Dynamically tracks geometry metrics from the active orientation loader item
     implicitWidth: isVertical ? 24 : (layoutLoader.item ? layoutLoader.item.implicitWidth : 0)
     implicitHeight: isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight : 0) : 24
 
@@ -31,9 +30,7 @@ Item {
                     if (Array.isArray(json)) {
                         let ids = json.map(ws => ws.id).filter(id => id > 0);
                         let occupied = {};
-                        json.forEach(ws => {
-                            if (ws.windows > 0) occupied[ws.id] = true;
-                        });
+                        json.forEach(ws => { if (ws.windows > 0) occupied[ws.id] = true; });
                         workspaceContainer.occupiedMap = occupied;
                         if (!ids.includes(workspaceContainer.activeWorkspace)) ids.push(workspaceContainer.activeWorkspace);
                         let maxId = Math.max(...ids, 0);
@@ -66,54 +63,24 @@ Item {
         }
     }
 
-    Timer {
-        interval: 100; running: true; repeat: true
-        onTriggered: {
-            queryActiveWorkspace.running = false; queryActiveWorkspace.running = true;
-            queryWorkspaceList.running = false; queryWorkspaceList.running = true;
-        }
-    }
+    Timer { interval: 100; running: true; repeat: true; onTriggered: { queryActiveWorkspace.running = false; queryActiveWorkspace.running = true; queryWorkspaceList.running = false; queryWorkspaceList.running = true; } }
 
-    // ==========================================
-    // 🎨 DYNAMIC LAYOUT CELL FRAMEWORK
-    // ==========================================
     Loader {
         id: layoutLoader
         anchors.fill: parent
         sourceComponent: workspaceContainer.isVertical ? verticalLayoutComponent : horizontalLayoutComponent
     }
 
-    // 🔄 VERTICAL ORIENTATION (Column Layout Engine)
     Component {
         id: verticalLayoutComponent
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 10
-            
-            Repeater {
-                model: workspaceContainer.activeWorkspaceList
-                delegate: workspaceButtonDelegate
-            }
-        }
+        ColumnLayout { anchors.fill: parent; spacing: 10; Repeater { model: workspaceContainer.activeWorkspaceList; delegate: workspaceButtonDelegate } }
     }
 
-    // ↔️ HORIZONTAL ORIENTATION (Original Row Layout Engine)
     Component {
         id: horizontalLayoutComponent
-        RowLayout {
-            anchors.fill: parent
-            spacing: 10
-            
-            Repeater {
-                model: workspaceContainer.activeWorkspaceList
-                delegate: workspaceButtonDelegate
-            }
-        }
+        RowLayout { anchors.fill: parent; spacing: 10; Repeater { model: workspaceContainer.activeWorkspaceList; delegate: workspaceButtonDelegate } }
     }
 
-    // ==========================================
-    // 🪴 DOT/PILL CELL DELEGATE TEMPLATE
-    // ==========================================
     Component {
         id: workspaceButtonDelegate
         
@@ -122,23 +89,27 @@ Item {
             property int wsId: modelData
             property bool isActive: workspaceContainer.activeWorkspace === wsId
             property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
-            
-            // New dot tracker checks if this item sits at the end of the calculated workspace array
             property bool isNewIndicatorSlot: index === (workspaceContainer.activeWorkspaceList.length - 1)
 
-            // Large, easy-to-click hitboxes
             implicitWidth: workspaceContainer.isVertical ? 24 : (isActive ? 44 : 24)
             implicitHeight: workspaceContainer.isVertical ? (isActive ? 44 : 24) : 24
             cursorShape: Qt.PointingHandCursor
+            hoverEnabled: true
 
-            Behavior on implicitWidth {
-                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
-            }
-            Behavior on implicitHeight {
-                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+            onEntered: {
+                if (isNewIndicatorSlot) return;
+                if (typeof mainBarWindow !== "undefined" && mainBarWindow.previewHandle) {
+                    mainBarWindow.previewHandle.workspaceId = wsId;
+                    mainBarWindow.previewHandle.active = true;
+                }
             }
 
-            // Preserved original Lua dispatcher syntax
+            onExited: {
+                if (typeof mainBarWindow !== "undefined" && mainBarWindow.previewHandle) {
+                    mainBarWindow.previewHandle.active = false;
+                }
+            }
+
             onClicked: {
                 workspaceContainer.activeWorkspace = wsId;
                 switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + wsId + "\" })"];
@@ -149,40 +120,18 @@ Item {
 
             Rectangle {
                 anchors.centerIn: parent
-                
                 width: workspaceContainer.isVertical ? (isActive ? 14 : 12) : (isActive ? 44 : 12)
                 height: workspaceContainer.isVertical ? (isActive ? 44 : 12) : (isActive ? 14 : 12)
-                
                 radius: 6
-
-                Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                Behavior on height { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                
-                // 🎯 THE FIX: Maps active and occupied layers to full-strength white (#ffffff)
-                color: isActive           ? "#ffffff" : 
-                       isNewIndicatorSlot ? "transparent" : 
-                       isOccupied         ? "#ffffff" : "#1affffff"
-                
-                // 🎯 THE FIX: Enforces a clean, full-strength white outline for the hollow ring slot
+                color: isActive ? "#ffffff" : (isNewIndicatorSlot ? "transparent" : (isOccupied ? "#ffffff" : "#1affffff"))
                 border.width: (isNewIndicatorSlot && !isActive) ? 1.5 : 0
                 border.color: (isNewIndicatorSlot && !isActive) ? "#ffffff" : "transparent"
 
-                Behavior on color { ColorAnimation { duration: 140 } }
-                Behavior on border.color { ColorAnimation { duration: 140 } }
-
                 Text {
                     text: workspaceButton.wsId.toString()
-                    font.family: "Rubik"
-                    font.pixelSize: 11
-                    font.bold: true
-                    color: "#11111b"
-                    
-                    anchors.fill: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    
+                    font.family: "Rubik"; font.pixelSize: 11; font.bold: true; color: "#11111b"
+                    anchors.fill: parent; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                     opacity: workspaceButton.isActive ? 1.0 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: 120 } }
                 }
             }
         }
