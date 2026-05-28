@@ -112,7 +112,7 @@ Item {
     Rectangle {
         id: triggerButton
         anchors.fill: parent
-        radius: 0 // 📐 REMOVED ROUNDING
+        radius: 0 
         color: wallpaperMouseArea.containsMouse ? "#313244" : "transparent"
 
         Text {
@@ -142,7 +142,7 @@ Item {
         anchors.left: true
         anchors.right: true
         
-        color: "#0111111b"
+        color: "transparent"
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-wallpapers"
@@ -172,18 +172,18 @@ Item {
             id: wallpaperCard
 
             width: 216
-            height: 600
             
+            // 🎯 THE FIX: Anchors stretched contextually from top to bottom margins matching shell.qml bounds
             anchors.top: parent.top
+            anchors.bottom: parent.bottom
             anchors.topMargin: 12
+            anchors.bottomMargin: 12
             anchors.left: parent.left
             
             property int targetX: -216
             property real targetOpacity: 0.0
 
-            // 🎯 RESTORED SLIDING ANIMATION TRACKERS
-            anchors.leftMargin: targetX
-            opacity: targetOpacity
+            anchors.leftMargin: targetX; opacity: targetOpacity
 
             SequentialAnimation {
                 id: slideRightAnimation
@@ -202,7 +202,6 @@ Item {
             border.color: "transparent"
             focus: true
 
-            // 📐 GRANULAR CORNER CLIP: All frame sides flattened perfectly clean
             topLeftRadius: 0
             bottomLeftRadius: 0
             topRightRadius: 0
@@ -298,7 +297,7 @@ Item {
                             width: 192
                             height: 132
                             anchors.horizontalCenter: parent.horizontalCenter
-                            radius: 0 // 📐 REMOVED ROUNDING
+                            radius: 0 
                             
                             readonly property bool isHighlighted: (wallpaperListView.activeKeyIndex === index && wallpaperCard.activeFocus) || 
                                                                   (wallpaperListView.activeMouseIndex === index)
