@@ -146,7 +146,6 @@ Item {
                 anchors.fill: parent
                 spacing: 8
                 
-                // 🎯 THE FIX: Split side margins out from top/bottom offsets to inject cleaner vertical padding space
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
                 anchors.topMargin: 16
@@ -155,11 +154,12 @@ Item {
                 // THE TRACK
                 Rectangle {
                     id: barTrack
-                    Layout.preferredWidth: 10
+                    Layout.preferredWidth: 4
                     Layout.fillHeight: true
                     Layout.alignment: Qt.AlignHCenter
-                    color: "#313244"
-                    radius: 5
+                    // Muted background channel
+                    color: "#26ffffff"
+                    radius: 0
                     clip: true
 
                     // THE FILL
@@ -167,13 +167,14 @@ Item {
                         id: barFill
                         width: parent.width
                         height: parent.height * Math.min(hudRoot.volumeLevel, 1.0)
-                        color: hudRoot.isMuted ? "#f38ba8" : "#cdd6f4"
+                        // 🎯 THE FIX: Active = Solid White (#ffffff), Muted = Low alpha opacity step (#59ffffff)
+                        color: hudRoot.isMuted ? "#59ffffff" : "#ffffff"
                         anchors.bottom: parent.bottom
 
-                        bottomLeftRadius: 5
-                        bottomRightRadius: 5
-                        topLeftRadius: hudRoot.volumeLevel >= 0.95 ? 5 : 0
-                        topRightRadius: hudRoot.volumeLevel >= 0.95 ? 5 : 0
+                        bottomLeftRadius: 0
+                        bottomRightRadius: 0
+                        topLeftRadius: 0
+                        topRightRadius: 0
 
                         Behavior on height {
                             NumberAnimation { duration: 80; easing.type: Easing.OutCubic }
@@ -190,7 +191,8 @@ Item {
                         font.family: "Rubik"
                         font.pixelSize: 13
                         font.weight: Font.Bold
-                        color: hudRoot.isMuted ? "#f38ba8" : "#cdd6f4"
+                        // Text channels respond with matching monochrome states
+                        color: hudRoot.isMuted ? "#59ffffff" : "#ffffff"
                         Layout.alignment: Qt.AlignHCenter
                     }
 
@@ -198,7 +200,7 @@ Item {
                         text: hudRoot.isMuted ? "󰝟" : (hudRoot.volumeLevel > 0.50 ? "󰕾" : "󰖀")
                         font.family: "Material Design Icons"
                         font.pixelSize: 22
-                        color: hudRoot.isMuted ? "#f38ba8" : "#a6adc8"
+                        color: hudRoot.isMuted ? "#59ffffff" : "#ffffff"
                         Layout.alignment: Qt.AlignHCenter
                     }
                 }
