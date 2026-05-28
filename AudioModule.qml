@@ -229,15 +229,15 @@ Item {
     Rectangle {
         id: volumeHitbox
         anchors.fill: parent
-        color: volumeMouseArea.containsMouse ? "#313244" : "transparent"
-        radius: 8
+        color: volumeMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        radius: 0 
 
         Text {
             id: volumeIcon
             text: (audioRoot.isMuted || audioRoot.currentVol <= 0.01) ? "\uE04F" : (audioRoot.currentVol > 0.50 ? "\uE050" : "\uE04D")
             font.family: "Material Design Icons"
             font.pixelSize: 26
-            color: "#cdd6f4" 
+            color: "#ffffff" 
             anchors.centerIn: parent
             anchors.verticalCenterOffset: 3
         }
@@ -314,11 +314,10 @@ Item {
             color: "#9911111b" 
             border.width: 0
             
-            // 📐 GRANULAR CORNER CLIP: Square left edges flush to the bar, round the right outer corners
             topLeftRadius: 0
             bottomLeftRadius: 0
-            topRightRadius: 12
-            bottomRightRadius: 12
+            topRightRadius: 0
+            bottomRightRadius: 0
 
             height: Math.min(146 + (deviceListModel.count * 40), 300)
 
@@ -355,13 +354,13 @@ Item {
                 id: titleLabel
                 text: "Audio"
                 font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; 
-                color: "#cdd6f4" 
+                color: "#ffffff" 
                 x: 14; y: 14
             }
 
             Rectangle {
                 id: headerDivider
-                width: parent.width - 24; height: 1; color: "#313244"
+                width: parent.width - 24; height: 1; color: "#26ffffff"
                 x: 12; y: 44
             }
 
@@ -381,8 +380,9 @@ Item {
                     checkUserActivity();
                 }
 
+                // 🎯 THE FIX: Thinned slider baseline track frame profile height down to 3px
                 background: Rectangle {
-                    height: 6; radius: 3; color: "#313244"
+                    height: 3; radius: 0; color: "#26ffffff"
                     width: globalVolumeSlider.availableWidth
                     x: globalVolumeSlider.leftPadding
                     y: globalVolumeSlider.topPadding + globalVolumeSlider.availableHeight / 2 - height / 2
@@ -390,13 +390,13 @@ Item {
                     Rectangle {
                         height: parent.height
                         width: globalVolumeSlider.visualPosition * parent.width
-                        color: "#898989" 
-                        radius: 3
+                        color: "#ffffff" 
+                        radius: 0
                     }
                 }
 
                 handle: Rectangle {
-                    width: 16; height: 16; radius: 8; color: "#cdd6f4" 
+                    width: 16; height: 16; radius: 8; color: "#ffffff" 
                     x: globalVolumeSlider.leftPadding + globalVolumeSlider.visualPosition * (globalVolumeSlider.availableWidth - width)
                     y: globalVolumeSlider.topPadding + globalVolumeSlider.availableHeight / 2 - height / 2
 
@@ -418,14 +418,14 @@ Item {
 
             Text {
                 text: Math.round(globalVolumeSlider.value * 100) + "%"
-                font.family: "Rubik"; font.pixelSize: 12; font.bold: true; color: "#cdd6f4"
+                font.family: "Rubik"; font.pixelSize: 12; font.bold: true; color: "#ffffff"
                 anchors.verticalCenter: globalVolumeSlider.verticalCenter
                 anchors.right: parent.right; anchors.rightMargin: 14
             }
 
             Rectangle {
                 id: sliderDivider
-                width: parent.width - 24; height: 1; color: "#313244"
+                width: parent.width - 24; height: 1; color: "#26ffffff"
                 x: 12; y: 94
             }
 
@@ -433,7 +433,7 @@ Item {
                 id: outputsLabel
                 text: "Outputs"
                 font.family: "Rubik"; font.pixelSize: 13; font.bold: true; 
-                color: "#cdd6f4" 
+                color: "#ffffff" 
                 x: 14; y: 104
             }
 
@@ -454,6 +454,7 @@ Item {
                     onContainsMouseChanged: checkUserActivity()
                 }
 
+                // OUTPUT DEVICE ROW ITERATOR
                 ListView {
                     id: deviceListView
                     anchors.fill: parent
@@ -467,10 +468,8 @@ Item {
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: 6
-                            color: active ? "#313244" : (deviceMouse.containsMouse ? "#252538" : "transparent")
-                            
-                            // 📐 INTERNAL BORDERS REMOVED: Inner item outlines dropped clean
+                            radius: 0
+                            color: active ? "#45ffffff" : (deviceMouse.containsMouse ? "#1affffff" : "transparent")
                             border.width: 0
 
                             RowLayout {
@@ -478,16 +477,17 @@ Item {
                                 anchors.leftMargin: 8; anchors.rightMargin: 8
                                 spacing: 8
 
+                                // 🎯 THE FIX: Restored active output status pill dot indicator back to circular bounds
                                 Rectangle {
                                     width: 6; height: 6; radius: 3
-                                    color: active ? "#a6e3a1" : "transparent"
+                                    color: active ? "#ffffff" : "transparent"
                                     Layout.alignment: Qt.AlignVCenter
                                 }
 
                                 Text {
                                     text: name
                                     font.family: "Rubik"; font.pixelSize: 12
-                                    color: active ? "#cdd6f4" : "#a6adc8" 
+                                    color: active ? "#ffffff" : "#59ffffff" 
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
                                 }
