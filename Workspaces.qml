@@ -158,14 +158,14 @@ Item {
                 Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 Behavior on height { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 
-                // 🎯 THE FIX: Evaluates to "transparent" if it's the empty placeholder node, otherwise fills properly
-                color: isActive           ? "#a6e3a1" : 
+                // 🎯 THE FIX: Maps active and occupied layers to full-strength white (#ffffff)
+                color: isActive           ? "#ffffff" : 
                        isNewIndicatorSlot ? "transparent" : 
-                       isOccupied         ? "#cdd6f4" : "#45475a"
+                       isOccupied         ? "#ffffff" : "#1affffff"
                 
-                // Enforces a solid, clean text-colored boundary stroke to compose the hollow ring shape
+                // 🎯 THE FIX: Enforces a clean, full-strength white outline for the hollow ring slot
                 border.width: (isNewIndicatorSlot && !isActive) ? 1.5 : 0
-                border.color: (isNewIndicatorSlot && !isActive) ? "#cdd6f4" : "transparent"
+                border.color: (isNewIndicatorSlot && !isActive) ? "#ffffff" : "transparent"
 
                 Behavior on color { ColorAnimation { duration: 140 } }
                 Behavior on border.color { ColorAnimation { duration: 140 } }
