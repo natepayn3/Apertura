@@ -11,7 +11,8 @@ Item {
     implicitWidth: 32
     implicitHeight: 32
 
-    property string wallpaperDir: "/home/nick/Pictures/Wallpapers"
+    // 🎯 HOME DIRECTORY CONFIGURATION PATH
+    property string wallpaperDir: ""
 
     // Controls actual PanelWindow visibility
     property bool menuOpen: false
@@ -22,6 +23,18 @@ Item {
 
     // 🔒 ROOT HARDWARE COORDINATE TRACKERS
     property point globalMousePos: Qt.point(-1, -1)
+
+    // 🎯 THE FIX: Maps user space variables inside runtime subshell evaluations atomically
+    Component.onCompleted: {
+        // Fallback target context engine to track image file loops cleanly inside your lists
+        wallpaperDir = Quickshell.env("HOME") + "/Pictures/Wallpapers";
+        
+        // Pass expansion arrays safely to the scanner engine
+        wallpaperScanner.command = ["sh", "-c", "ls " + wallpaperDir];
+        
+        // Execute background worker loops
+        wallpaperScanner.running = true;
+    }
 
     // 🎬 CLOSE FINALIZER
     Timer {
@@ -43,7 +56,6 @@ Item {
     }
 
     function openMenu(): void {
-        // Clear coordinate tracking records on window map
         globalMousePos = Qt.point(-1, -1);
 
         wallpaperListView.activeKeyIndex = -1;
@@ -57,7 +69,7 @@ Item {
 
         slideRightAnimation.start();
 
-        if (wallpaperModel.count === 0) {
+        if (wallpaperModel.count === 0 && wallpaperScanner.command && wallpaperScanner.command.length > 1) {
             wallpaperScanner.running = false;
             wallpaperScanner.running = true;
         }
@@ -99,8 +111,8 @@ Item {
     // 🔄 WALLPAPER DIRECTORY SCANNER
     Process {
         id: wallpaperScanner
-        running: true
-        command: ["ls", wallpaperDir]
+        command: ["true"]
+        running: false
         stdout: StdioCollector {
             onTextChanged: {
                 populateWallpapers(text);
@@ -113,14 +125,14 @@ Item {
         id: triggerButton
         anchors.fill: parent
         radius: 0 
-        color: wallpaperMouseArea.containsMouse ? "#313244" : "transparent"
+        color: wallpaperMouseArea.containsMouse ? "#26ffffff" : "transparent"
 
         Text {
             anchors.centerIn: parent
             text: "󰸉"
             font.family: "Rubik"
             font.pixelSize: 24
-            color: "#cdd6f4"
+            color: "#ffffff"
         }
 
         MouseArea {
@@ -137,21 +149,14 @@ Item {
         id: wallpaperModal
         visible: wallpaperModuleRoot.menuOpen
 
-        anchors.top: true
-        anchors.bottom: true
-        anchors.left: true
-        anchors.right: true
-        
+        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         color: "transparent"
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-wallpapers"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
-        WlrLayershell.margins.left: 0
-        WlrLayershell.margins.right: 0
-        WlrLayershell.margins.bottom: 0
-        WlrLayershell.margins.top: 0
+        WlrLayershell.margins.left: 0; WlrLayershell.margins.right: 0; WlrLayershell.margins.bottom: 0; WlrLayershell.margins.top: 0
 
         onVisibleChanged: {
             if (visible && wallpaperModuleRoot.menuOpen) {
@@ -170,19 +175,13 @@ Item {
         // 📦 VERTICAL PANE CONTAINER
         Rectangle {
             id: wallpaperCard
-
             width: 216
             
-            // 🎯 THE FIX: Anchors stretched contextually from top to bottom margins matching shell.qml bounds
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            anchors.topMargin: 12
-            anchors.bottomMargin: 12
-            anchors.left: parent.left
+            anchors.top: parent.top; anchors.bottom: parent.bottom
+            anchors.topMargin: 12; anchors.bottomMargin: 12; anchors.left: parent.left
             
             property int targetX: -216
             property real targetOpacity: 0.0
-
             anchors.leftMargin: targetX; opacity: targetOpacity
 
             SequentialAnimation {
@@ -198,14 +197,8 @@ Item {
             Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
 
             color: "#9911111b"
-            border.width: 0
-            border.color: "transparent"
-            focus: true
-
-            topLeftRadius: 0
-            bottomLeftRadius: 0
-            topRightRadius: 0
-            bottomRightRadius: 0
+            border.width: 0; border.color: "transparent"; focus: true
+            topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -214,7 +207,6 @@ Item {
                 }
                 else if (event.key === Qt.Key_Down) {
                     wallpaperListView.logicalMouseIndexStore = -1;
-                    
                     if (wallpaperListView.activeKeyIndex === -1) {
                         wallpaperListView.activeKeyIndex = 0;
                     } else if (wallpaperListView.activeKeyIndex < wallpaperListView.count - 1) {
@@ -225,7 +217,6 @@ Item {
                 }
                 else if (event.key === Qt.Key_Up) {
                     wallpaperListView.logicalMouseIndexStore = -1;
-                    
                     if (wallpaperListView.activeKeyIndex > 0) {
                         wallpaperListView.activeKeyIndex--;
                     }
@@ -236,16 +227,7 @@ Item {
                     let finalTarget = wallpaperListView.activeKeyIndex !== -1 ? wallpaperListView.activeKeyIndex : wallpaperListView.activeMouseIndex;
                     if (finalTarget >= 0 && finalTarget < wallpaperListView.count) {
                         let targetWallpaper = wallpaperModel.get(finalTarget);
-                        
-                        wallpaperSetter.command = [
-                            "awww",
-                            "img",
-                            targetWallpaper.fullPath,
-                            "--transition-type",
-                            "wipe",
-                            "--transition-step",
-                            "16"
-                        ];
+                        wallpaperSetter.command = ["awww", "img", targetWallpaper.fullPath, "--transition-type", "wipe", "--transition-step", "16"];
                         wallpaperSetter.running = true;
                         closeMenu();
                     }
@@ -259,67 +241,47 @@ Item {
             }
 
             ColumnLayout {
-                anchors.fill: parent
-                anchors.topMargin: 16
-                anchors.bottomMargin: 16
-                spacing: 12
+                anchors.fill: parent; anchors.topMargin: 16; anchors.bottomMargin: 16; spacing: 12
 
                 Text {
                     text: "Wallpapers"
-                    font.family: "Rubik"
-                    font.pixelSize: 16
-                    font.weight: Font.Bold
-                    color: "#cdd6f4"
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
+                    font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff"
+                    Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter
                 }
 
-                // 📜 VERTICAL LIST VIEW
                 ListView {
                     id: wallpaperListView
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    clip: true
-                    spacing: 12
-                    model: wallpaperModel
-                    boundsBehavior: Flickable.StopAtBounds
+                    Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: 12
+                    model: wallpaperModel; boundsBehavior: Flickable.StopAtBounds
 
                     property int activeKeyIndex: -1
                     property int logicalMouseIndexStore: -1
-                    
                     property int activeMouseIndex: (activeKeyIndex === -1) ? logicalMouseIndexStore : -1
 
                     delegate: Item {
-                        width: wallpaperListView.width
-                        height: 132
+                        width: wallpaperListView.width; height: 132
 
                         Rectangle {
-                            width: 192
-                            height: 132
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            radius: 0 
+                            width: 192; height: 132
+                            anchors.horizontalCenter: parent.horizontalCenter; radius: 0 
                             
                             readonly property bool isHighlighted: (wallpaperListView.activeKeyIndex === index && wallpaperCard.activeFocus) || 
                                                                   (wallpaperListView.activeMouseIndex === index)
 
-                            color: isHighlighted ? "#313244" : "#181825"
-                            border.color: isHighlighted ? "#b4befe" : "transparent"
+                            color: isHighlighted ? "#26ffffff" : "#11111b"
+                            border.color: isHighlighted ? "#ffffff" : "transparent"
                             border.width: 1
 
                             Image {
-                                anchors.fill: parent
-                                anchors.margins: 4
+                                anchors.fill: parent; anchors.margins: 4
                                 source: "file://" + model.fullPath
-                                fillMode: Image.PreserveAspectCrop
-                                clip: true
+                                fillMode: Image.PreserveAspectCrop; clip: true
                             }
                         }
 
                         MouseArea {
                             id: gridMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
+                            anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             
                             function verifyTruePointerAction() {
                                 var currentGlobalPoint = gridMouse.mapToItem(wallpaperModuleRoot, gridMouse.mouseX, gridMouse.mouseY);
@@ -330,41 +292,10 @@ Item {
                                 return false;
                             }
 
-                            onEntered: {
-                                if (verifyTruePointerAction()) {
-                                    wallpaperListView.activeKeyIndex = -1;
-                                    wallpaperListView.logicalMouseIndexStore = index;
-                                }
-                            }
-
-                            onPositionChanged: {
-                                if (verifyTruePointerAction()) {
-                                    if (wallpaperListView.logicalMouseIndexStore !== index) {
-                                        wallpaperListView.activeKeyIndex = -1;
-                                        wallpaperListView.logicalMouseIndexStore = index;
-                                    }
-                                }
-                            }
-                            
-                            onExited: {
-                                if (wallpaperListView.logicalMouseIndexStore === index) {
-                                    wallpaperListView.logicalMouseIndexStore = -1;
-                                }
-                            }
-                            
-                            onClicked: {
-                                wallpaperSetter.command = [
-                                    "awww",
-                                    "img",
-                                    model.fullPath,
-                                    "--transition-type",
-                                    "wipe",
-                                    "--transition-step",
-                                    "16"
-                                ];
-                                wallpaperSetter.running = true;
-                                closeMenu();
-                            }
+                            onEntered: { if (verifyTruePointerAction()) { wallpaperListView.activeKeyIndex = -1; wallpaperListView.logicalMouseIndexStore = index; } }
+                            onPositionChanged: { if (verifyTruePointerAction()) { if (wallpaperListView.logicalMouseIndexStore !== index) { wallpaperListView.activeKeyIndex = -1; wallpaperListView.logicalMouseIndexStore = index; } } }
+                            onExited: { if (wallpaperListView.logicalMouseIndexStore === index) { wallpaperListView.logicalMouseIndexStore = -1; } }
+                            onClicked: { wallpaperSetter.command = ["awww", "img", model.fullPath, "--transition-type", "wipe", "--transition-step", "16"]; wallpaperSetter.running = true; closeMenu(); }
                         }
                     }
                 }
@@ -372,9 +303,5 @@ Item {
         }
     }
 
-    // 🏃 WALLPAPER SETTER
-    Process {
-        id: wallpaperSetter
-        running: false
-    }
+    Process { id: wallpaperSetter; command: ["true"]; running: false }
 }
