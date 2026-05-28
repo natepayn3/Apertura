@@ -49,7 +49,6 @@ Item {
         rootScope.requestOpen("power");
         menuOpen = true;
 
-        // Drive the entry transition timeline sequentially matching NotificationOsd setup
         slideInAnimation.start();
         checkUserActivity();
     }
@@ -87,7 +86,8 @@ Item {
         id: powerHitbox
         width: 32
         height: 32
-        color: powerMouseArea.containsMouse || menuOpen ? "#313244" : "transparent"
+        // Monochrome subtle alpha hover mask
+        color: powerMouseArea.containsMouse || menuOpen ? "#26ffffff" : "transparent"
         radius: 0 
 
         Text {
@@ -95,7 +95,7 @@ Item {
             text: "\u23FB"
             font.family: "Rubik"
             font.pixelSize: 20
-            color: "#cdd6f4"
+            color: "#ffffff"
             anchors.centerIn: parent
         }
 
@@ -173,7 +173,6 @@ Item {
             property int targetX: -320
             property real targetOpacity: 0.0
             
-            // 🎯 MATCHED OVERLAY CARD SLIDE ANIMATION
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
@@ -181,7 +180,6 @@ Item {
                 id: slideInAnimation
                 PauseAnimation { duration: 16 }
                 ParallelAnimation {
-                    // Slide animation lands securely at target 0 positioning tracking NotificationOsd constraints
                     NumberAnimation { target: popupPowerWrapper; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
                     NumberAnimation { target: popupPowerWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
                 }
@@ -239,7 +237,7 @@ Item {
                         font.family: "Rubik"
                         font.pixelSize: 16 
                         font.weight: Font.Bold 
-                        color: "#cdd6f4" 
+                        color: "#ffffff" 
                     }
                     Item { Layout.fillWidth: true }
                 }
@@ -247,7 +245,7 @@ Item {
                 Rectangle { 
                     Layout.fillWidth: true
                     height: 1 
-                    color: "#313244" 
+                    color: "#26ffffff" 
                 }
 
                 ColumnLayout {
@@ -257,7 +255,7 @@ Item {
 
                     Repeater {
                         model: [
-                            { label: "󰌾  Lock",      cmd: ["INTERNAL_LOCK"] },
+                            { label: "󰌾  Lock",     cmd: ["INTERNAL_LOCK"] },
                             { label: "󰤄  Suspend",  cmd: ["systemctl", "suspend"] },
                             { label: "󰜉  Reboot",   cmd: ["systemctl", "reboot"] },
                             { label: "󰐥  Shutdown", cmd: ["systemctl", "poweroff"] }
@@ -278,7 +276,7 @@ Item {
                                 Rectangle {
                                     id: btnBg
                                     anchors.fill: parent
-                                    color: menuBtn.containsMouse ? "#313244" : "transparent"
+                                    color: menuBtn.containsMouse ? "#26ffffff" : "transparent"
                                     radius: 0 
 
                                     Text {
@@ -287,7 +285,8 @@ Item {
                                         font.pixelSize: 13
                                         font.weight: Font.Normal
                                         
-                                        color: menuBtn.containsMouse ? "#cdd6f4" : "#a6adc8"
+                                        // 🎯 THE FIX: Bumped inactive resting item opacity from 35% up to 55% white (#8cffffff)
+                                        color: menuBtn.containsMouse ? "#ffffff" : "#8cffffff"
                                         anchors.verticalCenter: btnBg.verticalCenter
                                         anchors.left: btnBg.left
                                         anchors.leftMargin: 8
