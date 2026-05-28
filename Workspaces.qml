@@ -9,9 +9,9 @@ Item {
     // 🎛️ ORIENTATION TOGGLE
     property bool isVertical: true
 
-    // 🔒 FIXED: Read sizes dynamically out of the active instantiated loader item context instead of a broken component ID
-    implicitWidth: isVertical ? 22 : (layoutLoader.item ? layoutLoader.item.implicitWidth : 0)
-    implicitHeight: isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight : 0) : 22
+    // Dynamically tracks geometry metrics from the active orientation loader item
+    implicitWidth: isVertical ? 24 : (layoutLoader.item ? layoutLoader.item.implicitWidth : 0)
+    implicitHeight: isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight : 0) : 24
 
     property int activeWorkspace: 1
     property var activeWorkspaceList: [1, 2]
@@ -112,7 +112,7 @@ Item {
     }
 
     // ==========================================
-    // 🪴 CELL REPEATER DELEGATE TEMPLATE
+    // 🪴 DOT/PILL CELL DELEGATE TEMPLATE
     // ==========================================
     Component {
         id: workspaceButtonDelegate
@@ -123,19 +123,19 @@ Item {
             property bool isActive: workspaceContainer.activeWorkspace === wsId
             property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
 
-            implicitWidth: workspaceContainer.isVertical ? 22 : (isActive ? 50 : 30)
-            implicitHeight: workspaceContainer.isVertical ? (isActive ? 50 : 30) : 22
+            // 🎯 ENLARGED HITBOX TARGETS: Expanded bounds to 24px to completely shield scaled up nodes
+            implicitWidth: workspaceContainer.isVertical ? 24 : (isActive ? 44 : 24)
+            implicitHeight: workspaceContainer.isVertical ? (isActive ? 44 : 24) : 24
             cursorShape: Qt.PointingHandCursor
 
             Behavior on implicitWidth {
-                enabled: !workspaceContainer.isVertical
-                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
             }
             Behavior on implicitHeight {
-                enabled: workspaceContainer.isVertical
-                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
             }
 
+            // Preserved original Lua dispatch syntax
             onClicked: {
                 workspaceContainer.activeWorkspace = wsId;
                 switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + wsId + "\" })"];
@@ -145,36 +145,36 @@ Item {
             Process { id: switchWorkspace; running: false }
 
             Rectangle {
-                anchors.fill: parent
-                radius: workspaceContainer.isVertical ? width / 2 : height / 2
+                anchors.centerIn: parent
                 
-                color: isActive   ? "#cdd6f4" : 
-                       isOccupied ? "#313244" : "transparent"
+                // 🎯 ENLARGED GEOMETRY ENGINE: Active pills stretch to 44x14px; inactive items scale to 12x12px dots
+                width: workspaceContainer.isVertical ? (isActive ? 14 : 12) : (isActive ? 44 : 12)
+                height: workspaceContainer.isVertical ? (isActive ? 44 : 12) : (isActive ? 14 : 12)
                 
-                border.width: 1
-                border.color: isActive   ? "#cdd6f4" : 
-                              isOccupied ? "#a6adc8" : "#45475a"
+                // Radius auto-adjusts to maintain smooth caps on the thicker nodes
+                radius: 6
 
-                Behavior on color { ColorAnimation { duration: 120 } }
-                Behavior on border.color { ColorAnimation { duration: 120 } }
+                Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                Behavior on height { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                
+                color: isActive   ? "#a6e3a1" : 
+                       isOccupied ? "#cdd6f4" : "#45475a"
+                
+                Behavior on color { ColorAnimation { duration: 140 } }
 
                 Text {
                     text: workspaceButton.wsId.toString()
                     font.family: "Rubik"
-                    font.pixelSize: 12
+                    font.pixelSize: 11
                     font.bold: true
-                    color: workspaceButton.isActive ? "#11111b" : "#a6adc8"
+                    color: "#11111b"
                     
-                    width: parent.width
-                    height: parent.height
-                    
+                    anchors.fill: parent
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     
-                    opacity: (workspaceButton.isActive || workspaceButton.isOccupied) ? 1.0 : 0.0
-
-                    Behavior on opacity { NumberAnimation { duration: 100 } }
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    opacity: workspaceButton.isActive ? 1.0 : 0.0
+                    Behavior on opacity { NumberAnimation { duration: 120 } }
                 }
             }
         }
