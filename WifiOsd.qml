@@ -73,15 +73,40 @@ Item {
             onStreamFinished: {
                 wifiNetworksModel.clear();
                 let lines = text.split('\n');
+                
+                // 🎯 THE FIX: Track unique broadcast names during raw stream parsing
+                let seenSsids = new Set();
+                
                 for (let line of lines) {
                     if (!line.trim()) continue;
                     let parts = line.split(':');
+                    
                     if (parts.length >= 4 && parts[0].length > 0) {
+                        let ssidName = parts[0];
+                        let isActive = parts[3] === "yes";
+                        
+                        // If we've already parsed this SSID, skip it unless this line is the active connection
+                        if (seenSsids.has(ssidName) && !isActive) {
+                            continue;
+                        }
+                        
+                        // If it's the active network and it was already added as a duplicate, drop the old inactive one first
+                        if (isActive && seenSsids.has(ssidName)) {
+                            for (let i = 0; i < wifiNetworksModel.count; i++) {
+                                if (wifiNetworksModel.get(i).ssidName === ssidName) {
+                                    wifiNetworksModel.remove(i);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        seenSsids.add(ssidName);
+                        
                         wifiNetworksModel.append({
-                            "ssidName": parts[0],
+                            "ssidName": ssidName,
                             "secured": parts[1] !== "" && parts[1] !== "--",
                             "bars": parts[2],
-                            "isActive": parts[3] === "yes"
+                            "isActive": isActive
                         });
                     }
                 }
@@ -207,7 +232,7 @@ Item {
                     Text { text: "Wi-Fi"; font.family: "Rubik"; font.pixelSize: 15; font.weight: Font.Bold; color: "#cdd6f4" }
                     Item { Layout.fillWidth: true }
                     
-                    // 🎯 DYNAMIC STATUS TRACKER HEADER
+                    // Connected to: [SSID] Row Header
                     RowLayout {
                         spacing: 4
                         Text { 
