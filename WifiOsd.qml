@@ -8,7 +8,6 @@ import Quickshell.Io
 Item {
     id: wifiRoot
     
-    // 🎯 TRUE HARDWARE CHECK: Component collapses and hides automatically if no wireless card exists
     property bool hasWifiCard: false
     
     implicitWidth: hasWifiCard ? 32 : 0
@@ -19,7 +18,7 @@ Item {
     property string ssid: "Disconnected"
     property bool menuOpen: false
     property bool enteringPassword: false
-    property bool showingForgetConfirm: false // Track contextual forget screen view
+    property bool showingForgetConfirm: false 
     property string selectedSsid: ""
 
     // ⚡ Hardware Detection: Scans sysfs net paths for any card exposing wireless capabilities
@@ -73,8 +72,6 @@ Item {
             onStreamFinished: {
                 wifiNetworksModel.clear();
                 let lines = text.split('\n');
-                
-                // 🎯 THE FIX: Track unique broadcast names during raw stream parsing
                 let seenSsids = new Set();
                 
                 for (let line of lines) {
@@ -85,12 +82,10 @@ Item {
                         let ssidName = parts[0];
                         let isActive = parts[3] === "yes";
                         
-                        // If we've already parsed this SSID, skip it unless this line is the active connection
                         if (seenSsids.has(ssidName) && !isActive) {
                             continue;
                         }
                         
-                        // If it's the active network and it was already added as a duplicate, drop the old inactive one first
                         if (isActive && seenSsids.has(ssidName)) {
                             for (let i = 0; i < wifiNetworksModel.count; i++) {
                                 if (wifiNetworksModel.get(i).ssidName === ssidName) {
@@ -119,7 +114,6 @@ Item {
 
     function triggerScan(): void { networkScanner.running = true; statusWatcher.running = true; }
     
-    // Contextual target forget module
     function forgetNetwork(targetSsid): void {
         nmcActionExecutor.command = ["nmcli", "connection", "delete", targetSsid];
         nmcActionExecutor.running = true;
@@ -154,13 +148,12 @@ Item {
     Rectangle {
         id: wifiHitbox
         anchors.fill: parent
-        color: batteryMouseArea.containsMouse ? "#313244" : "transparent"
+        color: batteryMouseArea.containsMouse ? "#26ffffff" : "transparent"
         radius: 0 
 
         Item {
             anchors.centerIn: parent
-            width: 20
-            height: 20
+            width: 20; height: 20
 
             Text {
                 id: wifiIcon
@@ -172,7 +165,7 @@ Item {
                                                       "signal_cellular_4_bar"
                 font.family: "Material Symbols Outlined"
                 font.pixelSize: 20
-                color: wifiRoot.signalStrength > 0 ? "#a6e3a1" : "#f38ba8"
+                color: "#ffffff"
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
@@ -226,50 +219,39 @@ Item {
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 14; spacing: 8
 
-                // Header Block
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Wi-Fi"; font.family: "Rubik"; font.pixelSize: 15; font.weight: Font.Bold; color: "#cdd6f4" }
+                    Text { text: "Wi-Fi"; font.family: "Rubik"; font.pixelSize: 15; font.weight: Font.Bold; color: "#ffffff" }
                     Item { Layout.fillWidth: true }
                     
-                    // Connected to: [SSID] Row Header
                     RowLayout {
                         spacing: 4
-                        Text { 
-                            text: "Connected to:"
-                            font.family: "Rubik"
-                            font.pixelSize: 11
-                            color: "#a6adc8" 
-                        }
+                        Text { text: "Connected to:"; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
                         Text { 
                             text: wifiRoot.ssid
-                            font.family: "Rubik"
-                            font.pixelSize: 11
-                            font.weight: Font.Bold
-                            color: wifiRoot.signalStrength > 0 ? "#a6e3a1" : "#a6adc8"
-                            elide: Text.ElideRight
-                            Layout.maximumWidth: 100 
+                            font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
+                            color: "#ffffff"
+                            elide: Text.ElideRight; Layout.maximumWidth: 100 
                         }
                     }
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
 
                 StackLayout {
                     Layout.fillWidth: true; Layout.fillHeight: true
                     currentIndex: wifiRoot.enteringPassword ? 1 : (wifiRoot.showingForgetConfirm ? 2 : 0)
 
-                    // View 0: Dynamic Connection List View
                     ListView {
                         id: networkListView; model: wifiNetworksModel; clip: true; spacing: 4
                         delegate: Rectangle {
-                            width: networkListView.width; height: 34; color: itemMouseArea.containsMouse ? "#242535" : "transparent"; radius: 4
+                            width: networkListView.width; height: 34; color: itemMouseArea.containsMouse ? "#26ffffff" : "transparent"; radius: 4
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 8
                                 Text { text: model.isActive ? "🛜" : ""; font.pixelSize: 11 }
-                                Text { text: model.ssidName; font.family: "Rubik"; font.pixelSize: 12; font.weight: model.isActive ? Font.Bold : Font.Normal; color: model.isActive ? "#a6e3a1" : "#cdd6f4"; Layout.fillWidth: true; elide: Text.ElideRight }
-                                Text { text: model.secured ? "lock" : ""; font.family: "Material Symbols Outlined"; font.pixelSize: 14; color: "#585b70" }
-                                Text { text: model.bars; font.family: "Rubik"; font.pixelSize: 11; color: "#a6adc8" }
+                                Text { text: model.ssidName; font.family: "Rubik"; font.pixelSize: 12; font.weight: model.isActive ? Font.Bold : Font.Normal; color: "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight }
+                                Text { text: model.secured ? "lock" : ""; font.family: "Material Symbols Outlined"; font.pixelSize: 14; color: "#59ffffff" }
+                                Text { text: model.bars; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
                             }
                             MouseArea {
                                 id: itemMouseArea; anchors.fill: parent; hoverEnabled: true
@@ -289,15 +271,14 @@ Item {
                         }
                     }
 
-                    // View 1: Password Input Panel
                     ColumnLayout {
                         spacing: 10; Layout.fillWidth: true
-                        Text { text: "Connect to: " + wifiRoot.selectedSsid; font.family: "Rubik"; font.pixelSize: 12; color: "#bac2de" }
+                        Text { text: "Connect to: " + wifiRoot.selectedSsid; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff" }
                         
                         TextField {
                             id: passInputField; Layout.fillWidth: true; height: 32; echoMode: TextInput.Password
-                            placeholderText: "Enter passkey..."; font.family: "Rubik"; font.pixelSize: 12; color: "#cdd6f4"
-                            background: Rectangle { color: "#1e1e2e"; border.color: parent.activeFocus ? "#a6e3a1" : "#313244"; border.width: 1; radius: 4 }
+                            placeholderText: "Enter passkey..."; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff"
+                            background: Rectangle { color: "#11111b"; border.color: parent.activeFocus ? "#ffffff" : "#26ffffff"; border.width: 1; radius: 4 }
                             Keys.onPressed: (event) => { if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) connectToNetwork(wifiRoot.selectedSsid, text) }
                         }
 
@@ -305,53 +286,36 @@ Item {
                             Layout.fillWidth: true; spacing: 8
                             Button {
                                 Layout.preferredWidth: 140; Layout.fillWidth: true
-                                contentItem: Text { text: "Cancel"; font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"; horizontalAlignment: Text.AlignHCenter }
-                                background: Rectangle { color: parent.hovered ? "#313244" : "#1e1e2e"; radius: 4 }
+                                contentItem: Text { text: "Cancel"; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter }
+                                background: Rectangle { color: parent.hovered ? "#26ffffff" : "#11111b"; radius: 4 }
                                 onClicked: wifiRoot.enteringPassword = false
                             }
                             Button {
                                 Layout.preferredWidth: 140; Layout.fillWidth: true
-                                contentItem: Text { 
-                                    text: "Connect"
-                                    font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
-                                    color: parent.hovered ? "#11111b" : "#cdd6f4"
-                                    horizontalAlignment: Text.AlignHCenter 
-                                }
-                                background: Rectangle { 
-                                    color: parent.hovered ? "#a6e3a1" : "#1e1e2e"; radius: 4 
-                                }
+                                contentItem: Text { text: "Connect"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter }
+                                background: Rectangle { color: parent.hovered ? "#40ffffff" : "#11111b"; radius: 4 }
                                 onClicked: connectToNetwork(wifiRoot.selectedSsid, passInputField.text)
                             }
                         }
                         Item { Layout.fillHeight: true } 
                     }
 
-                    // View 2: Contextual Management Screen (Forget Option)
                     ColumnLayout {
                         spacing: 10; Layout.fillWidth: true
-                        Text { text: "Connected to: " + wifiRoot.selectedSsid; font.family: "Rubik"; font.pixelSize: 12; color: "#bac2de" }
+                        Text { text: "Connected to: " + wifiRoot.selectedSsid; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff" }
 
                         RowLayout {
                             Layout.fillWidth: true; spacing: 8
-                            
                             Button {
                                 Layout.preferredWidth: 140; Layout.fillWidth: true
-                                contentItem: Text { text: "Back"; font.family: "Rubik"; font.pixelSize: 12; color: "#a6adc8"; horizontalAlignment: Text.AlignHCenter }
-                                background: Rectangle { color: parent.hovered ? "#313244" : "#1e1e2e"; radius: 4 }
+                                contentItem: Text { text: "Back"; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter }
+                                background: Rectangle { color: parent.hovered ? "#26ffffff" : "#11111b"; radius: 4 }
                                 onClicked: wifiRoot.showingForgetConfirm = false
                             }
-                            
                             Button {
                                 Layout.preferredWidth: 140; Layout.fillWidth: true
-                                contentItem: Text { 
-                                    text: "Forget"
-                                    font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
-                                    color: parent.hovered ? "#11111b" : "#f38ba8"
-                                    horizontalAlignment: Text.AlignHCenter 
-                                }
-                                background: Rectangle { 
-                                    color: parent.hovered ? "#f38ba8" : "#1e1e2e"; radius: 4 
-                                }
+                                contentItem: Text { text: "Forget"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter }
+                                background: Rectangle { color: parent.hovered ? "#40ffffff" : "#11111b"; radius: 4 }
                                 onClicked: forgetNetwork(wifiRoot.selectedSsid)
                             }
                         }
