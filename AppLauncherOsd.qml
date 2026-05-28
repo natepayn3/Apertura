@@ -20,6 +20,17 @@ Item {
         id: dynamicAppModel
     }
 
+    // 🎯 PATH SEPARATION MECHANISM
+    Component.onCompleted: {
+        const localUri = Qt.resolvedUrl(".").toString();
+        const basePath = localUri.replace("file://", "");
+        
+        appScanner.command = ["python3", basePath + "/get_apps.py"];
+        
+        // Boot execution sequence
+        appScanner.running = true;
+    }
+
     // 🎬 CLOSE FINALIZER
     Timer {
         id: closeTimer
@@ -48,8 +59,10 @@ Item {
 
         slideInAnimation.start();
 
-        appScanner.running = false;
-        appScanner.running = true;
+        if (appScanner.command && appScanner.command.length > 1) {
+            appScanner.running = false;
+            appScanner.running = true;
+        }
     }
 
     function closeMenu(): void {
@@ -80,7 +93,7 @@ Item {
             return;
         }
 
-        // Tokenize strings with flags (e.g. Chrome PWAs) into clean system execution arrays
+        // Tokenize strings with flags into clean system execution arrays
         let argsArray = [];
         let currentToken = "";
         let inQuotes = false;
@@ -137,8 +150,8 @@ Item {
     // 🔄 PAYLOAD SCANNER
     Process {
         id: appScanner
-        running: true
-        command: ["python3", "/home/nick/.config/quickshell/vibez/get_apps.py"]
+        command: ["true"]
+        running: false
 
         stdout: StdioCollector {
             onTextChanged: {
@@ -157,15 +170,15 @@ Item {
     Rectangle {
         id: triggerButton
         anchors.fill: parent
-        color: launcherMouseArea.containsMouse ? "#313244" : "transparent"
-        radius: 8
+        color: launcherMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        radius: 0 
 
         Text {
             anchors.centerIn: parent
             text: "󰣇" 
             font.family: "Rubik"
             font.pixelSize: 24
-            color: "#cdd6f4" 
+            color: "#ffffff" 
         }
 
         MouseArea {
@@ -181,10 +194,7 @@ Item {
     PanelWindow {
         id: appLauncherModal
         visible: launcherModuleRoot.menuOpen
-        anchors.top: true
-        anchors.bottom: true
-        anchors.left: true
-        anchors.right: true
+        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-launcher"
@@ -245,12 +255,8 @@ Item {
             border.width: 0
             focus: true
 
-            // 📐 SQUARE CORNER OPTIMIZATION
             antialiasing: false
-            topLeftRadius: 0
-            bottomLeftRadius: 0
-            topRightRadius: 0
-            bottomRightRadius: 0
+            topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -352,7 +358,7 @@ Item {
                     font.family: "Rubik"
                     font.pixelSize: 18
                     font.weight: Font.Bold
-                    color: "#cdd6f4" 
+                    color: "#ffffff" 
                     Layout.alignment: Qt.AlignLeft
                     Layout.bottomMargin: 2
                     Layout.topMargin: 4
@@ -360,10 +366,7 @@ Item {
 
                 ListView {
                     id: appListView
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    clip: true
-                    spacing: 2
+                    Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: 2
                     model: dynamicAppModel
                     
                     property bool keyboardActive: false
@@ -374,32 +377,28 @@ Item {
 
                     delegate: Item {
                         id: delegateRoot
-                        width: appListView.width
-                        height: 36
+                        width: appListView.width; height: 36
 
                         Rectangle {
                             anchors.fill: parent
-                            color: (appListView.currentIndex === index) ? "#313244" : "transparent"
-                            radius: 6
+                            color: (appListView.currentIndex === index) ? "#26ffffff" : "transparent"
+                            radius: 0 
                             z: 0 
                         }
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: 10
-                            anchors.rightMargin: 10
+                            anchors.leftMargin: 10; anchors.rightMargin: 10
                             spacing: 12
                             z: 1
 
                             Item {
-                                width: 22
-                                height: 22
+                                width: 22; height: 22
                                 Layout.alignment: Qt.AlignVCenter
 
                                 Image {
                                     anchors.fill: parent
-                                    sourceSize.width: 22
-                                    sourceSize.height: 22
+                                    sourceSize.width: 22; sourceSize.height: 22
                                     visible: model.iconPath !== ""
                                     source: model.iconPath ? "file://" + model.iconPath : ""
                                     fillMode: Image.PreserveAspectFit
@@ -407,27 +406,24 @@ Item {
 
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: 4
-                                    color: "#45475a"
+                                    radius: 0 
+                                    // 🎯 FIXED: Corrected token alignment syntax error block
+                                    color: "#1affffff" 
                                     visible: model.iconPath === ""
 
                                     Text {
                                         anchors.centerIn: parent
                                         text: model.name.charAt(0).toUpperCase()
-                                        font.family: "Rubik"
-                                        font.pixelSize: 11
-                                        font.weight: Font.Bold
-                                        color: "#b4befe"
+                                        font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
+                                        color: "#ffffff" 
                                     }
                                 }
                             }
 
                             Text {
                                 text: model.name
-                                font.family: "Rubik"
-                                font.weight: Font.Medium
-                                font.pixelSize: 14
-                                color: "#cdd6f4"
+                                font.family: "Rubik"; font.weight: Font.Medium; font.pixelSize: 14
+                                color: "#ffffff" 
                                 Layout.fillWidth: true
                                 elide: Text.ElideRight 
                                 Layout.alignment: Qt.AlignVCenter
