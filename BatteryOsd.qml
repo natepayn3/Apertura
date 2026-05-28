@@ -41,7 +41,6 @@ Item {
         id: capReader
         path: batRoot.isLaptop ? "/sys/class/power_supply/BAT1/capacity" : ""
         onTextChanged: {
-            // 🎯 THE FIX: Gated type-check completely eliminates the [undefined] assignment warning on init
             if (typeof text === "function" && text()) {
                 let cleanText = text().trim();
                 if (cleanText.length > 0) {
@@ -113,7 +112,8 @@ Item {
     Rectangle {
         id: batteryHitbox
         anchors.fill: parent
-        color: batteryMouseArea.containsMouse ? "#313244" : "transparent"
+        // Unified monochrome hover mask
+        color: batteryMouseArea.containsMouse ? "#26ffffff" : "transparent"
         radius: 0 
 
         ColumnLayout {
@@ -132,7 +132,8 @@ Item {
                                                     
                 font.family: "Material Symbols Outlined" 
                 font.pixelSize: 20
-                color: batRoot.capacity < 25 && !batRoot.isCharging ? "#f38ba8" : "#a6e3a1"
+                // Uniform white output
+                color: "#ffffff"
                 horizontalAlignment: Text.AlignHCenter
             }
         }
@@ -163,10 +164,7 @@ Item {
         visible: batRoot.menuOpen
         color: "transparent"
         
-        anchors.top: true
-        anchors.bottom: true
-        anchors.left: true
-        anchors.right: true
+        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
@@ -201,7 +199,9 @@ Item {
             Behavior on anchors.leftMargin { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
             Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
 
-            color: "#9911111b"; border.width: 0; radius: 0; focus: true
+            // Dynamic blur-through window base
+            color: "#9911111b"
+            border.width: 0; radius: 0; focus: true
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
                     closeMenu();
@@ -219,24 +219,24 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#cdd6f4" }
+                    Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" }
                     Item { Layout.fillWidth: true }
                     Text { 
                         text: batRoot.isCharging ? "󱐋 Charging" : "Discharging"
                         font.family: "Rubik"; font.pixelSize: 12
-                        color: batRoot.isCharging ? "#a6e3a1" : "#a6adc8"
+                        color: "#ffffff"
                     }
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
 
                 ColumnLayout {
                     Layout.fillWidth: true; spacing: 4
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Current Charge:"; font.family: "Rubik"; font.pixelSize: 13; color: "#a6adc8" }
+                        Text { text: "Current Charge:"; font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff" }
                         Item { Layout.fillWidth: true }
-                        Text { text: batRoot.capacity + "%"; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#cdd6f4" }
+                        Text { text: batRoot.capacity + "%"; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#ffffff" }
                     }
                 }
             }
