@@ -1,4 +1,4 @@
-# Apertura Wayland Bar Framework
+# Apertura
 
 A sleek, hyper-responsive status bar framework built for Quickshell on Wayland (Layershell). 
 
