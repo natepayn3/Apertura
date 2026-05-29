@@ -3,9 +3,7 @@
 
 ***
 
-<div align="left" style="margin-top: 10px; margin-bottom: 10px; line-height: 1;">
-  <img src="https://readme-typing-svg.demolab.com?font=Rubik&weight=900&size=100&color=a6adc8&center=false&vCenter=true&width=600&height=110&lines=APERTURA&repeat=false&runOnce=true" alt="Apertura Header">
-</div>
+<img width="600" height="100" alt="image" src="https://github.com/user-attachments/assets/2acb41ab-1842-40b9-9e7a-86976955c11f" />
 
 A sleek and responsive shell built for Quickshell on Hyprland.
 
