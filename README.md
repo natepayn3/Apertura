@@ -3,7 +3,16 @@
 
 ***
 
-# Apertura
+<div align="center">
+
+# 🌌 **APERTURA**
+### _Exposing the hidden layers of your desktop_
+
+`⬢ Hyper-Responsive` `⬡ Layershell` `⬢ Hyprland X-Ray Native`
+
+</div>
+
+***
 
 A sleek, hyper-responsive status bar framework built for Quickshell on Wayland (Layershell). 
 
