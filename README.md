@@ -4,8 +4,7 @@
 ***
 
 <div align="left">
-  <img src="https://readme-typing-svg.demolab.com?font=Rubik&weight=900&size=64&color=a6adc8&center=false&vCenter=true&width=600&height=100&lines=APERTURA&repeat=false&runOnce=true" alt="Apertura Header">
-  <br>
+  <img src="https://readme-typing-svg.demolab.com?font=Rubik&weight=900&size=100&color=a6adc8&center=false&vCenter=true&width=600&height=100&lines=APERTURA&repeat=false&runOnce=true" alt="Apertura Header">
   <h3><i>Exposing the hidden layers of your desktop</i></h3>
 </div>
 
