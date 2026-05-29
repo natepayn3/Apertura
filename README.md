@@ -1,9 +1,4 @@
-#     _    ____  _____ ____ _____ _   _ ____    _    
-#    / \  |  _ \| ____|  _ \_   _| | | |  _ \  / \   
-#   / _ \ | |_) |  _| | |_) || | | | | | |_) |/ _ \  
-#  / ___ \|  __/| |___|  _ < | | | |_| |  _ <___  | 
-# /_/   \_\_|   |_____|_| \_\|_|  \___/|_| \_\  |_| 
-#
+
 # Apertura Wayland Bar Framework
 
 A sleek, highly responsive status bar framework built for Quickshell on Wayland (Layershell). This configuration offers independent, asynchronous status modules with modern UI micro-animations and dynamic layer blurring.
