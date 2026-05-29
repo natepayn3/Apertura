@@ -41,8 +41,8 @@ Item {
         id: capReader
         path: batRoot.isLaptop ? "/sys/class/power_supply/BAT1/capacity" : ""
         onTextChanged: {
-            if (typeof text === "function" && text()) {
-                let cleanText = text().trim();
+            if (capReader.text) {
+                let cleanText = capReader.text().trim();
                 if (cleanText.length > 0) {
                     batRoot.capacity = parseInt(cleanText) || 100;
                 }
@@ -55,13 +55,17 @@ Item {
         id: statusReader
         path: batRoot.isLaptop ? "/sys/class/power_supply/BAT1/status" : ""
         onTextChanged: {
-            if (typeof text === "function" && text()) {
-                batRoot.isCharging = (text().trim() === "Charging");
+            if (statusReader.text) {
+                let cleanStatus = statusReader.text().trim();
+                // Evaluates true if plugged into the wall, regardless of active current status
+                batRoot.isCharging = (cleanStatus === "Charging" || 
+                                      cleanStatus === "Full" || 
+                                      cleanStatus === "Not charging");
             }
         }
     }
 
-    // 🕒 Sync hardware nodes every 15 seconds if on a laptop setup
+    // 🕒 Sync hardware nodes every second if on a laptop setup
     Timer {
         interval: 1000
         running: batRoot.isLaptop
@@ -137,7 +141,7 @@ Item {
                     batRoot.capacity < 80    ? "battery_android_7" : 
                     batRoot.capacity < 90    ? "battery_android_8" : 
                     batRoot.capacity < 98    ? "battery_android_9" : 
-                                            "battery_android_full"
+                                               "battery_android_full"
                 )
                                                     
                 // Dynamic styling layout to handle the transition between the icon font and regular text digits cleanly
@@ -233,7 +237,8 @@ Item {
                     Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" }
                     Item { Layout.fillWidth: true }
                     Text { 
-                        text: batRoot.isCharging ? "󱐋 Charging" : "Discharging"
+                        // Dynamically outputs Fully Charged, Charging, or Discharging text depending on actual string state
+                        text: (statusReader.text && statusReader.text().trim() === "Full") ? "Fully Charged" : (batRoot.isCharging ? "󱐋 Charging" : "Discharging")
                         font.family: "Rubik"; font.pixelSize: 12
                         color: "#ffffff"
                     }
