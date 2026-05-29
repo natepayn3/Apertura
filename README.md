@@ -17,6 +17,8 @@ This shell is minimal in nature, containing everything you need to operate your 
 
 Toggles are listed below for you to add custom keybinds if you wish, but these are not set automatically during install.
 
+#### This shell assumes you're using the newer Hyprland lua config!
+
 ### System Dependencies
 
 Your package manager must resolve the following dependencies to ensure core backend operations:
