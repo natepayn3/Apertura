@@ -140,11 +140,15 @@ Item {
             running: false
         }
 
-        // 🧠 FIXED COMMAND INTERCEPT ROUTER
+        // 🧠 DESKTOP AGNOSTIC REFACTOR
         function runCommand(args) {
             closeMenu();
             if (args[0] === "INTERNAL_LOCK") {
-                rootScope.sessionLocked = true;
+                // Hand execution chain to global user session hooks dynamically
+                Quickshell.execDetached([
+                    "sh", "-c", 
+                    "loginctl lock-session || hyprlock || swaylock || waylock"
+                ]);
             } else {
                 sysCmd.command = args;
                 sysCmd.running = true;
@@ -284,8 +288,6 @@ Item {
                                         font.family: "Rubik"
                                         font.pixelSize: 13
                                         font.weight: Font.Normal
-                                        
-                                        // 🎯 THE FIX: Bumped inactive resting item opacity from 35% up to 55% white (#8cffffff)
                                         color: menuBtn.containsMouse ? "#ffffff" : "#8cffffff"
                                         anchors.verticalCenter: btnBg.verticalCenter
                                         anchors.left: btnBg.left
