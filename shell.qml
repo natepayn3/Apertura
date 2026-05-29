@@ -10,88 +10,45 @@ import "."
 Scope {
     id: rootScope
 
-    // 🎯 LOCAL CENTRAL STATE MACHINE
     property var activeModal: null
-    
-    // 🔒 GLOBAL SAFELOCK REGISTER: Tracks when the GUI volume slider is being dragged
     property bool audioSliderActive: false
-
-    // 🗺️ ABSOLUTE INSTANCE TRACKER: Maps explicit panel window pointers by unique hardware names
     property var instantiatedBars: ({})
-
-    // 🔒 LAZY LOCKSCREEN CONTROLLER STATE
     property bool sessionLocked: false
 
-    function requestOpen(modalName) {
-        activeModal = modalName;
-    }
+    function requestOpen(modalName) { activeModal = modalName; }
+    function dismissAll() { activeModal = null; }
 
-    function dismissAll() {
-        activeModal = null;
-    }
+    IpcHandler { target: "session"; function lock(): void { rootScope.sessionLocked = true; } }
+    IpcHandler { target: "launcher"; function toggle(): void { for (let s in rootScope.instantiatedBars) if (rootScope.instantiatedBars[s].appLauncherModule) rootScope.instantiatedBars[s].appLauncherModule.toggleMenu(); } }
+    IpcHandler { target: "wallpaper"; function toggle(): void { for (let s in rootScope.instantiatedBars) if (rootScope.instantiatedBars[s].wallpaperModule) rootScope.instantiatedBars[s].wallpaperModule.toggleMenu(); } }
 
-    // 🔒 GLOBAL IPC ROUTING MAPS
-    IpcHandler {
-        target: "session"
-        
-        function lock(): void {
-            rootScope.sessionLocked = true;
-        }
-    }
-
-    IpcHandler {
-        target: "launcher"
-        
-        function toggle(): void {
-            for (let screenName in rootScope.instantiatedBars) {
-                let barWindow = rootScope.instantiatedBars[screenName];
-                if (barWindow && barWindow.appLauncherModule) {
-                    barWindow.appLauncherModule.toggleMenu();
-                }
-            }
-        }
-    }
-
-    // 🔄 GLOBAL PANEL HANDOFF SWAP LISTENER
-    IpcHandler {
-        target: "wallpaper"
-        
-        function toggle(): void {
-            for (let screenName in rootScope.instantiatedBars) {
-                let barWindow = rootScope.instantiatedBars[screenName];
-                if (barWindow && barWindow.wallpaperModule) {
-                    barWindow.wallpaperModule.toggleMenu();
-                }
-            }
-        }
-    }
-
-    // 🖥️ MULTI-MONITOR INSTANTIATION TRACKING
     Instantiator {
         id: barWindows
         model: Quickshell.screens
-
-        delegate: Item {
-            id: displayGroupContext
-
-            VolumeHud {
+        
+        delegate: Scope {
+            WorkspacePreview {
+                id: workspacePreviewWindow
                 targetScreen: modelData
             }
-
+            
+            VolumeHud { targetScreen: modelData }
+            
             PanelWindow {
                 id: mainBarWindow
-                
                 property alias appLauncherModule: appLauncherItem
                 property alias wallpaperModule: wallpaperItem
-
+                property alias previewHandle: workspacePreviewWindow
                 screen: modelData
                 
-                anchors.left: true
-                anchors.top: true
-                anchors.bottom: true
+                anchors {
+                    left: true
+                    top: true
+                    bottom: true
+                }
+                
                 implicitWidth: 54
                 color: "transparent"
-
                 WlrLayershell.layer: WlrLayer.Top
                 WlrLayershell.namespace: "quickshell-bar"
                 WlrLayershell.margins.top: 12
@@ -99,169 +56,43 @@ Scope {
                 WlrLayershell.margins.left: 12
                 WlrLayershell.margins.right: 0
 
-                Component.onCompleted: {
-                    if (modelData && modelData.name) {
-                        let currentMap = rootScope.instantiatedBars;
-                        currentMap[modelData.name] = mainBarWindow;
-                        rootScope.instantiatedBars = currentMap;
-                    }
-                }
-
-                Component.onDestruction: {
-                    if (modelData && modelData.name) {
-                        let currentMap = rootScope.instantiatedBars;
-                        delete currentMap[modelData.name];
-                        rootScope.instantiatedBars = currentMap;
-                    }
-                }
-
                 Rectangle {
                     anchors.fill: parent
                     color: "#9911111b"          
-                    border.color: "transparent"   
-                    border.width: 0
-                    radius: 0
-
-                    MouseArea {
-                        id: mainBarMouseTracker
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        z: -1
-                        acceptedButtons: Qt.LeftButton
-                        onPressed: rootScope.dismissAll()
-                    }
-
-                    Workspaces {
-                        anchors.centerIn: parent
-                        z: 1 
-                    }
-
+                    MouseArea { anchors.fill: parent; hoverEnabled: true; z: -1; onPressed: rootScope.dismissAll() }
+                    Workspaces { anchors.centerIn: parent; z: 1 }
                     ColumnLayout {
-                        anchors.fill: parent
-                        anchors.topMargin: 16
-                        anchors.bottomMargin: 16
-                        spacing: 0
-
-                        // Top Stack Layout Window Block
+                        anchors.fill: parent; anchors.topMargin: 16; anchors.bottomMargin: 16; spacing: 0
                         ColumnLayout {
-                            Layout.preferredHeight: 180
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
-                            spacing: 12
-
-                            AppLauncher {
-                                id: appLauncherItem
-                                Layout.alignment: Qt.AlignHCenter
-                            }
-
-                            Wallpaper {
-                                id: wallpaperItem
-                                Layout.alignment: Qt.AlignHCenter
-                            }
-                            
+                            Layout.preferredHeight: 180; Layout.fillWidth: true; Layout.alignment: Qt.AlignTop | Qt.AlignHCenter; spacing: 12
+                            AppLauncher { id: appLauncherItem; Layout.alignment: Qt.AlignHCenter }
+                            Wallpaper { id: wallpaperItem; Layout.alignment: Qt.AlignHCenter }
                             Item { Layout.fillHeight: true }
                         }
-
-                        // Center Layout Spacer Box
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                        }
-
-                        // ==========================================
-                        // 📦 BOTTOM INDENT INDICATOR DRAWER CONTEXT
-                        // ==========================================
+                        Item { Layout.fillWidth: true; Layout.fillHeight: true }
                         ColumnLayout {
                             id: bottomGroupControls
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter
-                            spacing: 12
-
-                            // Controller state track flag variable
+                            Layout.fillWidth: true; Layout.alignment: Qt.AlignBottom | Qt.AlignHCenter; spacing: 12
                             property bool isExpanded: false
-
-                            // 📅 1. Calendar (Always Visible / Top Priority)
-                            CalendarModule {
-                                Layout.alignment: Qt.AlignHCenter
-                            }
-
-                            // 🧭 2. Collapsible Control Arrow Trigger Block
+                            CalendarModule { Layout.alignment: Qt.AlignHCenter }
                             Rectangle {
-                                id: toggleButton
-                                Layout.preferredWidth: 32
-                                Layout.preferredHeight: 32
-                                Layout.alignment: Qt.AlignHCenter
-                                // Subtle white alpha hover overlay mask
-                                color: toggleMouseArea.containsMouse ? "#26ffffff" : "transparent"
-                                radius: 4
-
-                                Text {
-                                    id: toggleChevron
-                                    anchors.centerIn: parent
-                                    
-                                    text: bottomGroupControls.isExpanded ? "expand_circle_down" : "expand_circle_up"
-                                    
-                                    font.family: "Material Symbols Outlined"
-                                    font.pixelSize: 22 
-                                    // High-visibility pure white text element
-                                    color: "#ffffff"
-                                }
-
-                                MouseArea {
-                                    id: toggleMouseArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: bottomGroupControls.isExpanded = !bottomGroupControls.isExpanded
-                                }
+                                id: toggleButton; Layout.preferredWidth: 32; Layout.preferredHeight: 32; Layout.alignment: Qt.AlignHCenter
+                                color: toggleMouseArea.containsMouse ? "#26ffffff" : "transparent"; radius: 4
+                                Text { anchors.centerIn: parent; text: bottomGroupControls.isExpanded ? "expand_circle_down" : "expand_circle_up"; font.family: "Material Symbols Outlined"; font.pixelSize: 22; color: "#ffffff" }
+                                MouseArea { id: toggleMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: bottomGroupControls.isExpanded = !bottomGroupControls.isExpanded }
                             }
-
-                            // 🗃️ 3. Animated Masked Sub-Column Clipping Container
                             Item {
-                                id: drawerClipWrapper
-                                Layout.fillWidth: true
-                                
-                                implicitHeight: bottomGroupControls.isExpanded ? modulesSubColumn.implicitHeight : 0
-                                opacity: bottomGroupControls.isExpanded ? 1.0 : 0.0
-                                clip: true
-
-                                Behavior on implicitHeight {
-                                    NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
-                                }
-                                Behavior on opacity {
-                                    NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
-                                }
-
+                                id: drawerClipWrapper; Layout.fillWidth: true; implicitHeight: bottomGroupControls.isExpanded ? modulesSubColumn.implicitHeight : 0; opacity: bottomGroupControls.isExpanded ? 1.0 : 0.0; clip: true
+                                Behavior on implicitHeight { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                                Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutQuad } }
                                 ColumnLayout {
-                                    id: modulesSubColumn
-                                    anchors.top: parent.top
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: 12 
-
-                                    // 🎯 PRESERVED CRITICAL STACK ORDER (TOP TO BOTTOM)
-                                    Wifi {
-                                        Layout.alignment: Qt.AlignHCenter
-                                    }
-
-                                    Battery {
-                                        Layout.alignment: Qt.AlignHCenter
-                                    }
-
-                                    Notification {
-                                        Layout.alignment: Qt.AlignHCenter
-                                    }
-
-                                    Bluetooth {
-                                        Layout.alignment: Qt.AlignHCenter
-                                    }
-
-                                    Audio {
-                                        Layout.alignment: Qt.AlignHCenter
-                                    }
-
-                                    Power {
-                                        Layout.alignment: Qt.AlignHCenter
-                                    }
+                                    id: modulesSubColumn; anchors.top: parent.top; anchors.horizontalCenter: parent.horizontalCenter; spacing: 12 
+                                    Wifi { Layout.alignment: Qt.AlignHCenter }
+                                    Battery { Layout.alignment: Qt.AlignHCenter }
+                                    Notification { Layout.alignment: Qt.AlignHCenter }
+                                    Bluetooth { Layout.alignment: Qt.AlignHCenter }
+                                    Audio { Layout.alignment: Qt.AlignHCenter }
+                                    Power { Layout.alignment: Qt.AlignHCenter }
                                 }
                             }
                         }
