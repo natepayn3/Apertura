@@ -4,13 +4,12 @@
 ***
 
 <div align="left">
-  <img src="https://readme-typing-svg.demolab.com?font=Rubik&weight=900&size=100&color=a6adc8&center=false&vCenter=true&width=600&height=100&lines=APERTURA&repeat=false&runOnce=true" alt="Apertura Header">
-  <h3><i>Exposing the hidden layers of your desktop</i></h3>
+  <img src="https://readme-typing-svg.demolab.com?font=Rubik&weight=900&size=100&color=a6adc8&center=false&vCenter=true&width=600&height=120&lines=APERTURA&repeat=false&runOnce=true" alt="Apertura Header">
 </div>
 
 ***
 
-A sleek, hyper-responsive status bar framework built for Quickshell on Hyprland. 
+A sleek and responsive shell built for Quickshell on Hyprland.
 
 Why "Apertura"? Because like a camera lens opening up to the light, this bar uses Hyprland's `xray` mechanics to slice through the desktop and expose the beautiful, hidden blur layers underneath. It's built for speed, clean aesthetics, and zero-compromise desktop configuration.
 
