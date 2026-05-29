@@ -26,7 +26,7 @@ hl.monitor({ output = "DP-2", mode = "2560x1440@164.84", position = "1440x722", 
 -- Set programs that you use
 local terminal    = "kitty"
 local fileManager = "nautilus"
-local menu = "qs -p .config/quickshell/vibez ipc call launcher toggle"
+local menu = "qs -p .config/Apertura ipc call launcher toggle"
 
 
 -------------------
@@ -45,10 +45,9 @@ local menu = "qs -p .config/quickshell/vibez ipc call launcher toggle"
 -- end)
 
 hl.on("hyprland.start", function () 
-  hl.exec_cmd("qs -p .config/quickshell/vibez")
+  hl.exec_cmd("qs -p .config/Apertura")
   hl.exec_cmd("systemctl --user start hyprpolkitagent")
   hl.exec_cmd("hypridle")
-  hl.exec_cmd("librepods")
   hl.exec_cmd("awww-daemon")
 end)
 
