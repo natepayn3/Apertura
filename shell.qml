@@ -52,6 +52,19 @@ Scope {
             PanelWindow {
                 id: mainBarWindow
 
+                // Unique identifier string derived from screen data
+                property string screenKey: modelData.name
+
+                // Register window instance into reference tracking object
+                Component.onCompleted: {
+                    rootScope.instantiatedBars[screenKey] = mainBarWindow;
+                }
+
+                // Clean up references to prevent leak traces on layout shifts
+                Component.onDestruction: {
+                    delete rootScope.instantiatedBars[screenKey];
+                }
+
                 property alias appLauncherModule: appLauncherItem
                 property alias wallpaperModule: wallpaperItem
                 property alias calendarModule: calendarItem
@@ -97,23 +110,23 @@ Scope {
                         id: topStackColumn
                         anchors.top: parent.top
                         anchors.left: parent.left
-                        anchors.right: parent.right // Force Column to fill the entire 54px bar width
+                        anchors.right: parent.right 
                         anchors.topMargin: 16
                         spacing: 12
 
                         AppLauncher {
                             id: appLauncherItem
-                            anchors.horizontalCenter: parent.horizontalCenter // Center in the 54px space
+                            anchors.horizontalCenter: parent.horizontalCenter 
                         }
 
                         Wallpaper {
                             id: wallpaperItem
-                            anchors.horizontalCenter: parent.horizontalCenter // Center in the 54px space
+                            anchors.horizontalCenter: parent.horizontalCenter 
                         }
 
                         Calendar {
                             id: calendarItem
-                            anchors.horizontalCenter: parent.horizontalCenter // Center in the 54px space
+                            anchors.horizontalCenter: parent.horizontalCenter 
                         }
                     }
 
