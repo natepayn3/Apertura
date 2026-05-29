@@ -3,8 +3,8 @@
 
 ***
 
-<div align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Rubik&weight=900&size=46&duration=1&pause=1&color=33CCFF&center=true&vCenter=true&width=500&height=70&lines=APERTURA" alt="Apertura Header">
+<div align="left">
+  <img src="https://readme-typing-svg.demolab.com?font=Rubik&weight=900&size=46&color=33CCFF&center=true&vCenter=true&width=500&height=70&lines=APERTURA&singleLine=true" alt="Apertura Header">
   <br>
   <h3><i>Exposing the hidden layers of your desktop</i></h3>
 </div>
