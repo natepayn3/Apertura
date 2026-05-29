@@ -1,3 +1,8 @@
+> [!WARNING]  
+> _This framework is currently in active development and has not been fully tested across all system hardware configurations yet. Proceed with caution!_
+
+***
+
 # Apertura
 
 A sleek, hyper-responsive status bar framework built for Quickshell on Wayland (Layershell). 
