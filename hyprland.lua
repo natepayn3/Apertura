@@ -15,9 +15,13 @@
 ------------------
 
 -- See https://wiki.hypr.land/Configuring/Basics/Monitors/
+hl.monitor({
+    output   = "",
+    mode     = "preferred",
+    position = "auto",
+    scale    = "auto",
+})
 
-hl.monitor({ output = "DP-1", mode = "2560x1440@164.84", position = "0x0", scale = 1, transform = 1 })
-hl.monitor({ output = "DP-2", mode = "2560x1440@164.84", position = "1440x722", scale = 1 })
 
 ---------------------
 ---- MY PROGRAMS ----
@@ -26,7 +30,7 @@ hl.monitor({ output = "DP-2", mode = "2560x1440@164.84", position = "1440x722", 
 -- Set programs that you use
 local terminal    = "kitty"
 local fileManager = "nautilus"
-local menu = "qs -p .config/Apertura ipc call launcher toggle"
+local menu = "qs -c Apertura ipc call launcher toggle"
 
 
 -------------------
@@ -35,20 +39,12 @@ local menu = "qs -p .config/Apertura ipc call launcher toggle"
 
 -- See https://wiki.hypr.land/Configuring/Basics/Autostart/
 
--- Autostart necessary processes (like notifications daemons, status bars, etc.)
--- Or execute your favorite apps at launch like this:
---
--- hl.on("hyprland.start", function () 
---   hl.exec_cmd(terminal)
---   hl.exec_cmd("nm-applet")
---   hl.exec_cmd("waybar & hyprpaper & firefox")
--- end)
-
 hl.on("hyprland.start", function () 
-  hl.exec_cmd("qs -p .config/Apertura")
+  hl.exec_cmd("qs -c Apertura")
+  hl.exec_cmd("awww-daemon")
   hl.exec_cmd("systemctl --user start hyprpolkitagent")
   hl.exec_cmd("hypridle")
-  hl.exec_cmd("awww-daemon")
+  hl.exec_cmd("librepods")
 end)
 
 -------------------------------
@@ -70,18 +66,6 @@ hl.env("LIBVA_DRIVER_NAME", "nvidia")
 -----------------------
 
 -- See https://wiki.hypr.land/Configuring/Advanced-and-Cool/Permissions/
--- Please note permission changes here require a Hyprland restart and are not applied on-the-fly
--- for security reasons
-
--- hl.config({
---   ecosystem = {
---     enforce_permissions = true,
---   },
--- })
-
--- hl.permission("/usr/(bin|local/bin)/grim", "screencopy", "allow")
--- hl.permission("/usr/(lib|libexec|lib64)/xdg-desktop-portal-hyprland", "screencopy", "allow")
--- hl.permission("/usr/(bin|local/bin)/hyprpm", "plugin", "allow")
 
 
 -----------------------
@@ -101,20 +85,15 @@ hl.config({
             inactive_border = "rgba(595959aa)",
         },
 
-        -- Set to true to enable resizing windows by clicking and dragging on borders and gaps
         resize_on_border = false,
-
-        -- Please see https://wiki.hypr.land/Configuring/Advanced-and-Cool/Tearing/ before you turn this on
         allow_tearing = false,
-
         layout = "scrolling",
     },
 
     decoration = {
-        rounding       = 4,
-        rounding_power = 10,
+        rounding       = 6,
+        rounding_power = 2,
 
-        -- Change transparency of focused and unfocused windows
         active_opacity   = 1.0,
         inactive_opacity = 1.0,
 
@@ -166,28 +145,10 @@ hl.animation({ leaf = "workspacesIn",  enabled = true,  speed = 1.21, bezier = "
 hl.animation({ leaf = "workspacesOut", enabled = true,  speed = 1.94, bezier = "almostLinear", style = "fade" })
 hl.animation({ leaf = "zoomFactor",    enabled = true,  speed = 7,    bezier = "quick" })
 
--- Ref https://wiki.hypr.land/Configuring/Basics/Workspace-Rules/
--- "Smart gaps" / "No gaps when only"
--- uncomment all if you wish to use that.
--- hl.workspace_rule({ workspace = "w[tv1]", gaps_out = 0, gaps_in = 0 })
--- hl.workspace_rule({ workspace = "f[1]",   gaps_out = 0, gaps_in = 0 })
--- hl.window_rule({
---     name  = "no-gaps-wtv1",
---     match = { float = false, workspace = "w[tv1]" },
---     border_size = 0,
---     rounding    = 0,
--- })
--- hl.window_rule({
---     name  = "no-gaps-f1",
---     match = { float = false, workspace = "f[1]" },
---     border_size = 0,
---     rounding    = 0,
--- })
-
 -- See https://wiki.hypr.land/Configuring/Layouts/Dwindle-Layout/ for more
 hl.config({
     dwindle = {
-        preserve_split = true, -- You probably want this
+        preserve_split = true,
     },
 })
 
@@ -211,8 +172,8 @@ hl.config({
 
 hl.config({
     misc = {
-        force_default_wallpaper = -1,    -- Set to 0 or 1 to disable the anime mascot wallpapers
-        disable_hyprland_logo   = false, -- If true disables the random hyprland logo / anime girl background. :(
+        force_default_wallpaper = -1,
+        disable_hyprland_logo   = false,
     },
 })
 
@@ -230,8 +191,7 @@ hl.config({
         kb_rules   = "",
 
         follow_mouse = 1,
-
-        sensitivity = 0, -- -1.0 - 1.0, 0 means no modification.
+        sensitivity = 0,
 
         touchpad = {
             natural_scroll = false,
@@ -245,8 +205,6 @@ hl.gesture({
     action = "workspace"
 })
 
--- Example per-device config
--- See https://wiki.hypr.land/Configuring/Advanced-and-Cool/Devices/ for more
 hl.device({
     name        = "epic-mouse-v1",
     sensitivity = -0.5,
@@ -257,54 +215,42 @@ hl.device({
 ---- KEYBINDINGS ----
 ---------------------
 
-local mainMod = "SUPER" -- Sets "Windows" key as main modifier
+local mainMod = "SUPER"
 
--- Example binds, see https://wiki.hypr.land/Configuring/Basics/Binds/ for more
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 local closeWindowBind = hl.bind(mainMod .. " + Q", hl.dsp.window.close())
--- closeWindowBind:set_enabled(false)
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
-hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))    -- dwindle only
+hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))
 hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("google-chrome-stable"))
-hl.bind(mainMod .. " + ALT + W", hl.dsp.exec_cmd("google-chrome-stable --incognito"))
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("hyprlock"))
 hl.bind(mainMod .. " + C", hl.dsp.exec_cmd("vscodium"))
-hl.bind(mainMod .. " + H", hl.dsp.exec_cmd("sh ~/.config/hypr/hypridle.sh"))
 
--- Move focus with mainMod + arrow keys
 hl.bind(mainMod .. " + left",  hl.dsp.focus({ direction = "left" }))
 hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
 hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
 hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
 
--- Switch workspaces with mainMod + [0-9]
--- Move active window to a workspace with mainMod + SHIFT + [0-9]
 for i = 1, 10 do
-    local key = i % 10 -- 10 maps to key 0
-    hl.bind(mainMod .. " + " .. key,             hl.dsp.focus({ workspace = i}))
-    hl.bind(mainMod .. " + CTRL + " .. key,     hl.dsp.window.move({ workspace = i }))
+    local key = i % 10
+    hl.bind(mainMod .. " + " .. key,        hl.dsp.focus({ workspace = i}))
+    hl.bind(mainMod .. " + CTRL + " .. key, hl.dsp.window.move({ workspace = i }))
 end
 
--- Example special workspace (scratchpad)
 hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
-hl.bind(mainMod .. " + CTRL + S", hl.dsp.window.move({ workspace = "special:magic" }))
+hl.bind(mainMod .. " + CTRL + " .. "S", hl.dsp.window.move({ workspace = "special:magic" }))
 
--- Screen snip functionality --
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd("grim -g \"$(slurp)\" - | wl-copy"))
 
--- Scroll through existing workspaces with mainMod + scroll
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 
--- Move/resize windows with mainMod + LMB/RMB and dragging
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- Laptop multimedia keys for volume and LCD brightness
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true })
 hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     { locked = true, repeating = true })
@@ -312,7 +258,6 @@ hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_S
 hl.bind("XF86MonBrightnessUp",  hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"),                  { locked = true, repeating = true })
 hl.bind("XF86MonBrightnessDown",hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"),                  { locked = true, repeating = true })
 
--- Requires playerctl
 hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
@@ -322,30 +267,21 @@ hl.bind(mainMod .. " + period", hl.dsp.layout("move +col"))
 hl.bind(mainMod .. " + comma", hl.dsp.layout("swapcol l"))
 
 hl.bind("ALT + Tab", function()
-    hl.dispatch(hl.dsp.window.cycle_next())    -- Change focus to another window
-    hl.dispatch(hl.dsp.window.bring_to_top()) -- Bring it to the top
+    hl.dispatch(hl.dsp.window.cycle_next())
+    hl.dispatch(hl.dsp.window.bring_to_top())
 end)
 
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----
 --------------------------------
 
--- See https://wiki.hypr.land/Configuring/Basics/Window-Rules/
--- and https://wiki.hypr.land/Configuring/Basics/Workspace-Rules/
-
--- Example window rules that are useful
-
 local suppressMaximizeRule = hl.window_rule({
-    -- Ignore maximize requests from all apps. You'll probably like this.
     name  = "suppress-maximize-events",
     match = { class = ".*" },
-
     suppress_event = "maximize",
 })
--- suppressMaximizeRule:set_enabled(false)
 
 hl.window_rule({
-    -- Fix some dragging issues with XWayland
     name  = "fix-xwayland-drags",
     match = {
         class      = "^$",
@@ -355,60 +291,29 @@ hl.window_rule({
         fullscreen = false,
         pin        = false,
     },
-
     no_focus = true,
 })
 
--- Layer rules also return a handle.
--- local overlayLayerRule = hl.layer_rule({
---     name  = "no-anim-overlay",
---     match = { namespace = "^my-overlay$" },
---     no_anim = true,
--- })
--- overlayLayerRule:set_enabled(false)
-
--- Hyprland-run windowrule
 hl.window_rule({
     name  = "move-hyprland-run",
     match = { class = "hyprland-run" },
-
     move  = "20 monitor_h-120",
     float = true,
 })
 
-hl.window_rule({ match = { class = "signal" }, opacity = "0.85 0.85" })
-
--- 🌀 NATIVE BACKGROUND BLUR RULES: Targets the exact namespaces declared inside your Quickshell panel layers
+-- Unique configuration for the bar layer
 hl.layer_rule({
     name  = "quickshell-bar-blur",
     match = { namespace = "quickshell-bar" },
     blur  = true,
-    xray  = false, -- Bar stays normal; blends smoothly over open windows
+    xray  = false,
 })
 
--- Calendar Card Pipeline
+-- Combined rule for all other components using regex matching
 hl.layer_rule({
-    name         = "quickshell-overlay-blur",
-    match        = { namespace = "quickshell-overlay" },
+    name         = "quickshell-components-blur",
+    match        = { namespace = "^quickshell-(overlay|wallpapers|launcher)$" },
     blur         = true,
-    xray         = true,   -- 🧠 ISOLATED XRAY: Drops window edge-blending only for this overlay canvas
-    ignore_alpha = 0.5,    -- Cuts off the blur calculation step at your panel threshold
-})
-
--- Wallpaper Card Pipeline
-hl.layer_rule({
-    name         = "quickshell-wallpapers-blur",
-    match        = { namespace = "quickshell-wallpapers" },
-    blur         = true,
-    xray         = true,   -- 🎯 Strips out the dark 1px line artifact natively by looking straight to the wallpaper
-    ignore_alpha = 0.5,
-})
-
--- App Launcher Pipeline
-hl.layer_rule({
-    name         = "quickshell-launcher-blur",
-    match        = { namespace = "quickshell-launcher" },
-    blur         = true,
-    xray         = true,   -- Keeps your launcher container crisp and artifact-free
+    xray         = true,
     ignore_alpha = 0.5,
 })
