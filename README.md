@@ -3,15 +3,15 @@
 
 ***
 
-<div align="left">
-  <img src="https://readme-typing-svg.demolab.com?font=Rubik&weight=900&size=46&color=33CCFF&center=true&vCenter=true&width=500&height=70&lines=APERTURA&singleLine=true" alt="Apertura Header">
+<div align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Rubik&weight=900&size=64&color=a6adc8&center=true&vCenter=true&width=600&height=100&lines=APERTURA&repeat=false&runOnce=true" alt="Apertura Header">
   <br>
   <h3><i>Exposing the hidden layers of your desktop</i></h3>
 </div>
 
 ***
 
-A sleek, hyper-responsive status bar framework built for Quickshell on Wayland (Layershell). 
+A sleek, hyper-responsive status bar framework built for Quickshell on Hyprland. 
 
 Why "Apertura"? Because like a camera lens opening up to the light, this bar uses Hyprland's `xray` mechanics to slice through the desktop and expose the beautiful, hidden blur layers underneath. It's built for speed, clean aesthetics, and zero-compromise desktop configuration.
 
