@@ -9,13 +9,15 @@ A sleek and responsive shell built for Quickshell on Hyprland.
 
 Why "Apertura"? Because like a camera lens opening up to the light, this bar uses Hyprland's xray mechanics to slice through the desktop and expose the beautiful, hidden blur layers underneath. It's built for speed, clean aesthetics, and zero-compromise desktop configuration.
 
-## 📦 What this is and is not
+### What this is and is not
 
 This is a desktop shell, not a full system manager.  There is no settings gui for configuration.  Any changes to this config will require editing the qml files manually.  These files have not been extensively tested on multiple distros/configs, so please proceed with caution.  If you have a good grasp of Hyprland and Linux basics, you should be able to customize this without much trouble.  Please do not contact me for help customizing your unique environment.
 
+This shell is minimal in nature, containing everything you need to operate your system but not necessarily everything you might want.  Please consider making feature requests for what you would like to see!
+
 Toggles are listed below for you to add custom keybinds if you wish, but these are not set automatically during install.
 
-## 📦 System Dependencies
+### System Dependencies
 
 Your package manager must resolve the following dependencies to ensure core backend operations:
 
@@ -26,7 +28,7 @@ Your package manager must resolve the following dependencies to ensure core back
 - wireplumber — Provides wpctl for PipeWire audio routing.
 - python — Execution environment for application indexing.
 
-## 🚀 Installation & Deployment
+## Installation & Deployment
 
 An automated deployment script is included to handle dependencies, verify hardware endpoints, and hook into your display compositor setup.
 
@@ -48,7 +50,7 @@ hl.layer_rule({
     xray  = false,
 })
 
-## 💡 IPC Architecture
+### IPC Architecture
 
 Once deployed, you can interact with or toggle the shell layout elements cleanly via the command line or desktop keybinds:
 
