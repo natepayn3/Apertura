@@ -8,7 +8,6 @@ import Quickshell.Io
 Item {
     id: batRoot
     
-    // 🎯 DYNAMIC VISIBILITY CONFIGURATION: Collapses dimensions when on a desktop layout
     property bool isLaptop: false
     
     implicitWidth: isLaptop ? 32 : 0
@@ -19,7 +18,6 @@ Item {
     property bool isCharging: false
     property bool menuOpen: false
 
-    // ⚡ Hardware Presence Check: Verifies the path exists before enabling bindings
     Process {
         id: presenceCheck
         command: ["test", "-f", "/sys/class/power_supply/BAT1/capacity"]
@@ -36,7 +34,6 @@ Item {
         }
     }
 
-    // ⚡ Sysfs tracking nodes (Path collapses safely to empty strings on desktops)
     FileView {
         id: capReader
         path: batRoot.isLaptop ? "/sys/class/power_supply/BAT1/capacity" : ""
@@ -50,22 +47,23 @@ Item {
         }
     }
 
-    // ⚡ Sysfs status tracker node
     FileView {
         id: statusReader
         path: batRoot.isLaptop ? "/sys/class/power_supply/BAT1/status" : ""
         onTextChanged: {
             if (statusReader.text) {
                 let cleanStatus = statusReader.text().trim();
-                // Evaluates true if plugged into the wall, regardless of active current status
-                batRoot.isCharging = (cleanStatus === "Charging" || 
-                                      cleanStatus === "Full" || 
-                                      cleanStatus === "Not charging");
+                if (batRoot.capacity >= 99) {
+                    batRoot.isCharging = (cleanStatus !== "Discharging");
+                } else {
+                    batRoot.isCharging = (cleanStatus === "Charging" || 
+                                          cleanStatus === "Full" || 
+                                          cleanStatus === "Not charging");
+                }
             }
         }
     }
 
-    // 🕒 Sync hardware nodes every second if on a laptop setup
     Timer {
         interval: 1000
         running: batRoot.isLaptop
@@ -76,7 +74,14 @@ Item {
         }
     }
 
-    // 🎬 CLOSE FINALIZER TIMER
+    Timer {
+        id: osdAutohideTimer
+        interval: 3500
+        running: false
+        repeat: false
+        onTriggered: closeMenu()
+    }
+
     Timer {
         id: closeTimer
         interval: 180
@@ -97,11 +102,10 @@ Item {
     function openMenu(): void {
         popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
-
         rootScope.requestOpen("battery");
         menuOpen = true;
-
         slideInAnimation.start();
+        checkUserActivity();
     }
 
     function closeMenu(): void {
@@ -110,13 +114,17 @@ Item {
         closeTimer.start();
     }
 
-    // ==========================================
-    // 🔋 BATTERY ICON TRIGGER MODULE
-    // ==========================================
+    function checkUserActivity() {
+        if (batteryMouseArea.containsMouse || cardHoverTracker.containsMouse) {
+            osdAutohideTimer.stop(); 
+        } else {
+            osdAutohideTimer.restart(); 
+        }
+    }
+
     Rectangle {
         id: batteryHitbox
         anchors.fill: parent
-        // Unified monochrome hover mask
         color: batteryMouseArea.containsMouse ? "#26ffffff" : "transparent"
         radius: 0 
 
@@ -128,23 +136,21 @@ Item {
                 id: batteryIcon
                 Layout.alignment: Qt.AlignHCenter
                 
-                // 📊 Check mouse hover first: if true, show percentage string; if false, show the android glyphs
                 text: batteryMouseArea.containsMouse ? batRoot.capacity + "%" : (
-                    batRoot.isCharging       ? "battery_android_frame_bolt" : 
-                    batRoot.capacity < 10    ? "battery_android_0" :
-                    batRoot.capacity < 20    ? "battery_android_1" : 
-                    batRoot.capacity < 30    ? "battery_android_2" : 
-                    batRoot.capacity < 40    ? "battery_android_3" : 
-                    batRoot.capacity < 50    ? "battery_android_4" : 
-                    batRoot.capacity < 60    ? "battery_android_5" : 
-                    batRoot.capacity < 70    ? "battery_android_6" : 
-                    batRoot.capacity < 80    ? "battery_android_7" : 
-                    batRoot.capacity < 90    ? "battery_android_8" : 
-                    batRoot.capacity < 98    ? "battery_android_9" : 
-                                               "battery_android_full"
+                    batRoot.isCharging        ? "battery_android_frame_bolt" : 
+                    batRoot.capacity >= 99    ? "battery_android_full" :
+                    batRoot.capacity < 10     ? "battery_android_0" :
+                    batRoot.capacity < 20     ? "battery_android_1" : 
+                    batRoot.capacity < 30     ? "battery_android_2" : 
+                    batRoot.capacity < 40     ? "battery_android_3" : 
+                    batRoot.capacity < 50     ? "battery_android_4" : 
+                    batRoot.capacity < 60     ? "battery_android_5" : 
+                    batRoot.capacity < 70     ? "battery_android_6" : 
+                    batRoot.capacity < 80     ? "battery_android_7" : 
+                    batRoot.capacity < 90     ? "battery_android_8" : 
+                                                "battery_android_9"
                 )
                                                     
-                // Dynamic styling layout to handle the transition between the icon font and regular text digits cleanly
                 font.family: batteryMouseArea.containsMouse ? "Rubik" : "Material Symbols Outlined" 
                 font.pixelSize: batteryMouseArea.containsMouse ? 12 : 20
                 font.weight: batteryMouseArea.containsMouse ? Font.Bold : Font.Normal
@@ -159,6 +165,7 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: toggleMenu()
+            onContainsMouseChanged: checkUserActivity()
         }
     }
 
@@ -171,16 +178,11 @@ Item {
         }
     }
 
-    // ==========================================
-    // 🪟 OVERLAY MENU CARD
-    // ==========================================
     PanelWindow {
         id: batteryOverlayModal
         visible: batRoot.menuOpen
         color: "transparent"
-        
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
-        
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -214,7 +216,6 @@ Item {
             Behavior on anchors.leftMargin { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
             Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
 
-            // Dynamic blur-through window base
             color: "#9911111b"
             border.width: 0; radius: 0; focus: true
             Keys.onPressed: (event) => {
@@ -224,9 +225,12 @@ Item {
                 }
             }
 
-            MouseArea { 
+            MouseArea {
+                id: cardHoverTracker
                 anchors.fill: parent
-                onPressed: (mouse) => { mouse.accepted = true; } 
+                hoverEnabled: true
+                onContainsMouseChanged: checkUserActivity()
+                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } 
             }
 
             ColumnLayout {
@@ -237,7 +241,6 @@ Item {
                     Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" }
                     Item { Layout.fillWidth: true }
                     Text { 
-                        // Dynamically outputs Fully Charged, Charging, or Discharging text depending on actual string state
                         text: (statusReader.text && statusReader.text().trim() === "Full") ? "Fully Charged" : (batRoot.isCharging ? "󱐋 Charging" : "Discharging")
                         font.family: "Rubik"; font.pixelSize: 12
                         color: "#ffffff"
