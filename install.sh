@@ -18,13 +18,13 @@ WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 
 # Clear screen and blast the block capital banner
 clear
-echo -e "${🔵}    _    ____  _____ ____ _____ _   _ ____    _    "
+echo -e "${🔵}    _   ____  _____ ____ _____ _   _ ____    _    "
 echo -e "   / \  |  _ \| ____|  _ \_   _| | | |  _ \  / \   "
 echo -e "  / _ \ | |_) |  _| | |_) || | | | | | |_) |/ _ \  "
 echo -e " / ___ \|  __/| |___|  _ < | | | |_| |  _ <___  | "
 echo -e "/_/   \_\_|   |_____|_| \_\|_|  \___/|_| \_\  |_| ${🏁}"
 echo -e "${⚫}────────────────────────────────────────────────────────────${🏁}"
-echo -e "             ${⚪}Apertura Core Bar Deployment Module${🏁}"
+echo -e "               ${⚪}Apertura Core Bar Deployment Module${🏁}"
 echo -e "${⚫}────────────────────────────────────────────────────────────${🏁}"
 echo ""
 
@@ -33,10 +33,12 @@ DEPENDENCIES=(
     "quickshell"
     "awww-git"
     "bluez"
-    "bluez-utils"     # Critical: Provides 'bluetoothctl' binary used by Bluetooth.qml
-    "networkmanager"  # Critical: Provides 'nmcli' binary used by Wifi.qml
-    "python"          # Critical: Provides 'python3' interpreter used by AppLauncher.qml
-    "wireplumber"     # Critical: Provides 'wpctl' used by Audio.qml & VolumeHud
+    "bluez-utils"              # Provides 'bluetoothctl' binary used by Bluetooth.qml
+    "networkmanager"           # Provides 'nmcli' binary used by Wifi.qml
+    "python"                   # Provides 'python3' interpreter used by AppLauncher.qml
+    "wireplumber"              # Provides 'wpctl' used by Audio.qml & VolumeHud
+    "ttf-material-design-icons-git" # Maps \uE050 style system glyphs cleanly
+    "ttf-nerd-fonts-symbols"   # Font tracking backbone fallback for 󰂱 and 󱐋 shapes
 )
 
 for pkg in "${DEPENDENCIES[@]}"; do
