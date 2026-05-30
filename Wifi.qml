@@ -20,6 +20,7 @@ Item {
     property bool enteringPassword: false
     property bool showingForgetConfirm: false 
     property string selectedSsid: ""
+    property bool wifiEnabled: true
 
     Process {
         id: hardwareCheck
@@ -109,7 +110,11 @@ Item {
 
     Process { id: nmcActionExecutor; command: []; running: false }
 
-    function triggerScan(): void { networkScanner.running = true; statusWatcher.running = true; }
+    function triggerScan(): void { 
+        if (!wifiRoot.wifiEnabled) return;
+        networkScanner.running = true; 
+        statusWatcher.running = true; 
+    }
     
     function startTransitionBurst(): void {
         transitionBurstTimer.restart();
@@ -134,7 +139,7 @@ Item {
         startTransitionBurst();
     }
 
-    Timer { interval: 20000; running: wifiRoot.hasWifiCard; repeat: true; onTriggered: triggerScan() }
+    Timer { interval: 20000; running: wifiRoot.hasWifiCard && wifiRoot.wifiEnabled; repeat: true; onTriggered: triggerScan() }
     
     Timer {
         id: transitionBurstTimer
@@ -195,14 +200,14 @@ Item {
                 Text {
                     id: wifiIcon
                     anchors.centerIn: parent
-                    text: wifiRoot.signalStrength === 0 ? "signal_cellular_nodata" : 
-                          wifiRoot.signalStrength < 35  ? "signal_cellular_1_bar" : 
-                          wifiRoot.signalStrength < 65  ? "signal_cellular_2_bar" : 
-                          wifiRoot.signalStrength < 85  ? "signal_cellular_3_bar" : 
-                                                          "signal_cellular_4_bar"
+                    text: !wifiRoot.wifiEnabled ? "signal_wifi_off" : (wifiRoot.ssid === "Disconnected" || wifiRoot.ssid === "" ? "perm_scan_wifi" : 
+                          wifiRoot.signalStrength < 25  ? "network_wifi_1_bar" : 
+                          wifiRoot.signalStrength < 50  ? "network_wifi_2_bar" : 
+                          wifiRoot.signalStrength < 75  ? "network_wifi_3_bar" : 
+                                                          "network_wifi")
                     font.family: "Material Symbols Outlined"
                     font.pixelSize: 20
-                    color: "#ffffff"
+                    color: wifiRoot.wifiEnabled ? "#ffffff" : "#59ffffff"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -264,18 +269,58 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Wi-Fi"; font.family: "Rubik"; font.pixelSize: 15; font.weight: Font.Bold; color: "#ffffff" }
-                    Item { Layout.fillWidth: true }
+                    
+                    Text { 
+                        text: "Wi-Fi"
+                        font.family: "Rubik"; font.pixelSize: 15; font.weight: Font.Bold; color: "#ffffff" 
+                        Layout.alignment: Qt.AlignVCenter
+                    }
                     
                     RowLayout {
                         spacing: 4
-                        opacity: (wifiRoot.ssid !== "Disconnected" && wifiRoot.ssid !== "") ? 1.0 : 0.0
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignHCenter
+                        opacity: (wifiRoot.wifiEnabled && wifiRoot.ssid !== "Disconnected" && wifiRoot.ssid !== "") ? 1.0 : 0.0
+                        
+                        Item { Layout.fillWidth: true }
                         Text { text: "Connected to:"; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
                         Text { 
                             text: wifiRoot.ssid
                             font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
                             color: "#ffffff"
                             elide: Text.ElideRight; Layout.maximumWidth: 100 
+                        }
+                        Item { Layout.fillWidth: true }
+                    }
+
+                    Rectangle {
+                        width: 50; height: 24; radius: 12
+                        color: wifiRoot.wifiEnabled ? "#45ffffff" : "#26ffffff"
+                        Layout.alignment: Qt.AlignVCenter
+                        
+                        Rectangle {
+                            width: 18; height: 18; radius: 9; color: "#11111b"
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: wifiRoot.wifiEnabled ? 28 : 4
+                            Behavior on x { NumberAnimation { duration: 120 } }
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                wifiRoot.wifiEnabled = !wifiRoot.wifiEnabled;
+                                nmcActionExecutor.command = ["nmcli", "radio", "wifi", wifiRoot.wifiEnabled ? "on" : "off"];
+                                nmcActionExecutor.running = true;
+                                if (!wifiRoot.wifiEnabled) {
+                                    wifiNetworksModel.clear();
+                                    wifiRoot.signalStrength = 0;
+                                    wifiRoot.ssid = "Disconnected";
+                                } else {
+                                    triggerScan();
+                                    startTransitionBurst();
+                                }
+                                checkUserActivity();
+                            }
                         }
                     }
                 }
@@ -284,7 +329,7 @@ Item {
 
                 StackLayout {
                     Layout.fillWidth: true; Layout.fillHeight: true
-                    currentIndex: wifiRoot.enteringPassword ? 1 : (wifiRoot.showingForgetConfirm ? 2 : 0)
+                    currentIndex: !wifiRoot.wifiEnabled ? 3 : (wifiRoot.enteringPassword ? 1 : (wifiRoot.showingForgetConfirm ? 2 : 0))
 
                     ListView {
                         id: networkListView; model: wifiNetworksModel; clip: true; spacing: 4
@@ -364,6 +409,16 @@ Item {
                             }
                         }
                         Item { Layout.fillHeight: true } 
+                    }
+
+                    Text {
+                        id: disabledPlaceholder
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        text: "Wi-Fi is turned off"
+                        font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                 }
             }
