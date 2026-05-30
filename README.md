@@ -7,7 +7,7 @@
 
 A sleek and responsive shell built for Quickshell on Hyprland.
 
-Why "Apertura"? Because like a camera lens opening up to the light, this bar uses Hyprland's xray mechanics to slice through the desktop and expose the beautiful, hidden blur layers underneath. It's built for speed, clean aesthetics, and zero-compromise desktop configuration.
+Why "Apertura"? Because like a camera lens or "aperture" opening up to the light, this bar uses Hyprland's xray mechanics to slice through the desktop and expose the beautiful, hidden blur layers underneath. It's built for speed, clean aesthetics, and zero-compromise desktop configuration.
 
 ### What this is and is not
 
