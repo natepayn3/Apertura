@@ -12,18 +12,14 @@ Item {
 
     readonly property real currentVol: globalVolumeSlider.value ?? 0.0
     property bool isMuted: false
-
-    // 🧠 VISUAL STATE TRACKER
     property bool menuOpen: false
 
-    // 🔒 FIXED: Connect the global safelock variable directly to your slider interaction matrix
     Binding {
         target: rootScope
         property: "audioSliderActive"
         value: globalVolumeSlider.pressed
     }
 
-    // 🔄 AUDIO BACKGROUND LOOP
     Timer {
         interval: 400
         running: true
@@ -40,7 +36,6 @@ Item {
         }
     }
 
-    // Volume status parser
     Process {
         id: syncVolumeQuery
         command: ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]
@@ -67,7 +62,6 @@ Item {
         }
     }
 
-    // 🎧 SINK/OUTPUT DEVICE PARSER (Diff-matching engine to prevent element recreation)
     Process {
         id: syncDevicesQuery
         command: ["wpctl", "status"]
@@ -144,7 +138,6 @@ Item {
         }
     }
 
-    // Target default audio sink router
     Process {
         id: changeDeviceProcess
         running: false
@@ -154,7 +147,6 @@ Item {
         }
     }
 
-    // Smart auto-hide countdown tracker
     Timer {
         id: osdAutohideTimer
         interval: 3500
@@ -163,7 +155,6 @@ Item {
         onTriggered: closeMenu()
     }
 
-    // 🎬 CLOSE FINALIZER TIMER
     Timer {
         id: closeTimer
         interval: 180
@@ -173,7 +164,6 @@ Item {
         }
     }
 
-    // 🔓 ANIMATED CONTEXT INTERFACING
     function toggleMenu(): void {
         if (menuOpen) {
             closeMenu();
@@ -198,7 +188,6 @@ Item {
     function closeMenu(): void {
         popupCard.targetX = -655;
         popupCard.targetOpacity = 0.0;
-
         closeTimer.start();
     }
 
@@ -223,23 +212,24 @@ Item {
         }
     }
 
-    // ==========================================
-    // 🔊 AUDIO ICON PANEL TRIGGER
-    // ==========================================
     Rectangle {
         id: volumeHitbox
         anchors.fill: parent
         color: volumeMouseArea.containsMouse ? "#26ffffff" : "transparent"
         radius: 0 
 
-        Text {
-            id: volumeIcon
-            text: (audioRoot.isMuted || audioRoot.currentVol <= 0.01) ? "\uE04F" : (audioRoot.currentVol > 0.50 ? "\uE050" : "\uE04D")
-            font.family: "Material Design Icons"
-            font.pixelSize: 26
-            color: "#ffffff" 
-            anchors.centerIn: parent
-            anchors.verticalCenterOffset: 3
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 0
+
+            Text {
+                id: volumeIcon
+                Layout.alignment: Qt.AlignHCenter
+                text: (audioRoot.isMuted || audioRoot.currentVol <= 0.01) ? "volume_off" : (audioRoot.currentVol > 0.50 ? "volume_up" : "volume_down")
+                font.family: "Material Symbols Outlined"
+                font.pixelSize: 20
+                color: "#ffffff" 
+            }
         }
 
         MouseArea {
@@ -251,9 +241,6 @@ Item {
         }
     }
 
-    // ==========================================
-    // 🎚️ MIXER CONTEXT CONTAINER
-    // ==========================================
     PanelWindow {
         id: globalVolumeModal
         visible: audioRoot.menuOpen
@@ -284,14 +271,11 @@ Item {
         Rectangle {
             id: popupCard
             width: 300
-            
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.bottomMargin: 12
-            
             property int targetX: -655
             property real targetOpacity: 0.0
-
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
@@ -313,15 +297,13 @@ Item {
 
             color: "#9911111b" 
             border.width: 0
-            
             topLeftRadius: 0
             bottomLeftRadius: 0
             topRightRadius: 0
             bottomRightRadius: 0
-
             height: Math.min(146 + (deviceListModel.count * 40), 300)
-
             focus: true
+            
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
                     closeMenu();
@@ -380,7 +362,6 @@ Item {
                     checkUserActivity();
                 }
 
-                // 🎯 THE FIX: Thinned slider baseline track frame profile height down to 3px
                 background: Rectangle {
                     height: 3; radius: 0; color: "#26ffffff"
                     width: globalVolumeSlider.availableWidth
@@ -454,7 +435,6 @@ Item {
                     onContainsMouseChanged: checkUserActivity()
                 }
 
-                // OUTPUT DEVICE ROW ITERATOR
                 ListView {
                     id: deviceListView
                     anchors.fill: parent
@@ -477,7 +457,6 @@ Item {
                                 anchors.leftMargin: 8; anchors.rightMargin: 8
                                 spacing: 8
 
-                                // 🎯 THE FIX: Restored active output status pill dot indicator back to circular bounds
                                 Rectangle {
                                     width: 6; height: 6; radius: 3
                                     color: active ? "#ffffff" : "transparent"
