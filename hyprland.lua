@@ -1,14 +1,34 @@
--- This is an example Hyprland Lua config file.
--- Refer to the wiki for more information.
--- https://wiki.hypr.land/Configuring/Start/
-
--- Please note not all available settings / options are set here.
--- For a full list, see the wiki
-
--- You can (and should!!) split this configuration into multiple files
--- Create your files separately and then require them like this:
--- require("myColors")
-
+-------------------------------------------
+----------  BEGIN CREATOR NOTES  ----------
+-------------------------------------------
+--
+-- Full example file included here, but the important parts are:
+--
+-- hl.on("hyprland.start", function ()
+--  hl.exec_cmd("qs -c Apertura")
+--  hl.exec_cmd("awww-daemon")
+-- end)
+-- 
+-- local menu = "qs -c Apertura ipc call launcher toggle" -- if you want to use a custom keybind to open the app launcher
+-- 
+-- -- Unique configuration for the bar layer
+-- hl.layer_rule({
+--     name  = "quickshell-bar-blur",
+--     match = { namespace = "quickshell-bar" },
+--     blur  = true,
+--     xray  = false,
+-- })
+-- hl.layer_rule({
+--     name         = "quickshell-components-blur",
+--     match        = { namespace = "^quickshell-(overlay|wallpapers|launcher)$" },
+--     blur         = true,
+--     xray         = true,
+--     ignore_alpha = 0.5,
+-- })
+--
+-----------------------------------------
+----------  END CREATOR NOTES  ----------
+-----------------------------------------
 
 ------------------
 ---- MONITORS ----
@@ -22,7 +42,6 @@ hl.monitor({
     scale    = "auto",
 })
 
-
 ---------------------
 ---- MY PROGRAMS ----
 ---------------------
@@ -31,7 +50,6 @@ hl.monitor({
 local terminal    = "kitty"
 local fileManager = "nautilus"
 local menu = "qs -c Apertura ipc call launcher toggle"
-
 
 -------------------
 ---- AUTOSTART ----
@@ -44,7 +62,6 @@ hl.on("hyprland.start", function ()
   hl.exec_cmd("awww-daemon")
   hl.exec_cmd("systemctl --user start hyprpolkitagent")
   hl.exec_cmd("hypridle")
-  hl.exec_cmd("librepods")
 end)
 
 -------------------------------
@@ -55,11 +72,9 @@ end)
 
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
-
 hl.env("GBM_BACKEND", "nvidia-drm")
 hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
 hl.env("LIBVA_DRIVER_NAME", "nvidia")
-
 
 -----------------------
 ----- PERMISSIONS -----
@@ -177,7 +192,6 @@ hl.config({
     },
 })
 
-
 ---------------
 ---- INPUT ----
 ---------------
@@ -209,7 +223,6 @@ hl.device({
     name        = "epic-mouse-v1",
     sensitivity = -0.5,
 })
-
 
 ---------------------
 ---- KEYBINDINGS ----
