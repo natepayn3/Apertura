@@ -227,7 +227,7 @@ Item {
                 Layout.alignment: Qt.AlignHCenter
                 text: (audioRoot.isMuted || audioRoot.currentVol <= 0.01) ? "volume_off" : (audioRoot.currentVol > 0.50 ? "volume_up" : "volume_down")
                 font.family: "Material Symbols Outlined"
-                font.pixelSize: 20
+                font.pixelSize: 24
                 color: "#ffffff" 
             }
         }
