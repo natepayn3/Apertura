@@ -93,7 +93,11 @@ Item {
 
         Rectangle {
             id: popupCalendarWrapper; width: 300; height: 300 
-            anchors.bottom: parent.bottom; anchors.bottomMargin: 12; anchors.left: parent.left; anchors.leftMargin: 1
+            
+            // Fixed positional values mapping to top-left corner configuration
+            y: 12
+            x: 1
+            
             transform: Translate { id: popupTranslate; x: -popupCalendarWrapper.width }
 
             ParallelAnimation {
