@@ -6,7 +6,7 @@
 --
 -- hl.on("hyprland.start", function ()
 --  hl.exec_cmd("qs -c Apertura")
---  hl.exec_cmd("awww-daemon")
+--  hl.exec_cmd("awww-daemon") -- wallpaper module requires this
 -- end)
 -- 
 -- local menu = "qs -c Apertura ipc call launcher toggle" -- if you want to use a custom keybind to open the app launcher
