@@ -10,10 +10,8 @@ Item {
     implicitWidth: powerHitbox.width
     implicitHeight: 32
 
-    // 🧠 VISUAL STATE TRACKER
     property bool menuOpen: false
 
-    // Smart auto-hide countdown tracker
     Timer {
         id: osdAutohideTimer
         interval: 3500
@@ -22,7 +20,6 @@ Item {
         onTriggered: closeMenu()
     }
 
-    // 🎬 CLOSE FINALIZER TIMER
     Timer {
         id: closeTimer
         interval: 180
@@ -32,7 +29,6 @@ Item {
         }
     }
 
-    // 🔓 ANIMATED CONTEXT INTERFACING
     function toggleMenu(): void {
         if (menuOpen) {
             closeMenu();
@@ -42,25 +38,20 @@ Item {
     }
 
     function openMenu(): void {
-        // Reset hidden baseline coordinates before mapping window surface
         popupPowerWrapper.targetX = -320;
         popupPowerWrapper.targetOpacity = 0.0;
-
         rootScope.requestOpen("power");
         menuOpen = true;
-
         slideInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        // Animate out while the window layer shell surface is still active
         popupPowerWrapper.targetX = -320;
         popupPowerWrapper.targetOpacity = 0.0;
         closeTimer.start();
     }
 
-    // Helper logic to cleanly handle user presence changes
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse) {
             osdAutohideTimer.stop(); 
@@ -69,7 +60,6 @@ Item {
         }
     }
 
-    // 🔄 GLOBAL PANEL HANDOFF SWAP LISTENER
     Connections {
         target: rootScope
         function onActiveModalChanged() {
@@ -79,22 +69,18 @@ Item {
         }
     }
 
-    // ==========================================
-    // 🔋 POWER TRIGGER MODULE
-    // ==========================================
     Rectangle {
         id: powerHitbox
         width: 32
         height: 32
-        // Monochrome subtle alpha hover mask
         color: powerMouseArea.containsMouse || menuOpen ? "#26ffffff" : "transparent"
         radius: 0 
 
         Text {
             id: powerIcon
-            text: "\u23FB"
-            font.family: "Rubik"
-            font.pixelSize: 20
+            text: "power_settings_new"
+            font.family: "Material Symbols Outlined"
+            font.pixelSize: 16
             color: "#ffffff"
             anchors.centerIn: parent
         }
@@ -108,19 +94,13 @@ Item {
         }
     }
 
-    // ==========================================
-    // 📅 MODAL WINDOW: Power Overlay
-    // ==========================================
     PanelWindow {
         id: globalPowerModal
         visible: powerRoot.menuOpen
-
-        // FULL SCREEN INTERCEPT CANVAS
         anchors.left: true
         anchors.top: true
         anchors.bottom: true
         anchors.right: true
-        
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
@@ -140,11 +120,9 @@ Item {
             running: false
         }
 
-        // 🧠 DESKTOP AGNOSTIC REFACTOR
         function runCommand(args) {
             closeMenu();
             if (args[0] === "INTERNAL_LOCK") {
-                // Hand execution chain to global user session hooks dynamically
                 Quickshell.execDetached([
                     "sh", "-c", 
                     "loginctl lock-session || hyprlock || swaylock || waylock"
@@ -155,7 +133,6 @@ Item {
             }
         }
 
-        // GLOBAL CAPTURE SHIELD
         MouseArea {
             anchors.fill: parent
             onPressed: (mouse) => {
@@ -166,17 +143,13 @@ Item {
 
         Rectangle {
             id: popupPowerWrapper
-            
             width: 160
             height: 200
-            
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 12
             anchors.left: parent.left
-            
             property int targetX: -320
             property real targetOpacity: 0.0
-            
             anchors.leftMargin: targetX
             opacity: targetOpacity
 
@@ -200,7 +173,6 @@ Item {
             color: "#9911111b" 
             border.width: 0
             focus: true
-
             topLeftRadius: 0
             bottomLeftRadius: 0
             topRightRadius: 0
@@ -219,17 +191,12 @@ Item {
                 id: cardHoverTracker
                 anchors.fill: parent
                 hoverEnabled: true
-                
                 onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
                 onContainsMouseChanged: checkUserActivity()
             }
 
-            // ==========================================
-            // 📋 UNIFIED LAYOUT CONTAINER
-            // ==========================================
             ColumnLayout {
                 id: menuContentLayout
-                
                 anchors.fill: parent
                 anchors.margins: 14
                 spacing: 10
@@ -274,7 +241,6 @@ Item {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 hoverEnabled: true
-
                                 onClicked: globalPowerModal.runCommand(modelData.cmd)
 
                                 Rectangle {
