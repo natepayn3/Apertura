@@ -11,32 +11,20 @@ Item {
     implicitWidth: 32
     implicitHeight: 32
 
-    // 🎯 HOME DIRECTORY CONFIGURATION PATH
     property string wallpaperDir: ""
-
-    // Controls actual PanelWindow visibility
     property bool menuOpen: false
+    property point globalMousePos: Qt.point(-1, -1)
 
     ListModel {
         id: wallpaperModel
     }
 
-    // 🔒 ROOT HARDWARE COORDINATE TRACKERS
-    property point globalMousePos: Qt.point(-1, -1)
-
-    // 🎯 THE FIX: Maps user space variables inside runtime subshell evaluations atomically
     Component.onCompleted: {
-        // Fallback target context engine to track image file loops cleanly inside your lists
         wallpaperDir = Quickshell.env("HOME") + "/Pictures/Wallpapers";
-        
-        // Pass expansion arrays safely to the scanner engine
         wallpaperScanner.command = ["sh", "-c", "ls " + wallpaperDir];
-        
-        // Execute background worker loops
         wallpaperScanner.running = true;
     }
 
-    // 🎬 CLOSE FINALIZER
     Timer {
         id: closeTimer
         interval: 180
@@ -46,7 +34,6 @@ Item {
         }
     }
 
-    // 🔓 PUBLIC INTERFACE
     function toggleMenu(): void {
         if (menuOpen) {
             closeMenu();
@@ -57,41 +44,31 @@ Item {
 
     function openMenu(): void {
         globalMousePos = Qt.point(-1, -1);
-
         wallpaperListView.activeKeyIndex = -1;
         wallpaperListView.logicalMouseIndexStore = -1;
-
-        wallpaperCard.targetX = -216;
+        wallpaperCard.targetX = -290;
         wallpaperCard.targetOpacity = 0.0;
 
-        rootScope.requestOpen(wallpaperModal);
+        rootScope.requestOpen("wallpaper");
         menuOpen = true;
-
         slideRightAnimation.start();
-
-        if (wallpaperModel.count === 0 && wallpaperScanner.command && wallpaperScanner.command.length > 1) {
-            wallpaperScanner.running = false;
-            wallpaperScanner.running = true;
-        }
     }
 
     function closeMenu(): void {
-        wallpaperCard.targetX = -216;
+        wallpaperCard.targetX = -290;
         wallpaperCard.targetOpacity = 0.0;
         closeTimer.start();
     }
 
-    // 🔄 GLOBAL CLEANUP LISTENER
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (rootScope.activeModal !== wallpaperModal && menuOpen) {
+            if (rootScope.activeModal !== "wallpaper" && menuOpen) {
                 closeMenu();
             }
         }
     }
 
-    // 📦 LOAD WALLPAPERS
     function populateWallpapers(rawText) {
         wallpaperModel.clear();
         let lines = rawText.split("\n");
@@ -108,7 +85,6 @@ Item {
         wallpaperListView.logicalMouseIndexStore = -1;
     }
 
-    // 🔄 WALLPAPER DIRECTORY SCANNER
     Process {
         id: wallpaperScanner
         command: ["true"]
@@ -120,7 +96,6 @@ Item {
         }
     }
 
-    // 🔘 TRIGGER BUTTON
     Rectangle {
         id: triggerButton
         anchors.fill: parent
@@ -129,9 +104,9 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            text: "󰸉"
-            font.family: "Rubik"
-            font.pixelSize: 24
+            text: "wallpaper"
+            font.family: "Material Symbols Outlined"
+            font.pixelSize: 26
             color: "#ffffff"
         }
 
@@ -144,19 +119,14 @@ Item {
         }
     }
 
-    // 🪟 WALLPAPER WINDOW
     PanelWindow {
         id: wallpaperModal
         visible: wallpaperModuleRoot.menuOpen
-
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         color: "transparent"
-
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-wallpapers"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
-
-        WlrLayershell.margins.left: 0; WlrLayershell.margins.right: 0; WlrLayershell.margins.bottom: 0; WlrLayershell.margins.top: 0
 
         onVisibleChanged: {
             if (visible && wallpaperModuleRoot.menuOpen) {
@@ -172,15 +142,12 @@ Item {
             onClicked: closeMenu()
         }
 
-        // 📦 VERTICAL PANE CONTAINER
         Rectangle {
             id: wallpaperCard
-            width: 216
-            
+            width: 290
             anchors.top: parent.top; anchors.bottom: parent.bottom
             anchors.topMargin: 12; anchors.bottomMargin: 12; anchors.left: parent.left
-            
-            property int targetX: -216
+            property int targetX: -290
             property real targetOpacity: 0.0
             anchors.leftMargin: targetX; opacity: targetOpacity
 
@@ -198,7 +165,6 @@ Item {
 
             color: "#9911111b"
             border.width: 0; border.color: "transparent"; focus: true
-            topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -241,12 +207,15 @@ Item {
             }
 
             ColumnLayout {
-                anchors.fill: parent; anchors.topMargin: 16; anchors.bottomMargin: 16; spacing: 12
+                anchors.fill: parent; anchors.margins: 12; spacing: 8
 
                 Text {
                     text: "Wallpapers"
-                    font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff"
-                    Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter
+                    font.family: "Rubik"; font.pixelSize: 18; font.weight: Font.Bold; color: "#ffffff"
+                    Layout.alignment: Qt.AlignLeft
+                    Layout.leftMargin: 10
+                    Layout.bottomMargin: 2
+                    Layout.topMargin: 4
                 }
 
                 ListView {
@@ -259,10 +228,10 @@ Item {
                     property int activeMouseIndex: (activeKeyIndex === -1) ? logicalMouseIndexStore : -1
 
                     delegate: Item {
-                        width: wallpaperListView.width; height: 132
+                        width: wallpaperListView.width; height: 150
 
                         Rectangle {
-                            width: 192; height: 132
+                            width: 260; height: 150
                             anchors.horizontalCenter: parent.horizontalCenter; radius: 0 
                             
                             readonly property bool isHighlighted: (wallpaperListView.activeKeyIndex === index && wallpaperCard.activeFocus) || 
@@ -276,6 +245,10 @@ Item {
                                 anchors.fill: parent; anchors.margins: 4
                                 source: "file://" + model.fullPath
                                 fillMode: Image.PreserveAspectCrop; clip: true
+                                cache: true
+                                asynchronous: true
+                                sourceSize.width: 260
+                                sourceSize.height: 150
                             }
                         }
 
