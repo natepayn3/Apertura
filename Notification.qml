@@ -14,6 +14,7 @@ Item {
     property var visibleBanners: []
     property var activeHistoryReferences: [] 
     property bool menuOpen: false
+    property bool notificationsEnabled: true
 
     Timer {
         id: osdAutohideTimer
@@ -43,7 +44,7 @@ Item {
     function openMenu(): void {
         popupMenuFrame.targetX = -655;
         popupMenuFrame.targetOpacity = 0.0;
-        rootScope.requestOpen(notificationOverlayModal);
+        rootScope.requestOpen("notifications");
         menuOpen = true;
         slideInAnimation.start();
         checkUserActivity();
@@ -64,6 +65,10 @@ Item {
     }
 
     function updateCount() {
+        if (!notificationRoot.notificationsEnabled) {
+            notificationRoot.unreadCount = 0;
+            return;
+        }
         if (nativeServer && nativeServer.trackedNotifications) {
             notificationRoot.unreadCount = nativeServer.trackedNotifications.rowCount();
         }
@@ -76,6 +81,11 @@ Item {
         keepOnReload: true
 
         onNotification: (notification) => {
+            if (!notificationRoot.notificationsEnabled) {
+                notification.dismiss();
+                return;
+            }
+            
             notification.tracked = true;
             notificationRoot.updateCount();
             notificationRoot.activeHistoryReferences = [...notificationRoot.activeHistoryReferences, notification];
@@ -110,10 +120,10 @@ Item {
             Text {
                 id: notificationIcon
                 Layout.alignment: Qt.AlignHCenter
-                text: notificationRoot.unreadCount > 0 ? "notifications_unread" : "notifications"
+                text: !notificationRoot.notificationsEnabled ? "notifications_off" : (notificationRoot.unreadCount > 0 ? "notifications_unread" : "notifications")
                 font.family: "Material Symbols Outlined"
                 font.pixelSize: 20
-                color: "#ffffff"
+                color: notificationRoot.notificationsEnabled ? "#ffffff" : "#59ffffff"
             }
         }
 
@@ -126,6 +136,7 @@ Item {
             onContainsMouseChanged: checkUserActivity()
             
             onDoubleClicked: {
+                if (!notificationRoot.notificationsEnabled) return;
                 try { nativeServer.clear(); } catch(e) {}
                 try { nativeServer.dismissAll(); } catch(e) {}
                 for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
@@ -142,7 +153,7 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (rootScope.activeModal !== notificationOverlayModal && menuOpen) {
+            if (rootScope.activeModal !== "notifications" && menuOpen) {
                 closeMenu();
             }
         }
@@ -150,7 +161,7 @@ Item {
 
     PanelWindow {
         id: popupToastWindow
-        visible: notificationRoot.visibleBanners.length > 0 && !notificationOverlayModal.visible
+        visible: notificationRoot.visibleBanners.length > 0 && !notificationOverlayModal.visible && notificationRoot.notificationsEnabled
         color: "transparent"
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
         WlrLayershell.layer: WlrLayer.Overlay
@@ -237,7 +248,7 @@ Item {
             anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.bottomMargin: 12
             property int targetX: -655; property real targetOpacity: 0.0
             anchors.leftMargin: targetX; opacity: targetOpacity
-            height: notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300)
+            height: !notificationRoot.notificationsEnabled ? 92 : (notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300))
 
             SequentialAnimation {
                 id: slideInAnimation
@@ -267,111 +278,180 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 onContainsMouseChanged: checkUserActivity()
-                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
             }
 
-            ColumnLayout {
-                anchors.fill: parent; anchors.margins: 14; spacing: 10
+            MouseArea {
+                anchors.fill: parent
+                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" } 
-                    Item { Layout.fillWidth: true }
-                    
-                    Text {
-                        text: "Clear All"
-                        font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
-                        color: clearAllMouse.containsMouse ? "#ffffff" : "#59ffffff"
-                        visible: notificationRoot.unreadCount > 0
-                        
-                        MouseArea {
-                            id: clearAllMouse
-                            anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                try { nativeServer.clear(); } catch(e) {}
-                                try { nativeServer.dismissAll(); } catch(e) {}
-                                
-                                for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
-                                    let item = notificationRoot.activeHistoryReferences[i];
-                                    if (item) {
-                                        try { item.dismiss(); } catch(e) {}
-                                        try { nativeServer.dismiss(item.id); } catch(e) {}
-                                    }
+                ColumnLayout {
+                    anchors.fill: parent; anchors.margins: 14; spacing: 10
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" } 
+                        Item { Layout.fillWidth: true }
+
+                        RowLayout {
+                            spacing: 12
+                            Layout.alignment: Qt.AlignRight
+
+                            Item {
+                                width: clearAllText.implicitWidth
+                                height: 24
+                                visible: notificationRoot.unreadCount > 0 && notificationRoot.notificationsEnabled
+                                z: 100
+
+                                Text {
+                                    id: clearAllText
+                                    anchors.centerIn: parent
+                                    text: "Clear All"
+                                    font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
+                                    color: clearAllMouse.containsMouse ? "#ffffff" : "#59ffffff"
                                 }
-                                
-                                notificationRoot.visibleBanners = [];
-                                notificationRoot.activeHistoryReferences = [];
-                                notificationRoot.updateCount();
-                                checkUserActivity();
-                            }
-                        }
-                    }
-                }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
-
-                Item {
-                    id: listContainer
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-
-                    ListView {
-                        id: notifListView
-                        anchors.fill: parent
-                        clip: true; spacing: 8
-                        model: nativeServer.trackedNotifications
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "No new notifications"
-                            font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff" 
-                            visible: notifListView.count === 0
-                        }
-
-                        delegate: Item {
-                            width: notifListView.width
-                            height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
-
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "#5911111b"
-                                border.color: cellMouseArea.containsMouse ? "#ffffff" : "#26ffffff" 
-                                border.width: 1
-                                radius: 0 
-
-                                ColumnLayout {
-                                    anchors.fill: parent; anchors.margins: 10; spacing: 2
-
-                                    Text {
-                                        id: summaryLabel
-                                        text: modelData.summary
-                                        font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
-                                        color: "#ffffff" 
-                                        Layout.fillWidth: true; elide: Text.ElideRight
-                                    }
-
-                                    Text {
-                                        id: bodyLabel
-                                        text: modelData.body
-                                        font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"
-                                        Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight
-                                    }
-                                }
-                                
                                 MouseArea {
-                                    id: cellMouseArea
+                                    id: clearAllMouse
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        try { nativeServer.dismiss(modelData.id); } catch(e) {}
-                                        try { modelData.dismiss(); } catch(e) {}
+                                        try { nativeServer.clear(); } catch(e) {}
+                                        try { nativeServer.dismissAll(); } catch(e) {}
+                                        
+                                        for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
+                                            let item = notificationRoot.activeHistoryReferences[i];
+                                            if (item) {
+                                                try { item.dismiss(); } catch(e) {}
+                                                try { nativeServer.dismiss(item.id); } catch(e) {}
+                                            }
+                                        }
+                                        
+                                        notificationRoot.visibleBanners = [];
+                                        notificationRoot.activeHistoryReferences = [];
+                                        notificationRoot.updateCount();
+                                        checkUserActivity();
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                width: 50; height: 24; radius: 12
+                                color: notificationRoot.notificationsEnabled ? "#45ffffff" : "#26ffffff"
+                                z: 100
+                                
+                                Rectangle {
+                                    width: 18; height: 18; radius: 9; color: "#11111b"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    x: notificationRoot.notificationsEnabled ? 28 : 4
+                                    Behavior on x { NumberAnimation { duration: 120 } }
+                                }
+                                
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        notificationRoot.notificationsEnabled = !notificationRoot.notificationsEnabled;
+                                        if (!notificationRoot.notificationsEnabled) {
+                                            try { nativeServer.clear(); } catch(e) {}
+                                            try { nativeServer.dismissAll(); } catch(e) {}
+                                            
+                                            for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
+                                                let item = notificationRoot.activeHistoryReferences[i];
+                                                if (item) {
+                                                    try { item.dismiss(); } catch(e) {}
+                                                    try { nativeServer.dismiss(item.id); } catch(e) {}
+                                                }
+                                            }
+                                            
+                                            notificationRoot.visibleBanners = [];
+                                            notificationRoot.activeHistoryReferences = [];
+                                        }
                                         notificationRoot.updateCount();
                                         checkUserActivity();
                                     }
                                 }
                             }
                         }
+                    }
+
+                    Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
+
+                    Item {
+                        id: listContainer
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: notificationRoot.notificationsEnabled
+
+                        ListView {
+                            id: notifListView
+                            anchors.fill: parent
+                            clip: true; spacing: 8
+                            model: nativeServer.trackedNotifications
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "No new notifications"
+                                font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff" 
+                                visible: notifListView.count === 0 && notificationRoot.notificationsEnabled
+                            }
+
+                            delegate: Item {
+                                width: notifListView.width
+                                height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "#5911111b"
+                                    border.color: cellMouseArea.containsMouse ? "#ffffff" : "#26ffffff" 
+                                    border.width: 1
+                                    radius: 0 
+
+                                    ColumnLayout {
+                                        anchors.fill: parent; anchors.margins: 10; spacing: 2
+
+                                        Text {
+                                            id: summaryLabel
+                                            text: modelData.summary
+                                            font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
+                                            color: "#ffffff" 
+                                            Layout.fillWidth: true; elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            id: bodyLabel
+                                            text: modelData.body
+                                            font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"
+                                            Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight
+                                        }
+                                    }
+                                    
+                                    MouseArea {
+                                        id: cellMouseArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            try { nativeServer.dismiss(modelData.id); } catch(e) {}
+                                            try { modelData.dismiss(); } catch(e) {}
+                                            notificationRoot.updateCount();
+                                            checkUserActivity();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        id: mutedPlaceholder
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        text: "Notifications are muted"
+                        font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        visible: !notificationRoot.notificationsEnabled
                     }
                 }
             }
