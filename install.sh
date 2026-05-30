@@ -24,26 +24,30 @@ echo -e "  / _ \ | |_) |  _| | |_) || | | | | | |_) |/ _ \ "
 echo -e " / ___ \|  __/| |___|  _ < | | | |_| |  _ <___  |"
 echo -e "/_/   \_\_|   |_____|_| \_\|_|  \___/|_| \_\  |_| ${RESET}"
 echo -e "${GRAY}────────────────────────────────────────────────────────────${RESET}"
-echo -e "                ${WHITE}Apertura Core Bar Deployment Module${RESET}"
-echo -e "${GRAY}────────────────────────────────────────────────────────────${RESET}"
 echo ""
 
 echo -e "${BLUE}[*]${RESET} Updating system repositories and checking dependencies..."
 DEPENDENCIES=(
     "quickshell"
-    "awww-git"
+    "awww"                         # Targeted standard AUR package instead of -git
     "bluez"
-    "bluez-utils"              # Provides 'bluetoothctl' binary used by Bluetooth.qml
-    "networkmanager"           # Provides 'nmcli' binary used by Wifi.qml
-    "python"                   # Provides 'python3' interpreter used by AppLauncher.qml
-    "wireplumber"              # Provides 'wpctl' used by Audio.qml & VolumeHud
+    "bluez-utils"                  # Provides 'bluetoothctl' binary used by Bluetooth.qml
+    "networkmanager"               # Provides 'nmcli' binary used by Wifi.qml
+    "python"                       # Provides 'python3' interpreter used by AppLauncher.qml
+    "wireplumber"                  # Provides 'wpctl' used by Audio.qml & VolumeHud
     "ttf-material-design-icons-git" # Maps \uE050 style system glyphs cleanly
-    "ttf-nerd-fonts-symbols"   # Font tracking backbone fallback for 󰂱 and 󱐋 shapes
+    "ttf-nerd-fonts-symbols"       # Font tracking backbone fallback for 󰂱 and 󱐋 shapes
 )
 
 NEW_FONTS_INSTALLED=false
 
 for pkg in "${DEPENDENCIES[@]}"; do
+    # Skip if awww provider is already satisfied by any variant providing awww-daemon
+    if [[ "$pkg" == "awww" ]] && command -v awww-daemon &>/dev/null; then
+        echo -e "    ${GRAY}➔${RESET} awww daemon is already installed. Skipping..."
+        continue
+    fi
+
     if ! pacman -Qi "$pkg" &>/dev/null; then
         echo -e "    ${GRAY}➔${RESET} Installing $pkg..."
         
@@ -52,10 +56,11 @@ for pkg in "${DEPENDENCIES[@]}"; do
             NEW_FONTS_INSTALLED=true
         fi
 
+        # Execute helper with safe fallback to handle manual conflict confirmations if needed
         if command -v paru &>/dev/null; then
-            paru -S --noconfirm "$pkg"
+            paru -S --noconfirm --needed "$pkg" || paru -S --needed "$pkg"
         elif command -v yay &>/dev/null; then
-            yay -S --noconfirm "$pkg"
+            yay -S --noconfirm --needed "$pkg" || yay -S --needed "$pkg"
         else
             echo -e "${RED}[X] Error:${RESET} Neither paru nor yay found. Please install $pkg manually."
             exit 1
@@ -78,10 +83,10 @@ if [ ! -d "$WALLPAPER_DIR" ]; then
     mkdir -p "$WALLPAPER_DIR"
 fi
 
-# Atomic repository management pointing to your public Git path
+# Atomic repository management pointing to public Git path
 if [ -d "Apertura" ]; then
     echo -e "    ${GRAY}➔${RESET} Updating existing local repository directory..."
-    # Wrap in subshell block so failure or directory changes never pollute or stall execution state
+    # Subshell block safely isolates directory changes and failure risks
     (cd Apertura && git pull)
 else
     echo -e "    ${GRAY}➔${RESET} Cloning Apertura repository..."
@@ -94,7 +99,7 @@ echo -e "    ${GRAY}➔${RESET} Mapping battery target identifier node to: $DETE
 sed -i "s/BAT1/$DETECTED_BAT/g" Apertura/Battery.qml
 
 echo -e "${BLUE}[*]${RESET} Syncing Apertura core assets and helper scripts..."
-# Ensure the base tree exists and target syncing is clean and non-nested
+# Force clear path boundaries to ensure target syncing is clean and non-nested
 mkdir -p "$QUICKSHELL_DIR"
 cp -r Apertura/. "$QUICKSHELL_DIR/"
 
