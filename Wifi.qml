@@ -21,7 +21,6 @@ Item {
     property bool showingForgetConfirm: false 
     property string selectedSsid: ""
 
-    // ⚡ Hardware Detection: Scans sysfs net paths for any card exposing wireless capabilities
     Process {
         id: hardwareCheck
         command: ["sh", "-c", "ls /sys/class/net/*/wireless >/dev/null 2>&1"]
@@ -36,7 +35,6 @@ Item {
         }
     }
 
-    // 📡 Status Watcher: Resolves current connection states
     Process {
         id: statusWatcher
         command: ["nmcli", "-t", "-f", "ACTIVE,SIGNAL,SSID", "dev", "wifi"]
@@ -62,8 +60,8 @@ Item {
         }
     }
 
-    // 🔍 Network Scanner: Pulls surrounding endpoints into the model
     ListModel { id: wifiNetworksModel }
+    
     Process {
         id: networkScanner
         command: ["nmcli", "-t", "-f", "SSID,SECURITY,BARS,ACTIVE", "dev", "wifi"]
@@ -109,16 +107,21 @@ Item {
         }
     }
 
-    // 🛠️ Action Executer: Handles backend configuration tasks asynchronously
     Process { id: nmcActionExecutor; command: []; running: false }
 
     function triggerScan(): void { networkScanner.running = true; statusWatcher.running = true; }
     
+    function startTransitionBurst(): void {
+        transitionBurstTimer.restart();
+        transitionBurstStopTimer.restart();
+    }
+
     function forgetNetwork(targetSsid): void {
         nmcActionExecutor.command = ["nmcli", "connection", "delete", targetSsid];
         nmcActionExecutor.running = true;
         wifiRoot.showingForgetConfirm = false;
         triggerScan();
+        startTransitionBurst();
     }
     
     function connectToNetwork(targetSsid, password): void {
@@ -128,55 +131,91 @@ Item {
         nmcActionExecutor.running = true;
         wifiRoot.enteringPassword = false;
         triggerScan();
+        startTransitionBurst();
     }
 
-    // 🕒 Sync hardware layers regularly
-    Timer { interval: 12000; running: wifiRoot.hasWifiCard; repeat: true; onTriggered: triggerScan() }
+    Timer { interval: 20000; running: wifiRoot.hasWifiCard; repeat: true; onTriggered: triggerScan() }
+    
+    Timer {
+        id: transitionBurstTimer
+        interval: 200
+        running: false
+        repeat: true
+        onTriggered: triggerScan()
+    }
+
+    Timer {
+        id: transitionBurstStopTimer
+        interval: 4000
+        running: false
+        repeat: false
+        onTriggered: transitionBurstTimer.stop()
+    }
+
+    Timer {
+        id: osdAutohideTimer
+        interval: 3500
+        running: false
+        repeat: false
+        onTriggered: closeMenu()
+    }
+
     Timer { id: closeTimer; interval: 180; repeat: false; onTriggered: wifiRoot.menuOpen = false }
 
     function openMenu(): void {
         popupMenuFrame.targetX = -655; popupMenuFrame.targetOpacity = 0.0;
         rootScope.requestOpen("wifi"); wifiRoot.menuOpen = true; wifiRoot.enteringPassword = false; wifiRoot.showingForgetConfirm = false;
-        slideInAnimation.start(); triggerScan();
+        slideInAnimation.start(); triggerScan(); checkUserActivity();
     }
     
     function closeMenu(): void { popupMenuFrame.targetX = -655; popupMenuFrame.targetOpacity = 0.0; closeTimer.start(); }
 
-    // ==========================================
-    // 📶 WI-FI ICON TRIGGER MODULE
-    // ==========================================
+    function checkUserActivity() {
+        if (iconMouseArea.containsMouse || cardHoverTracker.containsMouse) {
+            osdAutohideTimer.stop(); 
+        } else {
+            osdAutohideTimer.restart(); 
+        }
+    }
+
     Rectangle {
         id: wifiHitbox
         anchors.fill: parent
-        color: batteryMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: iconMouseArea.containsMouse ? "#26ffffff" : "transparent"
         radius: 0 
 
-        Item {
-            anchors.centerIn: parent
-            width: 20; height: 20
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 0
 
-            Text {
-                id: wifiIcon
-                anchors.centerIn: parent
-                text: wifiRoot.signalStrength === 0 ? "signal_cellular_nodata" : 
-                      wifiRoot.signalStrength < 35  ? "signal_cellular_1_bar" : 
-                      wifiRoot.signalStrength < 65  ? "signal_cellular_2_bar" : 
-                      wifiRoot.signalStrength < 85  ? "signal_cellular_3_bar" : 
-                                                      "signal_cellular_4_bar"
-                font.family: "Material Symbols Outlined"
-                font.pixelSize: 20
-                color: "#ffffff"
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
+            Item {
+                Layout.alignment: Qt.AlignHCenter
+                width: 20; height: 20
+
+                Text {
+                    id: wifiIcon
+                    anchors.centerIn: parent
+                    text: wifiRoot.signalStrength === 0 ? "signal_cellular_nodata" : 
+                          wifiRoot.signalStrength < 35  ? "signal_cellular_1_bar" : 
+                          wifiRoot.signalStrength < 65  ? "signal_cellular_2_bar" : 
+                          wifiRoot.signalStrength < 85  ? "signal_cellular_3_bar" : 
+                                                          "signal_cellular_4_bar"
+                    font.family: "Material Symbols Outlined"
+                    font.pixelSize: 20
+                    color: "#ffffff"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
             }
         }
 
         MouseArea {
-            id: batteryMouseArea
+            id: iconMouseArea
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: wifiRoot.menuOpen ? closeMenu() : openMenu()
+            onContainsMouseChanged: checkUserActivity()
         }
     }
 
@@ -185,9 +224,6 @@ Item {
         function onActiveModalChanged() { if (rootScope.activeModal !== "wifi" && menuOpen) closeMenu(); }
     }
 
-    // ==========================================
-    // 🪟 OVERLAY CONTROL CARD
-    // ==========================================
     PanelWindow {
         id: wifiOverlayModal; visible: wifiRoot.menuOpen; color: "transparent"
         anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
@@ -214,7 +250,14 @@ Item {
             
             color: "#9911111b"; border.width: 0; radius: 0; focus: true
             Keys.onPressed: (event) => { if (event.key === Qt.Key_Escape) { closeMenu(); event.accepted = true; } }
-            MouseArea { anchors.fill: parent; onPressed: (mouse) => { mouse.accepted = true; } }
+
+            MouseArea {
+                id: cardHoverTracker
+                anchors.fill: parent
+                hoverEnabled: true
+                onContainsMouseChanged: checkUserActivity()
+                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
+            }
 
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 14; spacing: 8
@@ -226,6 +269,7 @@ Item {
                     
                     RowLayout {
                         spacing: 4
+                        opacity: (wifiRoot.ssid !== "Disconnected" && wifiRoot.ssid !== "") ? 1.0 : 0.0
                         Text { text: "Connected to:"; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
                         Text { 
                             text: wifiRoot.ssid
