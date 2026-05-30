@@ -28,7 +28,7 @@ echo -e "               ${⚪}Apertura Core Bar Deployment Module${🏁}"
 echo -e "${⚫}────────────────────────────────────────────────────────────${🏁}"
 echo ""
 
-echo -e "${🔵}[*]${🏁} Updating system repositories and checking dependencies..."
+echo -e "${BLUE}[*]${RESET} Updating system repositories and checking dependencies..."
 DEPENDENCIES=(
     "quickshell"
     "awww-git"
@@ -41,9 +41,17 @@ DEPENDENCIES=(
     "ttf-nerd-fonts-symbols"   # Font tracking backbone fallback for 󰂱 and 󱐋 shapes
 )
 
+NEW_FONTS_INSTALLED=false
+
 for pkg in "${DEPENDENCIES[@]}"; do
     if ! pacman -Qi "$pkg" &>/dev/null; then
         echo -e "    ${⚫}➔${🏁} Installing $pkg..."
+        
+        # Track if font packages are being added to trigger a cache rebuild
+        if [[ "$pkg" == ttf-* ]]; then
+            NEW_FONTS_INSTALLED=true
+        fi
+
         if command -v paru &>/dev/null; then
             paru -S --noconfirm "$pkg"
         elif command -v yay &>/dev/null; then
@@ -54,6 +62,12 @@ for pkg in "${DEPENDENCIES[@]}"; do
         fi
     fi
 done
+
+# Rebuild font index immediately if new typography assets were deployed
+if [ "$NEW_FONTS_INSTALLED" = true ]; then
+    echo -e "${BLUE}[*]${RESET} Rebuilding system font cache profiles..."
+    fc-cache -f
+fi
 
 echo -e "${🔵}[*]${🏁} Setting up local deployment directories..."
 mkdir -p "$HOME/.config/quickshell"
