@@ -12,26 +12,20 @@ Item {
 
     property var allApps: []
     property string activeSearchQuery: ""
-    
-    // Controls actual PanelWindow visibility
     property bool menuOpen: false
 
     ListModel {
         id: dynamicAppModel
     }
 
-    // 🎯 PATH SEPARATION MECHANISM
     Component.onCompleted: {
         const localUri = Qt.resolvedUrl(".").toString();
         const basePath = localUri.replace("file://", "");
         
         appScanner.command = ["python3", basePath + "/get_apps.py"];
-        
-        // Boot execution sequence
         appScanner.running = true;
     }
 
-    // 🎬 CLOSE FINALIZER
     Timer {
         id: closeTimer
         interval: 180
@@ -41,7 +35,6 @@ Item {
         }
     }
 
-    // 🔓 PUBLIC INTERFACE
     function toggleMenu(): void {
         if (menuOpen) {
             closeMenu();
@@ -72,7 +65,6 @@ Item {
         closeTimer.start();
     }
 
-    // 🔄 GLOBAL CLEANUP LISTENER
     Connections {
         target: rootScope
         function onActiveModalChanged() {
@@ -82,18 +74,15 @@ Item {
         }
     }
 
-    // 🚀 STATELESS TOKENS EXECUTION ENGINE
     function executeApplication(binString) {
         let cleanBin = binString.trim();
         
-        // Match .desktop files handed down via absolute paths
         if (cleanBin.endsWith(".desktop")) {
             let filename = cleanBin.substring(cleanBin.lastIndexOf('/') + 1);
             Quickshell.execDetached(["gtk-launch", filename]);
             return;
         }
 
-        // Tokenize strings with flags into clean system execution arrays
         let argsArray = [];
         let currentToken = "";
         let inQuotes = false;
@@ -122,7 +111,6 @@ Item {
             argsArray.push(currentToken);
         }
 
-        // Safely pass tokenized executable + arguments array directly to engine
         if (argsArray.length > 0) {
             Quickshell.execDetached(argsArray);
         }
@@ -147,7 +135,6 @@ Item {
         }
     }
 
-    // 🔄 PAYLOAD SCANNER
     Process {
         id: appScanner
         command: ["true"]
@@ -166,7 +153,6 @@ Item {
         }
     }
 
-    // 🔘 TRIGGER BUTTON
     Rectangle {
         id: triggerButton
         anchors.fill: parent
@@ -190,7 +176,6 @@ Item {
         }
     }
 
-    // 🪟 LAUNCHER WINDOW
     PanelWindow {
         id: appLauncherModal
         visible: launcherModuleRoot.menuOpen
@@ -299,7 +284,6 @@ Item {
                 }
             }
 
-            // 🚀 SCREEN-SPACE COUPLING TRACKER
             MouseArea {
                 id: globalTracker
                 anchors.fill: parent
@@ -407,7 +391,6 @@ Item {
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: 0 
-                                    // 🎯 FIXED: Corrected token alignment syntax error block
                                     color: "#1affffff" 
                                     visible: model.iconPath === ""
 
