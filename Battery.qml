@@ -9,6 +9,7 @@ Item {
     id: batRoot
     
     property bool isLaptop: false
+    property string acPath: ""
     
     implicitWidth: isLaptop ? 32 : 0
     implicitHeight: isLaptop ? 32 : 0
@@ -20,16 +21,34 @@ Item {
 
     Process {
         id: presenceCheck
-        command: ["test", "-f", "/sys/class/power_supply/BAT1/capacity"]
+        command: ["sh", "-c", "if [ -f /sys/class/power_supply/BAT1/capacity ]; then echo 1; fi"]
         running: true
         
-        onExited: (code) => {
-            if (code === 0) {
-                batRoot.isLaptop = true;
-                capReader.reload();
-                statusReader.reload();
-            } else {
-                batRoot.isLaptop = false;
+        stdout: StdioCollector {
+            onTextChanged: {
+                if (text.trim() === "1") {
+                    batRoot.isLaptop = true;
+                    acPathCheck.running = true;
+                } else {
+                    batRoot.isLaptop = false;
+                }
+            }
+        }
+    }
+
+    Process {
+        id: acPathCheck
+        command: ["sh", "-c", "if [ -f /sys/class/power_supply/AC/online ]; then echo '/sys/class/power_supply/AC/online'; else echo '/sys/class/power_supply/ADP1/online'; fi"]
+        running: false
+        
+        stdout: StdioCollector {
+            onTextChanged: {
+                let path = text.trim();
+                if (path) {
+                    batRoot.acPath = path;
+                    capReader.reload();
+                    acReader.reload();
+                }
             }
         }
     }
@@ -48,18 +67,12 @@ Item {
     }
 
     FileView {
-        id: statusReader
-        path: batRoot.isLaptop ? "/sys/class/power_supply/BAT1/status" : ""
+        id: acReader
+        path: (batRoot.isLaptop && batRoot.acPath) ? batRoot.acPath : ""
         onTextChanged: {
-            if (statusReader.text) {
-                let cleanStatus = statusReader.text().trim();
-                if (batRoot.capacity >= 99) {
-                    batRoot.isCharging = (cleanStatus !== "Discharging");
-                } else {
-                    batRoot.isCharging = (cleanStatus === "Charging" || 
-                                          cleanStatus === "Full" || 
-                                          cleanStatus === "Not charging");
-                }
+            if (acReader.text) {
+                let cleanStatus = acReader.text().trim();
+                batRoot.isCharging = (cleanStatus === "1");
             }
         }
     }
@@ -70,7 +83,7 @@ Item {
         repeat: true
         onTriggered: {
             capReader.reload();
-            statusReader.reload();
+            acReader.reload();
         }
     }
 
@@ -241,7 +254,7 @@ Item {
                     Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" }
                     Item { Layout.fillWidth: true }
                     Text { 
-                        text: (statusReader.text && statusReader.text().trim() === "Full") ? "Fully Charged" : (batRoot.isCharging ? "󱐋 Charging" : "Discharging")
+                        text: batRoot.capacity >= 99 ? "Fully Charged" : (batRoot.isCharging ? "󱐋 Charging" : "Discharging")
                         font.family: "Rubik"; font.pixelSize: 12
                         color: "#ffffff"
                     }
