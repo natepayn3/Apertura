@@ -112,16 +112,26 @@ fi
 echo -e "${BLUE}[*]${RESET} Injecting configuration trees into hyprland.lua..."
 touch "$HYPRLAND_LUA"
 
-# 1. Inject the IPC toggle macro string if missing
-if ! grep -q "local menu = \"qs -c Apertura ipc call launcher toggle\"" "$HYPRLAND_LUA"; then
+# Helper function to ensure safe appending without messing up missing trailing newlines
+safe_append() {
+    local file="$1"
+    # If the file doesn't end with a newline, add one first
+    if [ -s "$file" ] && [ "$(tail -c1 "$file" | wc -l)" -eq 0 ]; then
+        echo "" >> "$file"
+    fi
+    cat >> "$file"
+}
+
+# 1. Inject the IPC toggle macro string if missing (strict match on Apertura)
+if ! grep -q 'local menu = "qs -c Apertura ipc call launcher toggle"' "$HYPRLAND_LUA"; then
     echo -e "    ${GRAY}➔${RESET} Adding menu declaration macro..."
-    echo 'local menu = "qs -c Apertura ipc call launcher toggle"' >> "$HYPRLAND_LUA"
+    echo 'local menu = "qs -c Apertura ipc call launcher toggle"' | safe_append "$HYPRLAND_LUA"
 fi
 
 # 2. Inject layer blur configurations if missing
 if ! grep -q "quickshell-bar-blur" "$HYPRLAND_LUA"; then
     echo -e "    ${GRAY}➔${RESET} Adding bar layer rule hooks..."
-    cat << 'EOF' >> "$HYPRLAND_LUA"
+    cat << 'EOF' | safe_append "$HYPRLAND_LUA"
 
 -- Unique configuration for the bar layer
 hl.layer_rule({
@@ -142,10 +152,10 @@ hl.layer_rule({
 EOF
 fi
 
-# 3. Inject initializers hooks into startup blocks
-if ! grep -q "qs -c Apertura" "$HYPRLAND_LUA"; then
+# 3. Inject initializers hooks into startup blocks specifically for Apertura
+if ! grep -q 'hl.exec_cmd("qs -c Apertura")' "$HYPRLAND_LUA"; then
     echo -e "    ${GRAY}➔${RESET} Adding startup daemon execution engine..."
-    cat << 'EOF' >> "$HYPRLAND_LUA"
+    cat << 'EOF' | safe_append "$HYPRLAND_LUA"
 
 hl.on("hyprland.start", function () 
   hl.exec_cmd("qs -c Apertura")
@@ -165,4 +175,4 @@ if command -v awww-daemon &>/dev/null; then
 fi
 
 echo ""
-echo -e "${GREEN}[✓] Deployment finished successfully! Environment layout is uniform and operational.${RESET}"
+echo -e "${GREEN}[✓] Deployment finished successfully!${RESET}"
