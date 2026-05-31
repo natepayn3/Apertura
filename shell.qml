@@ -132,7 +132,7 @@ Scope {
 
                     // Spacer to prevent overlap into bottom region
                     Item {
-                        anchors.top: calendarItem.bottom
+                        anchors.top: topStackColumn.bottom
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
