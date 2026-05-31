@@ -10,6 +10,7 @@ Item {
     
     property bool hasWifiCard: false
     
+    // Bind dimensions and visibility tightly to hardware presence
     implicitWidth: hasWifiCard ? 32 : 0
     implicitHeight: hasWifiCard ? 32 : 0
     visible: hasWifiCard
@@ -24,7 +25,8 @@ Item {
 
     Process {
         id: hardwareCheck
-        command: ["sh", "-c", "ls /sys/class/net/*/wireless >/dev/null 2>&1"]
+        // Robust check that safely handles empty glob expansions without false 0 exit codes
+        command: ["sh", "-c", "if [ -d /sys/class/net ] && expr \"$(ls -d /sys/class/net/*/wireless 2>/dev/null)\" : '.*wireless' >/dev/null; then exit 0; else exit 1; fi"]
         running: true
         onExited: (code) => {
             if (code === 0) {
@@ -32,6 +34,7 @@ Item {
                 statusWatcher.running = true;
             } else {
                 wifiRoot.hasWifiCard = false;
+                statusWatcher.running = false; // Kill watcher if no hardware present
             }
         }
     }
@@ -42,6 +45,8 @@ Item {
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
+                if (!wifiRoot.hasWifiCard) return; // Prevent parsing if card is missing
+                
                 let lines = text.split('\n');
                 let foundActive = false;
                 for (let line of lines) {
@@ -69,6 +74,7 @@ Item {
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
+                if (!wifiRoot.hasWifiCard) return;
                 wifiNetworksModel.clear();
                 let lines = text.split('\n');
                 let seenSsids = new Set();
@@ -111,7 +117,7 @@ Item {
     Process { id: nmcActionExecutor; command: []; running: false }
 
     function triggerScan(): void { 
-        if (!wifiRoot.wifiEnabled) return;
+        if (!wifiRoot.wifiEnabled || !wifiRoot.hasWifiCard) return;
         networkScanner.running = true; 
         statusWatcher.running = true; 
     }
