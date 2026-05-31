@@ -21,7 +21,7 @@ Item {
     ListModel { id: pairedDevicesModel }
     ListModel { id: discoveredDevicesModel }
 
-    // 🎯 THE FIX: Resolves the local absolute path safely using standard QML URL translation
+    // 🎯 Resolves the local absolute path safely using standard QML URL translation
     Component.onCompleted: {
         const localUri = Qt.resolvedUrl(".").toString();
         const basePath = localUri.replace("file://", "");
@@ -84,7 +84,7 @@ Item {
         closeTimer.start();
     }
 
-    // 🛠️ RELIABLE PRESENCE DETECTOR
+    // 🛠 nighttime hover activity tracking
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse || pairedListView.isHoveringItems) {
             osdAutohideTimer.stop(); 
@@ -158,9 +158,9 @@ Item {
                     const segments = lines[i].split("|");
                     if (segments.length >= 3) {
                         pairedDevicesModel.append({
-                            macAddress: segments[0],
-                            isDeviceConnected: segments[1] === "true",
-                            deviceName: segments[2],
+                            macAddress: segments[0].trim().toLowerCase(),
+                            isDeviceConnected: segments[1].trim() === "true",
+                            deviceName: segments[2].trim(),
                             isTransitioning: false 
                         });
                     }
@@ -193,14 +193,26 @@ Item {
                 if (!rawOutput) return;
 
                 const lines = rawOutput.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+                
+                const pairedMacSet = new Set();
+                for (let j = 0; j < pairedDevicesModel.count; j++) {
+                    pairedMacSet.add(pairedDevicesModel.get(j).macAddress.toLowerCase());
+                }
+
                 discoveredDevicesModel.clear();
                 
                 for (let i = 0; i < lines.length; i++) {
                     const segments = lines[i].split("|");
                     if (segments.length >= 2 && segments[1].trim() !== "") {
+                        const targetMac = segments[0].trim().toLowerCase();
+                        
+                        if (pairedMacSet.has(targetMac)) {
+                            continue;
+                        }
+
                         discoveredDevicesModel.append({
-                            macAddress: segments[0],
-                            deviceName: segments[1]
+                            macAddress: targetMac,
+                            deviceName: segments[1].trim()
                         });
                     }
                 }
@@ -219,7 +231,11 @@ Item {
         id: deviceConnectionAction 
         command: ["true"]
         running: false
-        onExited: { running = false; refreshStatus(); refreshPairedList(); }
+        onExited: { 
+            running = false; 
+            refreshStatus(); 
+            refreshPairedList(); 
+        }
     }
     Process { 
         id: pairAction 
@@ -233,7 +249,13 @@ Item {
         id: unpairAction
         command: ["true"]
         running: false
-        onExited: { running = false; refreshStatus(); refreshPairedList(); }
+        onExited: { 
+            running = false; 
+            Qt.callLater(() => {
+                refreshStatus(); 
+                refreshPairedList(); 
+            });
+        }
     }
 
     function triggerScan() {
@@ -355,7 +377,7 @@ Item {
             antialiasing: false
             topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
 
-            height: !bluetoothRoot.isPowered ? 92 : Math.min(100 + ((currentTab === "paired" ? pairedDevicesModel.count : discoveredDevicesModel.count) * 42), 300)
+            height: !bluetoothRoot.isPowered ? 92 : Math.min(100 + ((currentTab === "paired" ? pairedDevicesModel.count : discoveredDevicesModel.count) * 40), 300)
 
             Behavior on height {
                 NumberAnimation {
@@ -468,7 +490,7 @@ Item {
                     // PANE 1: PAIRED LIST
                     ListView {
                         id: pairedListView
-                        anchors.fill: parent; spacing: 4
+                        anchors.fill: parent; spacing: 4; clip: true
                         model: pairedDevicesModel
                         visible: bluetoothRoot.currentTab === "paired" && bluetoothRoot.isPowered
 
@@ -492,61 +514,45 @@ Item {
                                 RowLayout {
                                     anchors.fill: parent
                                     anchors.leftMargin: 8
-                                    anchors.rightMargin: model.isTransitioning ? 82 : 122 
+                                    anchors.rightMargin: staticOptionsWrapper.width + 12
                                     spacing: 10
                                     
-                                    Text { text: model.isDeviceConnected ? "󰂱" : "󰂯"; font.family: "Rubik"; font.pixelSize: 16; color: "#ffffff" }
-                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight }
+                                    Text { text: model.isDeviceConnected ? "󰂱" : "󰂯"; font.family: "Rubik"; font.pixelSize: 16; color: "#ffffff"; Layout.alignment: Qt.AlignVCenter }
+                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight; Layout.alignment: Qt.AlignVCenter }
                                 }
                                 
-                                Item {
+                                // Clean symmetric layout tracking
+                                RowLayout {
                                     id: staticOptionsWrapper
-                                    width: model.isTransitioning ? 70 : 110
                                     height: parent.height
                                     anchors.right: parent.right
                                     anchors.rightMargin: 8
-                                    opacity: rowMasterArea.containsMouse ? 1.0 : 0.0
+                                    spacing: 4
+                                    opacity: rowMasterArea.containsMouse || model.isTransitioning ? 1.0 : 0.0
                                     z: 20 
 
-                                    Item {
-                                        id: connectButtonFrame
-                                        width: actionLabel.implicitWidth
-                                        height: parent.height
-                                        anchors.left: parent.left
-
-                                        Text {
-                                            id: actionLabel
-                                            text: model.isTransitioning ? "Connecting..." : (model.isDeviceConnected ? "Disconnect" : "Connect")
-                                            font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
-                                            color: "#ffffff"
-                                            anchors.centerIn: parent
-                                        }
+                                    Text {
+                                        id: actionLabel
+                                        text: model.isTransitioning ? "Connecting..." : (model.isDeviceConnected ? "Disconnect" : "Connect")
+                                        font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
+                                        color: "#ffffff"
+                                        Layout.alignment: Qt.AlignVCenter
                                     }
 
                                     Text { 
                                         id: pipeDivider
                                         text: "|" 
                                         font.family: "Rubik"; font.pixelSize: 11; color: "#26ffffff"
-                                        anchors.left: connectButtonFrame.right
-                                        anchors.leftMargin: 6
-                                        anchors.verticalCenter: parent.verticalCenter
+                                        Layout.alignment: Qt.AlignVCenter
                                         visible: !model.isTransitioning
                                     }
                                     
-                                    Item {
-                                        id: forgetButtonFrame
-                                        width: forgetLabel.implicitWidth
-                                        height: parent.height
-                                        anchors.left: pipeDivider.right
-                                        anchors.leftMargin: 6
+                                    Text {
+                                        id: forgetLabel
+                                        text: "Forget"
+                                        font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#59ffffff"
+                                        Layout.alignment: Qt.AlignVCenter
                                         visible: !model.isTransitioning
-
-                                        Text {
-                                            id: forgetLabel
-                                            text: "Forget"
-                                            font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#59ffffff"
-                                            anchors.centerIn: parent
-                                        }
                                     }
                                 }
 
@@ -565,33 +571,37 @@ Item {
                                         let localX = mouseX - staticOptionsWrapper.x;
                                         
                                         if (model.isTransitioning) {
-                                            return (localX >= connectButtonFrame.x && localX <= (connectButtonFrame.x + connectButtonFrame.width)) ? Qt.PointingHandCursor : Qt.ArrowCursor;
+                                            return (localX >= actionLabel.x && localX <= (actionLabel.x + actionLabel.width)) ? Qt.PointingHandCursor : Qt.ArrowCursor;
                                         } else {
-                                            let overConnect = (localX >= connectButtonFrame.x && localX <= (connectButtonFrame.x + connectButtonFrame.width));
-                                            let overForget = (localX >= forgetButtonFrame.x && localX <= (forgetButtonFrame.x + forgetButtonFrame.width));
+                                            let overConnect = (localX >= actionLabel.x && localX <= (actionLabel.x + actionLabel.width));
+                                            let overForget = (localX >= forgetLabel.x && localX <= (forgetLabel.x + forgetLabel.width));
                                             return (overConnect || overForget) ? Qt.PointingHandCursor : Qt.ArrowCursor;
                                         }
                                     }
 
                                     onClicked: (mouse) => {
                                         let localX = mouseX - staticOptionsWrapper.x;
-                                        let overConnect = (localX >= connectButtonFrame.x && localX <= (connectButtonFrame.x + connectButtonFrame.width));
-                                        let overForget = (!model.isTransitioning && localX >= forgetButtonFrame.x && localX <= (forgetButtonFrame.x + forgetButtonFrame.width));
+                                        let overConnect = (localX >= actionLabel.x && localX <= (actionLabel.x + actionLabel.width));
+                                        let overForget = (!model.isTransitioning && localX >= forgetLabel.x && localX <= (forgetLabel.x + forgetLabel.width));
 
                                         if (overConnect && !deviceConnectionAction.running) {
                                             const actionType = model.isDeviceConnected ? "disconnect" : "connect";
-                                            deviceConnectionAction.command = ["bluetoothctl", actionType, model.macAddress];
-                                            deviceConnectionAction.running = true;
                                             
                                             if (!model.isDeviceConnected) {
                                                 pairedDevicesModel.setProperty(index, "isTransitioning", true);
+                                                
+                                                // Clean execution array handling targeting native BR/EDR classic audio socket paths
+                                                deviceConnectionAction.command = ["bash", "-c", "bluetoothctl trust " + model.macAddress + " && bluetoothctl connect " + model.macAddress];
                                             } else {
                                                 pairedDevicesModel.setProperty(index, "isDeviceConnected", false);
+                                                deviceConnectionAction.command = ["bash", "-c", "bluetoothctl disconnect " + model.macAddress];
                                             }
+                                            
+                                            deviceConnectionAction.running = true;
                                             bluetoothRoot.checkUserActivity();
                                         } 
                                         else if (overForget && !unpairAction.running) {
-                                            unpairAction.command = ["bluetoothctl", "remove", model.macAddress];
+                                            unpairAction.command = ["bash", "-c", "bluetoothctl remove " + model.macAddress];
                                             unpairAction.running = true;
                                             bluetoothRoot.checkUserActivity();
                                         }
@@ -604,7 +614,7 @@ Item {
                     // PANE 2: DISCOVERY LIVE LIST
                     ListView {
                         id: discoveryListView
-                        anchors.fill: parent; spacing: 4
+                        anchors.fill: parent; spacing: 4; clip: true 
                         model: discoveredDevicesModel
                         visible: bluetoothRoot.currentTab === "discover" && bluetoothRoot.isPowered
 
