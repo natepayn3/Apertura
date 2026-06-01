@@ -14,7 +14,6 @@ Item {
 
     property var targetScreen: null
 
-    // 🕒 2-SECOND DISMISSAL TIMER
     Timer {
         id: dismissTimer
         interval: 2000
@@ -24,7 +23,6 @@ Item {
         }
     }
 
-    // 🎬 ANIMATION OUTRO FINALIZER
     SequentialAnimation {
         id: fadeOutAnimation
         NumberAnimation { target: innerContentCard; property: "opacity"; to: 0.0; duration: 120; easing.type: Easing.OutQuad }
@@ -51,7 +49,6 @@ Item {
         }
     }
 
-    // Ticking driver to poll wpctl status safely in user-space
     Timer {
         id: pollTimer
         interval: 100
@@ -63,7 +60,6 @@ Item {
         }
     }
 
-    // 📡 UNIVERSAL PRIVILEGE-FREE SYNC LOOP
     Process {
         id: hudVolumeWatcher
         command: ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]
@@ -90,9 +86,6 @@ Item {
         }
     }
 
-    // ==========================================
-    // 🪟 NATIVE HUD WINDOW SURFACE
-    // ==========================================
     PanelWindow {
         id: hudWindowSurface
         visible: true
@@ -113,13 +106,11 @@ Item {
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
         WlrLayershell.exclusiveZone: -1
 
-        // 📐 POSITIONING MATRIX: 54px (bar width) + 12px (bar gap) = 66px left margin offset
         WlrLayershell.margins.left: 66
         WlrLayershell.margins.right: 0
         WlrLayershell.margins.bottom: 0
         WlrLayershell.margins.top: hudWindowSurface.screen ? (hudWindowSurface.screen.height / 2) - 100 : 0
 
-        // ✨ ENTRY SEQUENCE
         SequentialAnimation {
             id: fadeInAnimation
             NumberAnimation { target: innerContentCard; property: "opacity"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
@@ -151,23 +142,19 @@ Item {
                 anchors.topMargin: 16
                 anchors.bottomMargin: 16
 
-                // THE TRACK
                 Rectangle {
                     id: barTrack
                     Layout.preferredWidth: 4
                     Layout.fillHeight: true
                     Layout.alignment: Qt.AlignHCenter
-                    // Muted background channel
                     color: "#26ffffff"
                     radius: 0
                     clip: true
 
-                    // THE FILL
                     Rectangle {
                         id: barFill
                         width: parent.width
                         height: parent.height * Math.min(hudRoot.volumeLevel, 1.0)
-                        // 🎯 THE FIX: Active = Solid White (#ffffff), Muted = Low alpha opacity step (#59ffffff)
                         color: hudRoot.isMuted ? "#59ffffff" : "#ffffff"
                         anchors.bottom: parent.bottom
 
@@ -191,7 +178,6 @@ Item {
                         font.family: "Rubik"
                         font.pixelSize: 13
                         font.weight: Font.Bold
-                        // Text channels respond with matching monochrome states
                         color: hudRoot.isMuted ? "#59ffffff" : "#ffffff"
                         Layout.alignment: Qt.AlignHCenter
                     }
