@@ -15,6 +15,15 @@ Scope {
     property var instantiatedBars: ({})
     property bool sessionLocked: false
 
+    // 📍 GLOBAL RESPONSIVE CLOCK COORDINATES
+    property int clockX: 200
+    property int clockY: 200
+    property bool isDraggingClock: false
+    property int dragStartX: 0
+    property int dragStartY: 0
+    property int initialClockX: 0
+    property int initialClockY: 0
+
     function requestOpen(modalName) { activeModal = modalName; }
     function dismissAll() { activeModal = null; }
 
@@ -46,136 +55,66 @@ Scope {
         model: Quickshell.screens
 
         delegate: Scope {
-
             VolumeHud { targetScreen: modelData }
 
             PanelWindow {
                 id: mainBarWindow
-
-                // Unique identifier string derived from screen data
                 property string screenKey: modelData.name
 
-                // Register window instance into reference tracking object
-                Component.onCompleted: {
-                    rootScope.instantiatedBars[screenKey] = mainBarWindow;
-                }
-
-                // Clean up references to prevent leak traces on layout shifts
-                Component.onDestruction: {
-                    delete rootScope.instantiatedBars[screenKey];
-                }
+                Component.onCompleted: { rootScope.instantiatedBars[screenKey] = mainBarWindow; }
+                Component.onDestruction: { delete rootScope.instantiatedBars[screenKey]; }
 
                 property alias appLauncherModule: appLauncherItem
                 property alias wallpaperModule: wallpaperItem
                 property alias calendarModule: calendarItem
 
                 screen: modelData
-
-                anchors {
-                    left: true
-                    top: true
-                    bottom: true
-                }
-
+                anchors { left: true; top: true; bottom: true }
                 implicitWidth: 54
                 color: "transparent"
 
                 WlrLayershell.layer: WlrLayer.Top
                 WlrLayershell.namespace: "quickshell-bar"
-                WlrLayershell.margins.top: 12
-                WlrLayershell.margins.bottom: 12
-                WlrLayershell.margins.left: 12
-                WlrLayershell.margins.right: 0
+                WlrLayershell.margins.top: 12; WlrLayershell.margins.bottom: 12; WlrLayershell.margins.left: 12; WlrLayershell.margins.right: 0
 
                 Rectangle {
                     anchors.fill: parent
                     color: "#9911111b"
 
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        z: -1
-                        onPressed: rootScope.dismissAll()
-                    }
+                    MouseArea { anchors.fill: parent; hoverEnabled: true; z: -1; onPressed: rootScope.dismissAll() }
+                    Workspaces { anchors.centerIn: parent; z: 1 }
 
-                    Workspaces {
-                        anchors.centerIn: parent
-                        z: 1
-                    }
-
-                    // =========================
-                    // TOP STACK (FULLY CENTER ALIGNED)
-                    // =========================
                     Column {
                         id: topStackColumn
-                        anchors.top: parent.top
-                        anchors.left: parent.left
-                        anchors.right: parent.right 
-                        anchors.topMargin: 16
+                        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.topMargin: 16
                         spacing: 12
 
-                        AppLauncher {
-                            id: appLauncherItem
-                            anchors.horizontalCenter: parent.horizontalCenter 
-                        }
-
-                        Wallpaper {
-                            id: wallpaperItem
-                            anchors.horizontalCenter: parent.horizontalCenter 
-                        }
-
-                        Calendar {
-                            id: calendarItem
-                            anchors.horizontalCenter: parent.horizontalCenter 
-                        }
+                        AppLauncher { id: appLauncherItem; anchors.horizontalCenter: parent.horizontalCenter }
+                        Wallpaper { id: wallpaperItem; anchors.horizontalCenter: parent.horizontalCenter }
+                        Calendar { id: calendarItem; anchors.horizontalCenter: parent.horizontalCenter }
                     }
 
-                    // Spacer to prevent overlap into bottom region
-                    Item {
-                        anchors.top: topStackColumn.bottom
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                    }
+                    Item { anchors.top: topStackColumn.bottom; anchors.left: parent.left; anchors.right: parent.right }
 
-                    // =========================
-                    // BOTTOM CONTROLS (UNCHANGED)
-                    // =========================
                     ColumnLayout {
                         id: bottomGroupControls
-
-                        anchors.bottom: parent.bottom
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.bottomMargin: 16
-
+                        anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; anchors.bottomMargin: 16
                         spacing: 12
-
                         property bool isExpanded: false
 
                         Rectangle {
                             id: toggleButton
-                            Layout.preferredWidth: 32
-                            Layout.preferredHeight: 32
-                            Layout.alignment: Qt.AlignHCenter
-
-                            color: toggleMouseArea.containsMouse ? "#26ffffff" : "transparent"
-                            radius: 4
+                            Layout.preferredWidth: 32; Layout.preferredHeight: 32; Layout.alignment: Qt.AlignHCenter
+                            color: toggleMouseArea.containsMouse ? "#26ffffff" : "transparent"; radius: 4
 
                             Text {
                                 anchors.centerIn: parent
-                                text: bottomGroupControls.isExpanded
-                                    ? "expand_circle_down"
-                                    : "expand_circle_up"
-                                font.family: "Material Symbols Outlined"
-                                font.pixelSize: 22
-                                color: "#ffffff"
+                                text: bottomGroupControls.isExpanded ? "expand_circle_down" : "expand_circle_up"
+                                font.family: "Material Symbols Outlined"; font.pixelSize: 22; color: "#ffffff"
                             }
 
                             MouseArea {
-                                id: toggleMouseArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
+                                id: toggleMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                 onClicked: bottomGroupControls.isExpanded = !bottomGroupControls.isExpanded
                             }
                         }
@@ -183,27 +122,16 @@ Scope {
                         Item {
                             id: drawerClipWrapper
                             Layout.fillWidth: true
-
-                            implicitHeight: bottomGroupControls.isExpanded
-                                ? modulesSubColumn.implicitHeight
-                                : 0
-
+                            implicitHeight: bottomGroupControls.isExpanded ? modulesSubColumn.implicitHeight : 0
                             opacity: bottomGroupControls.isExpanded ? 1.0 : 0.0
                             clip: true
 
-                            Behavior on implicitHeight {
-                                NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
-                            }
-
-                            Behavior on opacity {
-                                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
-                            }
+                            Behavior on implicitHeight { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                            Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutQuad } }
 
                             ColumnLayout {
                                 id: modulesSubColumn
-                                anchors.top: parent.top
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                spacing: 12
+                                anchors.top: parent.top; anchors.horizontalCenter: parent.horizontalCenter; spacing: 12
 
                                 Wifi { Layout.alignment: Qt.AlignHCenter }
                                 Battery { Layout.alignment: Qt.AlignHCenter }
@@ -217,5 +145,8 @@ Scope {
                 }
             }
         }
+    }
+    DesktopClock {
+        id: desktopClockWidget
     }
 }
