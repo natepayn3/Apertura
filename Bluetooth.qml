@@ -521,13 +521,12 @@ Item {
                                     Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight; Layout.alignment: Qt.AlignVCenter }
                                 }
                                 
-                                // Clean symmetric layout tracking
                                 RowLayout {
                                     id: staticOptionsWrapper
                                     height: parent.height
                                     anchors.right: parent.right
                                     anchors.rightMargin: 8
-                                    spacing: 4
+                                    spacing: 8
                                     opacity: rowMasterArea.containsMouse || model.isTransitioning ? 1.0 : 0.0
                                     z: 20 
 
@@ -537,6 +536,24 @@ Item {
                                         font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
                                         color: "#ffffff"
                                         Layout.alignment: Qt.AlignVCenter
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (!deviceConnectionAction.running) {
+                                                    if (!model.isDeviceConnected) {
+                                                        pairedDevicesModel.setProperty(index, "isTransitioning", true);
+                                                        deviceConnectionAction.command = ["bash", "-c", "bluetoothctl trust " + model.macAddress + " && bluetoothctl connect " + model.macAddress];
+                                                    } else {
+                                                        pairedDevicesModel.setProperty(index, "isDeviceConnected", false);
+                                                        deviceConnectionAction.command = ["bash", "-c", "bluetoothctl disconnect " + model.macAddress];
+                                                    }
+                                                    deviceConnectionAction.running = true;
+                                                    bluetoothRoot.checkUserActivity();
+                                                }
+                                            }
+                                        }
                                     }
 
                                     Text { 
@@ -553,6 +570,18 @@ Item {
                                         font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#59ffffff"
                                         Layout.alignment: Qt.AlignVCenter
                                         visible: !model.isTransitioning
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (!unpairAction.running) {
+                                                    unpairAction.command = ["bash", "-c", "bluetoothctl remove " + model.macAddress];
+                                                    unpairAction.running = true;
+                                                    bluetoothRoot.checkUserActivity();
+                                                }
+                                            }
+                                        }
                                     }
                                 }
 
@@ -564,47 +593,6 @@ Item {
                                     onContainsMouseChanged: {
                                         pairedListView.isHoveringItems = rowMasterArea.containsMouse;
                                         bluetoothRoot.checkUserActivity();
-                                    }
-
-                                    cursorShape: {
-                                        if (!containsMouse) return Qt.ArrowCursor;
-                                        let localX = mouseX - staticOptionsWrapper.x;
-                                        
-                                        if (model.isTransitioning) {
-                                            return (localX >= actionLabel.x && localX <= (actionLabel.x + actionLabel.width)) ? Qt.PointingHandCursor : Qt.ArrowCursor;
-                                        } else {
-                                            let overConnect = (localX >= actionLabel.x && localX <= (actionLabel.x + actionLabel.width));
-                                            let overForget = (localX >= forgetLabel.x && localX <= (forgetLabel.x + forgetLabel.width));
-                                            return (overConnect || overForget) ? Qt.PointingHandCursor : Qt.ArrowCursor;
-                                        }
-                                    }
-
-                                    onClicked: (mouse) => {
-                                        let localX = mouseX - staticOptionsWrapper.x;
-                                        let overConnect = (localX >= actionLabel.x && localX <= (actionLabel.x + actionLabel.width));
-                                        let overForget = (!model.isTransitioning && localX >= forgetLabel.x && localX <= (forgetLabel.x + forgetLabel.width));
-
-                                        if (overConnect && !deviceConnectionAction.running) {
-                                            const actionType = model.isDeviceConnected ? "disconnect" : "connect";
-                                            
-                                            if (!model.isDeviceConnected) {
-                                                pairedDevicesModel.setProperty(index, "isTransitioning", true);
-                                                
-                                                // Clean execution array handling targeting native BR/EDR classic audio socket paths
-                                                deviceConnectionAction.command = ["bash", "-c", "bluetoothctl trust " + model.macAddress + " && bluetoothctl connect " + model.macAddress];
-                                            } else {
-                                                pairedDevicesModel.setProperty(index, "isDeviceConnected", false);
-                                                deviceConnectionAction.command = ["bash", "-c", "bluetoothctl disconnect " + model.macAddress];
-                                            }
-                                            
-                                            deviceConnectionAction.running = true;
-                                            bluetoothRoot.checkUserActivity();
-                                        } 
-                                        else if (overForget && !unpairAction.running) {
-                                            unpairAction.command = ["bash", "-c", "bluetoothctl remove " + model.macAddress];
-                                            unpairAction.running = true;
-                                            bluetoothRoot.checkUserActivity();
-                                        }
                                     }
                                 }
                             }
