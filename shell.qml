@@ -15,7 +15,6 @@ Scope {
     property var instantiatedBars: ({})
     property bool sessionLocked: false
 
-    // 📍 GLOBAL RESPONSIVE CLOCK COORDINATES
     property int clockX: 200
     property int clockY: 200
     property bool isDraggingClock: false
@@ -50,6 +49,15 @@ Scope {
         }
     }
 
+    IpcHandler {
+        target: "notes"
+        function toggle(): void {
+            for (let s in rootScope.instantiatedBars)
+                if (rootScope.instantiatedBars[s].notesModule)
+                    rootScope.instantiatedBars[s].notesModule.toggleMenu();
+        }
+    }
+
     Instantiator {
         id: barWindows
         model: Quickshell.screens
@@ -67,6 +75,7 @@ Scope {
                 property alias appLauncherModule: appLauncherItem
                 property alias wallpaperModule: wallpaperItem
                 property alias calendarModule: calendarItem
+                property alias notesModule: notesItem
 
                 screen: modelData
                 anchors { left: true; top: true; bottom: true }
@@ -135,6 +144,7 @@ Scope {
 
                                 Wifi { Layout.alignment: Qt.AlignHCenter }
                                 Battery { Layout.alignment: Qt.AlignHCenter }
+                                Notes { id: notesItem; Layout.alignment: Qt.AlignHCenter }
                                 Notification { Layout.alignment: Qt.AlignHCenter }
                                 Bluetooth { Layout.alignment: Qt.AlignHCenter }
                                 Audio { Layout.alignment: Qt.AlignHCenter }
