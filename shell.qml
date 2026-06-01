@@ -139,8 +139,8 @@ Scope {
 
                             Text {
                                 anchors.centerIn: parent
-                                text: bottomGroupControls.isExpanded ? "expand_circle_down" : "expand_circle_up"
-                                font.family: "Material Symbols Outlined"; font.pixelSize: 22; color: "#ffffff"
+                                text: bottomGroupControls.isExpanded ? "arrow_drop_down" : "arrow_drop_up"
+                                font.family: "Material Symbols Outlined"; font.pixelSize: 30; color: "#ffffff"
                             }
 
                             MouseArea {
