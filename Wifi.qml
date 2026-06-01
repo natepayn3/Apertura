@@ -10,7 +10,6 @@ Item {
     
     property bool hasWifiCard: false
     
-    // Bind dimensions and visibility tightly to hardware presence
     implicitWidth: hasWifiCard ? 32 : 0
     implicitHeight: hasWifiCard ? 32 : 0
     visible: hasWifiCard
@@ -22,10 +21,10 @@ Item {
     property bool showingForgetConfirm: false 
     property string selectedSsid: ""
     property bool wifiEnabled: true
+    property bool windowAlive: false
 
     Process {
         id: hardwareCheck
-        // Robust check that safely handles empty glob expansions without false 0 exit codes
         command: ["sh", "-c", "if [ -d /sys/class/net ] && expr \"$(ls -d /sys/class/net/*/wireless 2>/dev/null)\" : '.*wireless' >/dev/null; then exit 0; else exit 1; fi"]
         running: true
         onExited: (code) => {
@@ -34,7 +33,7 @@ Item {
                 statusWatcher.running = true;
             } else {
                 wifiRoot.hasWifiCard = false;
-                statusWatcher.running = false; // Kill watcher if no hardware present
+                statusWatcher.running = false;
             }
         }
     }
@@ -45,7 +44,7 @@ Item {
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
-                if (!wifiRoot.hasWifiCard) return; // Prevent parsing if card is missing
+                if (!wifiRoot.hasWifiCard) return;
                 
                 let lines = text.split('\n');
                 let foundActive = false;
@@ -171,15 +170,27 @@ Item {
         onTriggered: closeMenu()
     }
 
-    Timer { id: closeTimer; interval: 180; repeat: false; onTriggered: wifiRoot.menuOpen = false }
+    function toggleMenu(): void {
+        if (menuOpen) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    }
 
     function openMenu(): void {
-        popupMenuFrame.targetX = -655; popupMenuFrame.targetOpacity = 0.0;
-        rootScope.requestOpen("wifi"); wifiRoot.menuOpen = true; wifiRoot.enteringPassword = false; wifiRoot.showingForgetConfirm = false;
-        slideInAnimation.start(); triggerScan(); checkUserActivity();
+        rootScope.requestOpen("wifi"); 
+        windowAlive = true;
+        menuOpen = true; 
+        wifiRoot.enteringPassword = false; 
+        wifiRoot.showingForgetConfirm = false;
+        triggerScan(); 
+        checkUserActivity();
     }
     
-    function closeMenu(): void { popupMenuFrame.targetX = -655; popupMenuFrame.targetOpacity = 0.0; closeTimer.start(); }
+    function closeMenu(): void { 
+        menuOpen = false; 
+    }
 
     function checkUserActivity() {
         if (iconMouseArea.containsMouse || cardHoverTracker.containsMouse) {
@@ -210,7 +221,7 @@ Item {
                           wifiRoot.signalStrength < 25  ? "network_wifi_1_bar" : 
                           wifiRoot.signalStrength < 50  ? "network_wifi_2_bar" : 
                           wifiRoot.signalStrength < 75  ? "network_wifi_3_bar" : 
-                                                          "network_wifi")
+                                                                          "network_wifi")
                     font.family: "Material Symbols Outlined"
                     font.pixelSize: 20
                     color: wifiRoot.wifiEnabled ? "#ffffff" : "#59ffffff"
@@ -225,7 +236,7 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: wifiRoot.menuOpen ? closeMenu() : openMenu()
+            onClicked: toggleMenu()
             onContainsMouseChanged: checkUserActivity()
         }
     }
@@ -236,28 +247,56 @@ Item {
     }
 
     PanelWindow {
-        id: wifiOverlayModal; visible: wifiRoot.menuOpen; color: "transparent"
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
-        WlrLayershell.layer: WlrLayer.Overlay; WlrLayershell.namespace: "quickshell-overlay"; WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+        id: wifiOverlayModal
+        visible: wifiRoot.windowAlive
+        color: "transparent"
+        anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "quickshell-overlay"
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+        
         onVisibleChanged: { if (visible && wifiRoot.menuOpen) popupMenuFrame.forceActiveFocus(); }
         MouseArea { anchors.fill: parent; onClicked: closeMenu() }
 
         Rectangle {
             id: popupMenuFrame
             width: 320; height: 340 
-            anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.bottomMargin: 12
-            property int targetX: -655; property real targetOpacity: 0.0
-            anchors.leftMargin: targetX; opacity: targetOpacity
+            anchors.bottom: parent.bottom; anchors.bottomMargin: 12
 
-            SequentialAnimation {
-                id: slideInAnimation; PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+            states: [
+                State {
+                    name: "visible"
+                    when: wifiRoot.menuOpen
+                    PropertyChanges { target: popupMenuFrame; x: 0; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !wifiRoot.menuOpen
+                    PropertyChanges { target: popupMenuFrame; x: -340; opacity: 0.0 }
                 }
-            }
-            Behavior on anchors.leftMargin { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+            ]
+
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: { wifiRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
             
             color: "#9911111b"; border.width: 0; radius: 0; focus: true
             Keys.onPressed: (event) => { if (event.key === Qt.Key_Escape) { closeMenu(); event.accepted = true; } }
