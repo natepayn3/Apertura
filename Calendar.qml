@@ -16,6 +16,7 @@ Item {
     readonly property date baseDate: new Date()
     property int currentMonthOffsetIndex: 50
     property date viewerTargetDate: new Date()
+    property bool windowAlive: false
 
     Timer {
         interval: 1000; running: true; repeat: true
@@ -38,18 +39,15 @@ Item {
     function toggleMenu(): void { if (menuOpen) { closeMenu(); } else { openMenu(); } }
 
     function openMenu(): void {
-        slideOutAnimation.stop();
-        popupTranslate.x = -popupCalendarWrapper.width;
-        popupCalendarWrapper.opacity = 0.0;
         rootScope.requestOpen(globalCalendarModal);
+        windowAlive = true;
         menuOpen = true;
         calendarRoot.currentMonthOffsetIndex = 50;
         updateViewerDate();
-        slideInAnimation.start();
         checkUserActivity();
     }
 
-    function closeMenu(): void { slideInAnimation.stop(); slideOutAnimation.start(); }
+    function closeMenu(): void { menuOpen = false; }
     function updateViewerDate() {
         let monthOffset = calendarRoot.currentMonthOffsetIndex - 50;
         calendarRoot.viewerTargetDate = new Date(calendarRoot.baseDate.getFullYear(), calendarRoot.baseDate.getMonth() + monthOffset, 1);
@@ -60,12 +58,8 @@ Item {
         function onActiveModalChanged() { if (rootScope.activeModal !== globalCalendarModal && menuOpen) { closeMenu(); } }
     }
 
-    // ==========================================
-    // 🕒 CLOCK TRIGGER MODULE
-    // ==========================================
     Rectangle {
         id: clockHitbox
-        // Compressed box dimensions to reduce the hover background size
         width: 44; height: verticalLayout.implicitHeight + 4
         color: clockMouseArea.containsMouse ? "#26ffffff" : "transparent"
         radius: 6
@@ -80,13 +74,10 @@ Item {
         MouseArea { id: clockMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: toggleMenu() }
     }
 
-    // ==========================================
-    // 📅 MODAL WINDOW: Calendar Overlay
-    // ==========================================
     PanelWindow {
-        id: globalCalendarModal; visible: calendarRoot.menuOpen
+        id: globalCalendarModal; visible: calendarRoot.windowAlive
         WlrLayershell.layer: WlrLayer.Overlay; WlrLayershell.namespace: "quickshell-overlay"; WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true; color: "transparent"
+        anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; color: "transparent"
         WlrLayershell.margins.left: -1; WlrLayershell.margins.right: 1; WlrLayershell.margins.bottom: 0; WlrLayershell.margins.top: 0
 
         onVisibleChanged: { if (visible && calendarRoot.menuOpen) { popupCalendarWrapper.forceActiveFocus(); } }
@@ -96,20 +87,41 @@ Item {
             id: popupCalendarWrapper; width: 300; height: 300 
             
             y: 12
-            x: 1
             
-            transform: Translate { id: popupTranslate; x: -popupCalendarWrapper.width }
+            states: [
+                State {
+                    name: "visible"
+                    when: calendarRoot.menuOpen
+                    PropertyChanges { target: popupCalendarWrapper; x: 1; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !calendarRoot.menuOpen
+                    PropertyChanges { target: popupCalendarWrapper; x: -320; opacity: 0.0 }
+                }
+            ]
 
-            ParallelAnimation {
-                id: slideInAnimation
-                NumberAnimation { target: popupTranslate; property: "x"; to: 0; duration: 250; easing.type: Easing.OutCubic }
-                NumberAnimation { target: popupCalendarWrapper; property: "opacity"; to: 1.0; duration: 180; easing.type: Easing.OutQuad }
-            }
-            ParallelAnimation {
-                id: slideOutAnimation; onFinished: calendarRoot.menuOpen = false
-                NumberAnimation { target: popupTranslate; property: "x"; to: -popupCalendarWrapper.width; duration: 220; easing.type: Easing.InCubic }
-                NumberAnimation { target: popupCalendarWrapper; property: "opacity"; to: 0.0; duration: 160; easing.type: Easing.OutQuad }
-            }
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: { calendarRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
 
             color: "#9911111b"; border.width: 0; focus: true
             topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
