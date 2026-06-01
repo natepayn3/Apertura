@@ -13,15 +13,9 @@ Item {
     property var notesList: [""]
     property int activeIndex: 0
     property bool isAlwaysVisible: false
-
-    Timer {
-        id: closeTimer
-        interval: 180
-        repeat: false
-        onTriggered: {
-            notesRoot.menuOpen = false;
-        }
-    }
+    
+    // Internal state to track if the window should physically exist/render
+    property bool windowAlive: false
 
     function toggleMenu(): void {
         if (isAlwaysVisible) {
@@ -35,19 +29,13 @@ Item {
     }
 
     function openMenu(): void {
-        popupMenuFrame.targetX = -655;
-        popupMenuFrame.targetOpacity = 0.0;
-        
         rootScope.requestOpen("notes");
+        windowAlive = true; // Instantly mount window for entry animation
         menuOpen = true;
-        
-        slideInAnimation.start();
     }
 
     function closeMenu(): void {
-        popupMenuFrame.targetX = -655;
-        popupMenuFrame.targetOpacity = 0.0;
-        closeTimer.start();
+        menuOpen = false; // Triggers the "hidden" state transition immediately
     }
 
     Connections {
@@ -89,10 +77,14 @@ Item {
 
     PanelWindow {
         id: notesOverlayModal
-        visible: notesRoot.menuOpen || notesRoot.isAlwaysVisible
+        // Window stays rendered while alive or when explicitly forced open
+        visible: notesRoot.windowAlive || notesRoot.isAlwaysVisible
         color: "transparent"
         
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
@@ -123,26 +115,44 @@ Item {
             height: 300
             
             anchors.bottom: parent.bottom
-            anchors.left: parent.left
             anchors.bottomMargin: 12
             
-            property int targetX: -655
-            property real targetOpacity: 0.0
-            
-            anchors.leftMargin: notesRoot.isAlwaysVisible ? 0 : targetX
-            opacity: notesRoot.isAlwaysVisible ? 1.0 : targetOpacity
-
-            SequentialAnimation {
-                id: slideInAnimation
-                PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+            states: [
+                State {
+                    name: "visible"
+                    when: notesRoot.menuOpen || notesRoot.isAlwaysVisible
+                    PropertyChanges { target: popupMenuFrame; x: 0; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !notesRoot.menuOpen && !notesRoot.isAlwaysVisible
+                    PropertyChanges { target: popupMenuFrame; x: -420; opacity: 0.0 }
                 }
-            }
+            ]
 
-            Behavior on anchors.leftMargin { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    // Perfectly symmetric reverse animation
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        // Explicitly unmount window ONLY when the slide-out finishes
+                        ScriptAction {
+                            script: { notesRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
 
             color: "#9911111b"
             border.width: 0
