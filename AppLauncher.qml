@@ -13,6 +13,7 @@ Item {
     property var allApps: []
     property string activeSearchQuery: ""
     property bool menuOpen: false
+    property bool windowAlive: false
 
     ListModel {
         id: dynamicAppModel
@@ -26,15 +27,6 @@ Item {
         appScanner.running = true;
     }
 
-    Timer {
-        id: closeTimer
-        interval: 180
-        repeat: false
-        onTriggered: {
-            launcherModuleRoot.menuOpen = false;
-        }
-    }
-
     function toggleMenu(): void {
         if (menuOpen) {
             closeMenu();
@@ -44,13 +36,9 @@ Item {
     }
 
     function openMenu(): void {
-        menuCard.targetX = -655;
-        menuCard.targetOpacity = 0.0;
-
         rootScope.requestOpen(appLauncherModal);
+        windowAlive = true;
         menuOpen = true;
-
-        slideInAnimation.start();
 
         if (appScanner.command && appScanner.command.length > 1) {
             appScanner.running = false;
@@ -59,10 +47,7 @@ Item {
     }
 
     function closeMenu(): void {
-        menuCard.targetX = -655;
-        menuCard.targetOpacity = 0.0;
-
-        closeTimer.start();
+        menuOpen = false;
     }
 
     Connections {
@@ -178,9 +163,14 @@ Item {
 
     PanelWindow {
         id: appLauncherModal
-        visible: launcherModuleRoot.menuOpen
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        visible: launcherModuleRoot.windowAlive
         color: "transparent"
+        
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-launcher"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -210,31 +200,42 @@ Item {
             height: 300 
             
             anchors.top: parent.top
-            anchors.left: parent.left
             anchors.topMargin: 12
             
-            property int targetX: -655
-            property real targetOpacity: 0.0
-
-            anchors.leftMargin: targetX
-            opacity: targetOpacity
-
-            SequentialAnimation {
-                id: slideInAnimation
-                PauseAnimation { duration: 16 } 
-                ParallelAnimation {
-                    NumberAnimation { target: menuCard; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: menuCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+            states: [
+                State {
+                    name: "visible"
+                    when: launcherModuleRoot.menuOpen
+                    PropertyChanges { target: menuCard; x: 0; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !launcherModuleRoot.menuOpen
+                    PropertyChanges { target: menuCard; x: -320; opacity: 0.0 }
                 }
-            }
+            ]
 
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-            }
-            
-            Behavior on opacity {
-                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
-            }
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: { launcherModuleRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
 
             color: "#9911111b" 
             border.width: 0
