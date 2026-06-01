@@ -289,6 +289,22 @@ Item {
                             }
                         }
 
+                        MouseArea {
+                            parent: tabScrollView.contentItem
+                            width: Math.max(tabRow.width, tabScrollView.width)
+                            height: tabScrollView.height
+                            
+                            propagateComposedEvents: true
+                            
+                            onWheel: (wheel) => {
+                                if (wheel.angleDelta.y > 0 || wheel.angleDelta.x > 0) {
+                                    tabScrollView.ScrollBar.horizontal.decrease();
+                                } else {
+                                    tabScrollView.ScrollBar.horizontal.increase();
+                                }
+                            }
+                        }
+
                         Row {
                             id: tabRow
                             spacing: 6
@@ -347,7 +363,6 @@ Item {
                                                     notesRoot.activeIndex = nextIndex;
                                                     notesRepeater.model = notesRoot.notesList;
                                                 } else if (list.length === 1) {
-                                                    // Clear text fields cleanly if only one note tab is left open
                                                     list[0] = "";
                                                     notesRoot.notesList = list.slice();
                                                     notesRoot.activeIndex = 0;
