@@ -151,17 +151,14 @@ Item {
                 
                 text: batteryMouseArea.containsMouse ? batRoot.capacity + "%" : (
                     batRoot.isCharging        ? "battery_android_frame_bolt" : 
-                    batRoot.capacity >= 99    ? "battery_android_full" :
-                    batRoot.capacity < 10     ? "battery_android_0" :
-                    batRoot.capacity < 20     ? "battery_android_1" : 
-                    batRoot.capacity < 30     ? "battery_android_2" : 
-                    batRoot.capacity < 40     ? "battery_android_3" : 
-                    batRoot.capacity < 50     ? "battery_android_4" : 
-                    batRoot.capacity < 60     ? "battery_android_5" : 
-                    batRoot.capacity < 70     ? "battery_android_6" : 
-                    batRoot.capacity < 80     ? "battery_android_7" : 
-                    batRoot.capacity < 90     ? "battery_android_8" : 
-                                                "battery_android_9"
+                    batRoot.capacity >= 95    ? "battery_android_full" :
+                    batRoot.capacity < 15     ? "battery_android_0" :
+                    batRoot.capacity < 30     ? "battery_android_1" : 
+                    batRoot.capacity < 45     ? "battery_android_2" : 
+                    batRoot.capacity < 60     ? "battery_android_3" : 
+                    batRoot.capacity < 75     ? "battery_android_4" : 
+                    batRoot.capacity < 90     ? "battery_android_5" : 
+                                                "battery_android_6"
                 )
                                                     
                 font.family: batteryMouseArea.containsMouse ? "Rubik" : "Material Symbols Outlined" 
