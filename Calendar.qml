@@ -65,15 +65,16 @@ Item {
     // ==========================================
     Rectangle {
         id: clockHitbox
-        width: 50; height: verticalLayout.implicitHeight + 12
+        // Compressed box dimensions to reduce the hover background size
+        width: 44; height: verticalLayout.implicitHeight + 4
         color: clockMouseArea.containsMouse ? "#26ffffff" : "transparent"
-        radius: 8
+        radius: 6
 
         ColumnLayout {
-            id: verticalLayout; anchors.centerIn: parent; spacing: 1
-            Text { text: Qt.formatDateTime(calendarRoot.currentDateTime, "ddd"); font.family: "Rubik"; font.pixelSize: 14; font.weight: Font.Bold; color: "#59ffffff"; Layout.alignment: Qt.AlignHCenter }
-            Text { text: Qt.formatDateTime(calendarRoot.currentDateTime, "h:mm ap").replace(/\s*[aApP][mM]\s*/g, ""); font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff"; Layout.alignment: Qt.AlignHCenter }
-            Text { text: Qt.formatDateTime(calendarRoot.currentDateTime, "ap"); font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: "#ffffff"; Layout.alignment: Qt.AlignHCenter }
+            id: verticalLayout; anchors.centerIn: parent; spacing: 0
+            Text { text: Qt.formatDateTime(calendarRoot.currentDateTime, "ddd"); font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: "#59ffffff"; Layout.alignment: Qt.AlignHCenter }
+            Text { text: Qt.formatDateTime(calendarRoot.currentDateTime, "h:mm ap").replace(/\s*[aApP][mM]\s*/g, ""); font.family: "Rubik"; font.pixelSize: 14; font.weight: Font.Bold; color: "#ffffff"; Layout.alignment: Qt.AlignHCenter }
+            Text { text: Qt.formatDateTime(calendarRoot.currentDateTime, "ap"); font.family: "Rubik"; font.pixelSize: 10; font.weight: Font.Bold; color: "#ffffff"; Layout.alignment: Qt.AlignHCenter }
         }
 
         MouseArea { id: clockMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: toggleMenu() }
@@ -94,7 +95,6 @@ Item {
         Rectangle {
             id: popupCalendarWrapper; width: 300; height: 300 
             
-            // Fixed positional values mapping to top-left corner configuration
             y: 12
             x: 1
             
