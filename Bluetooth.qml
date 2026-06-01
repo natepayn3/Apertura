@@ -377,7 +377,13 @@ Item {
             antialiasing: false
             topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
 
-            height: !bluetoothRoot.isPowered ? 92 : Math.min(100 + ((currentTab === "paired" ? pairedDevicesModel.count : discoveredDevicesModel.count) * 40), 300)
+            // 🛠️ Modified height calculation to inject an extra 40px padding if either list counts hit 0
+            height: {
+                if (!bluetoothRoot.isPowered) return 92;
+                const activeCount = (currentTab === "paired") ? pairedDevicesModel.count : discoveredDevicesModel.count;
+                const baseHeight = 100 + (activeCount * 40);
+                return Math.min(activeCount === 0 ? baseHeight + 40 : baseHeight, 300);
+            }
 
             Behavior on height {
                 NumberAnimation {
@@ -498,7 +504,7 @@ Item {
 
                         Text { 
                             anchors.centerIn: parent; 
-                            text: bluetoothRoot.isPowered ? "No paired devices found" : "Bluetooth is turned off"; 
+                            text: bluetoothRoot.isPowered ? "No devices paired" : "Bluetooth is turned off"; 
                             font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"; 
                             visible: pairedListView.count === 0 || !bluetoothRoot.isPowered 
                         }
