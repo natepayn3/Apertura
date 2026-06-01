@@ -25,9 +25,8 @@ PanelWindow {
     Rectangle {
         id: clockContentWrapper
         
-        // Use real internal properties to handle the coordinate tracking state cleanly
-        property int posX: 200
-        property int posY: 200
+        property int posX: desktopClockWindow.width - width - 25
+        property int posY: 25
 
         x: posX
         y: posY
