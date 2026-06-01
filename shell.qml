@@ -67,7 +67,6 @@ Scope {
         }
     }
 
-    // IPC Endpoint integration mapping path for the network drawer
     IpcHandler {
         target: "netmonitor"
         function toggle(): void {
@@ -96,7 +95,6 @@ Scope {
                 property alias calendarModule: calendarItem
                 property alias notesModule: notesItem
                 property alias sysMonitorModule: sysMonitorItem
-                // Property alias to expose internal module functions to external target scopes
                 property alias netMonitorModule: netMonitorItem
 
                 screen: modelData
@@ -113,7 +111,6 @@ Scope {
                     color: "#9911111b"
 
                     MouseArea { anchors.fill: parent; hoverEnabled: true; z: -1; onPressed: rootScope.dismissAll() }
-                    Workspaces { anchors.centerIn: parent; z: 1 }
 
                     Column {
                         id: topStackColumn
@@ -123,6 +120,8 @@ Scope {
                         AppLauncher { id: appLauncherItem; anchors.horizontalCenter: parent.horizontalCenter }
                         Wallpaper { id: wallpaperItem; anchors.horizontalCenter: parent.horizontalCenter }
                         Calendar { id: calendarItem; anchors.horizontalCenter: parent.horizontalCenter }
+                        Item { height: 8; width: 1 }
+                        Workspaces { anchors.horizontalCenter: parent.horizontalCenter; z: 1 }
                     }
 
                     Item { anchors.top: topStackColumn.bottom; anchors.left: parent.left; anchors.right: parent.right }
