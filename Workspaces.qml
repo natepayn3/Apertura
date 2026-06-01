@@ -6,17 +6,15 @@ import Quickshell.Io
 Item {
     id: workspaceContainer
     
-    // 🎛️ ORIENTATION TOGGLE
     property bool isVertical: true
 
-    implicitWidth: isVertical ? 24 : (layoutLoader.item ? layoutLoader.item.implicitWidth : 0)
-    implicitHeight: isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight : 0) : 24
+    implicitWidth: isVertical ? 28 : (layoutLoader.item ? layoutLoader.item.implicitWidth : 0)
+    implicitHeight: isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight : 0) : 28
 
     property int activeWorkspace: 1
     property var activeWorkspaceList: [1, 2]
     property var occupiedMap: ({})
 
-    // 🔄 HYPRLAND POLLING LOGIC
     Process {
         id: queryWorkspaceList
         command: ["hyprctl", "workspaces", "-j"]
@@ -32,9 +30,17 @@ Item {
                         let occupied = {};
                         json.forEach(ws => { if (ws.windows > 0) occupied[ws.id] = true; });
                         workspaceContainer.occupiedMap = occupied;
+                        
+                        if (!ids.includes(1)) ids.push(1);
                         if (!ids.includes(workspaceContainer.activeWorkspace)) ids.push(workspaceContainer.activeWorkspace);
+                        
                         let maxId = Math.max(...ids, 0);
                         if (!ids.includes(maxId + 1)) ids.push(maxId + 1);
+                        
+                        for (let i = 1; i <= maxId + 1; i++) {
+                            if (!ids.includes(i)) ids.push(i);
+                        }
+
                         ids.sort((a, b) => a - b);
                         workspaceContainer.activeWorkspaceList = ids;
                     }
@@ -91,8 +97,8 @@ Item {
             property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
             property bool isNewIndicatorSlot: index === (workspaceContainer.activeWorkspaceList.length - 1)
 
-            implicitWidth: workspaceContainer.isVertical ? 24 : (isActive ? 44 : 24)
-            implicitHeight: workspaceContainer.isVertical ? (isActive ? 44 : 24) : 24
+            implicitWidth: workspaceContainer.isVertical ? 28 : (isActive ? 58 : 28)
+            implicitHeight: workspaceContainer.isVertical ? (isActive ? 58 : 28) : 28
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
 
@@ -119,13 +125,30 @@ Item {
             Process { id: switchWorkspace; running: false }
 
             Rectangle {
+                id: hoverBackground
+                width: workspaceContainer.isVertical ? 28 : (workspaceButton.isActive ? 58 : 28)
+                height: workspaceContainer.isVertical ? (workspaceButton.isActive ? 58 : 28) : 28
+                radius: 6
+                anchors.centerIn: parent
+                color: "#26ffffff"
+                opacity: workspaceButton.containsMouse ? 1.0 : 0.0
+                z: 1
+
+                Behavior on opacity {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
+                }
+            }
+
+            Rectangle {
+                id: indicatorShape
                 anchors.centerIn: parent
                 width: workspaceContainer.isVertical ? (isActive ? 14 : 12) : (isActive ? 44 : 12)
                 height: workspaceContainer.isVertical ? (isActive ? 44 : 12) : (isActive ? 14 : 12)
                 radius: 6
-                color: isActive ? "#ffffff" : (isNewIndicatorSlot ? "transparent" : (isOccupied ? "#ffffff" : "#1affffff"))
-                border.width: (isNewIndicatorSlot && !isActive) ? 1.5 : 0
-                border.color: (isNewIndicatorSlot && !isActive) ? "#ffffff" : "transparent"
+                color: isActive ? "#ffffff" : (isOccupied ? "#ffffff" : "transparent")
+                border.width: (!isActive && !isOccupied) ? 1.5 : 0
+                border.color: (!isActive && !isOccupied) ? "#b3ffffff" : "transparent"
+                z: 2
 
                 Text {
                     text: workspaceButton.wsId.toString()
