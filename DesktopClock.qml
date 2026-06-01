@@ -6,7 +6,7 @@ import Quickshell.Wayland
 PanelWindow {
     id: desktopClockWindow
 
-    WlrLayershell.layer: WlrLayer.Bottom
+    WlrLayershell.layer: isAlwaysVisible ? WlrLayer.Overlay : WlrLayer.Bottom
     WlrLayershell.namespace: "desktop-clock-widget"
     WlrLayershell.anchors.top: true
     WlrLayershell.anchors.left: true
@@ -16,6 +16,7 @@ PanelWindow {
     color: "transparent"
 
     property date currentDateTime: new Date()
+    property bool isAlwaysVisible: false 
 
     Timer {
         interval: 1000; running: true; repeat: true
@@ -73,6 +74,44 @@ PanelWindow {
                 if (pressed) {
                     clockContentWrapper.posX = clockContentWrapper.posX + mouse.x - clickOffsetX
                     clockContentWrapper.posY = clockContentWrapper.posY + mouse.y - clickOffsetY
+                }
+            }
+        }
+
+        Rectangle {
+            id: toggleButton
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 8
+            anchors.rightMargin: 8
+            width: 110
+            height: 26
+            radius: 0 
+            
+            visible: dragArea.containsMouse || btnMouseArea.containsMouse
+            
+            color: desktopClockWindow.isAlwaysVisible ? "#45ffffff" : "transparent"
+            border.width: desktopClockWindow.isAlwaysVisible ? 0 : 1
+            border.color: "#26ffffff"
+
+            Text {
+                anchors.centerIn: parent
+                text: "Always Visible"
+                font.family: "Rubik"
+                font.pixelSize: 11
+                font.weight: Font.Medium
+                color: "#ffffff"
+            }
+
+            MouseArea {
+                id: btnMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                preventStealing: true 
+                
+                onClicked: {
+                    desktopClockWindow.isAlwaysVisible = !desktopClockWindow.isAlwaysVisible
                 }
             }
         }
