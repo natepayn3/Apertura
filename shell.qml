@@ -10,6 +10,8 @@ import "."
 Scope {
     id: rootScope
 
+    property alias theme: theme 
+
     Theme { id: theme }
 
     property var activeModal: null
@@ -97,7 +99,6 @@ Scope {
 
                 Rectangle {
                     anchors.fill: parent
-                    // Transparency is now handled solely by the theme's alpha channel
                     color: theme.bg
 
                     MouseArea { 
@@ -116,7 +117,10 @@ Scope {
                         Wallpaper { id: wallpaperItem; anchors.horizontalCenter: parent.horizontalCenter }
                         Calendar { id: calendarItem; anchors.horizontalCenter: parent.horizontalCenter }
                         Item { height: 8; width: 1 }
-                        Workspaces { anchors.horizontalCenter: parent.horizontalCenter; z: 1 }
+                        Workspaces { 
+                            theme: rootScope.theme 
+                            anchors.horizontalCenter: parent.horizontalCenter; z: 1 
+                        }
                     }
 
                     ColumnLayout {
