@@ -67,6 +67,16 @@ Scope {
         }
     }
 
+    // IPC Endpoint integration mapping path for the network drawer
+    IpcHandler {
+        target: "netmonitor"
+        function toggle(): void {
+            for (let s in rootScope.instantiatedBars)
+                if (rootScope.instantiatedBars[s].netMonitorModule)
+                    rootScope.instantiatedBars[s].netMonitorModule.toggleMenu();
+        }
+    }
+
     Instantiator {
         id: barWindows
         model: Quickshell.screens
@@ -86,6 +96,8 @@ Scope {
                 property alias calendarModule: calendarItem
                 property alias notesModule: notesItem
                 property alias sysMonitorModule: sysMonitorItem
+                // Property alias to expose internal module functions to external target scopes
+                property alias netMonitorModule: netMonitorItem
 
                 screen: modelData
                 anchors { left: true; top: true; bottom: true }
@@ -159,6 +171,7 @@ Scope {
                                 Bluetooth { Layout.alignment: Qt.AlignHCenter }
                                 Audio { Layout.alignment: Qt.AlignHCenter }
                                 SysMonitor { id: sysMonitorItem; Layout.alignment: Qt.AlignHCenter }
+                                NetMonitor { id: netMonitorItem; Layout.alignment: Qt.AlignHCenter }
                                 Power { Layout.alignment: Qt.AlignHCenter }
                             }
                         }
