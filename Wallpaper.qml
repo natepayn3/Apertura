@@ -14,6 +14,7 @@ Item {
     property string wallpaperDir: ""
     property bool menuOpen: false
     property point globalMousePos: Qt.point(-1, -1)
+    property bool windowAlive: false
 
     ListModel {
         id: wallpaperModel
@@ -23,15 +24,6 @@ Item {
         wallpaperDir = Quickshell.env("HOME") + "/Pictures/Wallpapers";
         wallpaperScanner.command = ["sh", "-c", "ls " + wallpaperDir];
         wallpaperScanner.running = true;
-    }
-
-    Timer {
-        id: closeTimer
-        interval: 180
-        repeat: false
-        onTriggered: {
-            wallpaperModuleRoot.menuOpen = false;
-        }
     }
 
     function toggleMenu(): void {
@@ -46,18 +38,14 @@ Item {
         globalMousePos = Qt.point(-1, -1);
         wallpaperListView.activeKeyIndex = -1;
         wallpaperListView.logicalMouseIndexStore = -1;
-        wallpaperCard.targetX = -290;
-        wallpaperCard.targetOpacity = 0.0;
-
+        
         rootScope.requestOpen("wallpaper");
+        windowAlive = true;
         menuOpen = true;
-        slideRightAnimation.start();
     }
 
     function closeMenu(): void {
-        wallpaperCard.targetX = -290;
-        wallpaperCard.targetOpacity = 0.0;
-        closeTimer.start();
+        menuOpen = false;
     }
 
     Connections {
@@ -121,8 +109,8 @@ Item {
 
     PanelWindow {
         id: wallpaperModal
-        visible: wallpaperModuleRoot.menuOpen
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        visible: wallpaperModuleRoot.windowAlive
+        anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-wallpapers"
@@ -146,22 +134,42 @@ Item {
             id: wallpaperCard
             width: 290
             anchors.top: parent.top; anchors.bottom: parent.bottom
-            anchors.topMargin: 12; anchors.bottomMargin: 12; anchors.left: parent.left
-            property int targetX: -290
-            property real targetOpacity: 0.0
-            anchors.leftMargin: targetX; opacity: targetOpacity
+            anchors.topMargin: 12; anchors.bottomMargin: 12
 
-            SequentialAnimation {
-                id: slideRightAnimation
-                PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    NumberAnimation { target: wallpaperCard; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: wallpaperCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+            states: [
+                State {
+                    name: "visible"
+                    when: wallpaperModuleRoot.menuOpen
+                    PropertyChanges { target: wallpaperCard; x: 0; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !wallpaperModuleRoot.menuOpen
+                    PropertyChanges { target: wallpaperCard; x: -310; opacity: 0.0 }
                 }
-            }
+            ]
 
-            Behavior on anchors.leftMargin { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: { wallpaperModuleRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
 
             color: "#9911111b"
             border.width: 0; border.color: "transparent"; focus: true
