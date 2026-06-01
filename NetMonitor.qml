@@ -17,6 +17,8 @@ Item {
     property string ipAddress: "0.0.0.0"
     property string downloadSpeed: "0 B/s"
     property string uploadSpeed: "0 B/s"
+    
+    property string connectionIcon: activeIface === "None" ? "cloud_off" : "cloud_upload"
 
     Timer {
         id: osdAutohideTimer
@@ -64,7 +66,6 @@ Item {
 
     Process {
         id: netFetcher
-        // Uses programmatic JSON lookup to find the primary interface and parse stats
         command: [
             "sh", "-c",
             "iface=$(/usr/bin/ip -j addr | /usr/bin/jq -r '.[] | select(.ifname != \"lo\" and .addr_info[].family == \"inet\") | .ifname' | /usr/bin/head -n1); " +
@@ -115,14 +116,18 @@ Item {
 
     Timer {
         id: netTicker
-        interval: 1000
-        running: netRoot.windowAlive
+        interval: 3000
+        running: true  
         repeat: true
         triggeredOnStart: true
         onTriggered: {
             netFetcher.running = false;
             netFetcher.running = true;
         }
+    }
+
+    Component.onCompleted: {
+        netFetcher.running = true;
     }
 
     Rectangle {
@@ -133,10 +138,11 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            text: "language"
+            text: netRoot.connectionIcon
             font.family: "Material Symbols Outlined"
             font.pixelSize: 20
-            color: "#ffffff"
+            // Red alert color if offline
+            color: activeIface === "None" ? "#ff5555" : "#ffffff"
         }
 
         MouseArea {
@@ -159,12 +165,6 @@ Item {
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
-
-        onVisibleChanged: {
-            if (visible && netRoot.menuOpen) {
-                popupCard.forceActiveFocus();
-            }
-        }
 
         MouseArea { anchors.fill: parent; onClicked: closeMenu() }
 
