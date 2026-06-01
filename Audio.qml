@@ -13,6 +13,7 @@ Item {
     readonly property real currentVol: globalVolumeSlider.value ?? 0.0
     property bool isMuted: false
     property bool menuOpen: false
+    property bool windowAlive: false
 
     Binding {
         target: rootScope
@@ -155,15 +156,6 @@ Item {
         onTriggered: closeMenu()
     }
 
-    Timer {
-        id: closeTimer
-        interval: 180
-        repeat: false
-        onTriggered: {
-            audioRoot.menuOpen = false;
-        }
-    }
-
     function toggleMenu(): void {
         if (menuOpen) {
             closeMenu();
@@ -173,22 +165,17 @@ Item {
     }
 
     function openMenu(): void {
-        popupCard.targetX = -655;
-        popupCard.targetOpacity = 0.0;
-
         rootScope.requestOpen(globalVolumeModal);
+        windowAlive = true;
         menuOpen = true;
 
-        slideInAnimation.start();
         syncDevicesQuery.running = false;
         syncDevicesQuery.running = true;
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        popupCard.targetX = -655;
-        popupCard.targetOpacity = 0.0;
-        closeTimer.start();
+        menuOpen = false;
     }
 
     function checkUserActivity() {
@@ -243,9 +230,13 @@ Item {
 
     PanelWindow {
         id: globalVolumeModal
-        visible: audioRoot.menuOpen
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        visible: audioRoot.windowAlive
         color: "transparent"
+        
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
@@ -272,28 +263,42 @@ Item {
             id: popupCard
             width: 300
             anchors.bottom: parent.bottom
-            anchors.left: parent.left
             anchors.bottomMargin: 12
-            property int targetX: -655
-            property real targetOpacity: 0.0
-            anchors.leftMargin: targetX
-            opacity: targetOpacity
 
-            SequentialAnimation {
-                id: slideInAnimation
-                PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    NumberAnimation { target: popupCard; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupCard; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+            states: [
+                State {
+                    name: "visible"
+                    when: audioRoot.menuOpen
+                    PropertyChanges { target: popupCard; x: 0; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !audioRoot.menuOpen
+                    PropertyChanges { target: popupCard; x: -320; opacity: 0.0 }
                 }
-            }
+            ]
 
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-            }
-            Behavior on opacity {
-                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
-            }
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: { audioRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
 
             color: "#9911111b" 
             border.width: 0
