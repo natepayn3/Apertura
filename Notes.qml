@@ -98,7 +98,6 @@ Item {
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: notesRoot.isAlwaysVisible ? WlrKeyboardFocus.None : WlrKeyboardFocus.OnDemand
 
-        // Limits mouse interactions strictly to the popup menu card bounds when pinned
         mask: notesRoot.isAlwaysVisible ? notesInputBounds : null
 
         Region {
@@ -112,7 +111,6 @@ Item {
             }
         }
 
-        // Global background mask: captures click-away events, but disables completely when pinned
         MouseArea {
             anchors.fill: parent
             enabled: !notesRoot.isAlwaysVisible
@@ -131,7 +129,6 @@ Item {
             property int targetX: -655
             property real targetOpacity: 0.0
             
-            // Dynamic animation mapping to remain perfectly flush against your bar layout
             anchors.leftMargin: notesRoot.isAlwaysVisible ? 0 : targetX
             opacity: notesRoot.isAlwaysVisible ? 1.0 : targetOpacity
 
@@ -249,10 +246,11 @@ Item {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        var newList = notesRoot.notesList;
-                                        newList.push("");
-                                        notesRoot.notesList = newList;
-                                        notesRoot.activeIndex = newList.length - 1;
+                                        var list = notesRoot.notesList;
+                                        list.push("");
+                                        
+                                        notesRoot.notesList = list.slice();
+                                        notesRoot.activeIndex = notesRoot.notesList.length - 1;
                                         notesRepeater.model = notesRoot.notesList;
                                     }
                                 }
@@ -339,10 +337,20 @@ Item {
                                                 var list = notesRoot.notesList;
                                                 if (list.length > 1) {
                                                     list.splice(index, 1);
-                                                    notesRoot.notesList = list;
-                                                    if (notesRoot.activeIndex >= list.length) {
-                                                        notesRoot.activeIndex = list.length - 1;
+                                                    
+                                                    let nextIndex = notesRoot.activeIndex;
+                                                    if (nextIndex >= list.length) {
+                                                        nextIndex = list.length - 1;
                                                     }
+                                                    
+                                                    notesRoot.notesList = list.slice();
+                                                    notesRoot.activeIndex = nextIndex;
+                                                    notesRepeater.model = notesRoot.notesList;
+                                                } else if (list.length === 1) {
+                                                    // Clear text fields cleanly if only one note tab is left open
+                                                    list[0] = "";
+                                                    notesRoot.notesList = list.slice();
+                                                    notesRoot.activeIndex = 0;
                                                     notesRepeater.model = notesRoot.notesList;
                                                 }
                                             }
@@ -388,27 +396,12 @@ Item {
                                 background: null
                                 padding: 8
                                 
-                                property int lastIndex: -1
+                                text: notesRoot.notesList[notesRoot.activeIndex] || ""
 
-                                Binding {
-                                    target: noteTextArea
-                                    property: "text"
-                                    value: notesRoot.notesList[notesRoot.activeIndex] || ""
-                                    when: noteTextArea.lastIndex !== notesRoot.activeIndex
-                                }
-
-                                onTextChanged: {
-                                    if (noteTextArea.lastIndex === notesRoot.activeIndex) {
-                                        var list = notesRoot.notesList;
-                                        list[notesRoot.activeIndex] = text;
-                                        notesRoot.notesList = list;
-                                    }
-                                }
-
-                                onActiveFocusChanged: {
-                                    if (activeFocus) {
-                                        noteTextArea.lastIndex = notesRoot.activeIndex;
-                                    }
+                                onTextEdited: {
+                                    var list = notesRoot.notesList;
+                                    list[notesRoot.activeIndex] = text;
+                                    notesRoot.notesList = list.slice();
                                 }
                             }
                         }
