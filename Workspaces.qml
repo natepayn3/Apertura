@@ -5,9 +5,8 @@ import Quickshell.Io
 
 Item {
     id: workspaceContainer
-    
     property bool isVertical: true
-
+    property var theme
     implicitWidth: isVertical ? 28 : (layoutLoader.item ? layoutLoader.item.implicitWidth : 0)
     implicitHeight: isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight : 0) : 28
 
@@ -92,6 +91,7 @@ Item {
         
         MouseArea {
             id: workspaceButton
+            property var theme: workspaceContainer.theme 
             property int wsId: modelData
             property bool isActive: workspaceContainer.activeWorkspace === wsId
             property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
@@ -101,20 +101,6 @@ Item {
             implicitHeight: workspaceContainer.isVertical ? (isActive ? 58 : 28) : 28
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
-
-            onEntered: {
-                if (isNewIndicatorSlot) return;
-                if (typeof mainBarWindow !== "undefined" && mainBarWindow.previewHandle) {
-                    mainBarWindow.previewHandle.workspaceId = wsId;
-                    mainBarWindow.previewHandle.active = true;
-                }
-            }
-
-            onExited: {
-                if (typeof mainBarWindow !== "undefined" && mainBarWindow.previewHandle) {
-                    mainBarWindow.previewHandle.active = false;
-                }
-            }
 
             onClicked: {
                 workspaceContainer.activeWorkspace = wsId;
@@ -130,13 +116,9 @@ Item {
                 height: workspaceContainer.isVertical ? (workspaceButton.isActive ? 58 : 28) : 28
                 radius: 6
                 anchors.centerIn: parent
-                color: "#26ffffff"
-                opacity: workspaceButton.containsMouse ? 1.0 : 0.0
+                color: (workspaceButton.theme ? workspaceButton.theme.primary : "#89b4fa")
+                opacity: workspaceButton.containsMouse ? 0.3 : 0.0
                 z: 1
-
-                Behavior on opacity {
-                    NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
-                }
             }
 
             Rectangle {
@@ -145,14 +127,16 @@ Item {
                 width: workspaceContainer.isVertical ? (isActive ? 14 : 12) : (isActive ? 44 : 12)
                 height: workspaceContainer.isVertical ? (isActive ? 44 : 12) : (isActive ? 14 : 12)
                 radius: 6
-                color: isActive ? "#ffffff" : (isOccupied ? "#ffffff" : "transparent")
-                border.width: (!isActive && !isOccupied) ? 1.5 : 0
-                border.color: (!isActive && !isOccupied) ? "#b3ffffff" : "transparent"
                 z: 2
+                
+                color: isActive ? (workspaceButton.theme ? workspaceButton.theme.primary : "#89b4fa") : (isOccupied ? (workspaceButton.theme ? workspaceButton.theme.text : "#cdd6f4") : "transparent")
+                border.width: (!isActive && !isOccupied) ? 1.5 : 0
+                border.color: (!isActive && !isOccupied) ? (workspaceButton.theme ? workspaceButton.theme.outline : "#b3ffffff") : "transparent"
 
                 Text {
                     text: workspaceButton.wsId.toString()
-                    font.family: "Rubik"; font.pixelSize: 11; font.bold: true; color: "#11111b"
+                    font.family: "Rubik"; font.pixelSize: 11; font.bold: true
+                    color: workspaceButton.isActive ? (workspaceButton.theme ? workspaceButton.theme.onPrimary : "#11111b") : (workspaceButton.theme ? workspaceButton.theme.text : "#cdd6f4")
                     anchors.fill: parent; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                     opacity: workspaceButton.isActive ? 1.0 : 0.0
                 }
