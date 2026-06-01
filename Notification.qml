@@ -15,6 +15,7 @@ Item {
     property var activeHistoryReferences: [] 
     property bool menuOpen: false
     property bool notificationsEnabled: true
+    property bool windowAlive: false
 
     Timer {
         id: osdAutohideTimer
@@ -22,15 +23,6 @@ Item {
         running: false
         repeat: false
         onTriggered: closeMenu()
-    }
-
-    Timer {
-        id: closeTimer
-        interval: 180
-        repeat: false
-        onTriggered: {
-            notificationRoot.menuOpen = false;
-        }
     }
 
     function toggleMenu(): void {
@@ -42,18 +34,14 @@ Item {
     }
 
     function openMenu(): void {
-        popupMenuFrame.targetX = -655;
-        popupMenuFrame.targetOpacity = 0.0;
         rootScope.requestOpen("notifications");
+        windowAlive = true;
         menuOpen = true;
-        slideInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        popupMenuFrame.targetX = -655;
-        popupMenuFrame.targetOpacity = 0.0;
-        closeTimer.start();
+        menuOpen = false;
     }
 
     function checkUserActivity() {
@@ -163,7 +151,10 @@ Item {
         id: popupToastWindow
         visible: notificationRoot.visibleBanners.length > 0 && !notificationOverlayModal.visible && notificationRoot.notificationsEnabled
         color: "transparent"
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -172,17 +163,36 @@ Item {
             id: toastColumn
             width: 300 
             anchors.bottom: parent.bottom
-            anchors.left: parent.left
             anchors.bottomMargin: 12
-            property int targetX: 0
-            anchors.leftMargin: targetX
             spacing: 8
 
-            NumberAnimation { id: toastSlideIn; target: toastColumn; property: "targetX"; from: -320; to: 0; duration: 180; easing.type: Easing.OutCubic }
+            states: [
+                State {
+                    name: "visible"
+                    when: notificationRoot.visibleBanners.length > 0
+                    PropertyChanges { target: toastColumn; x: 0 }
+                },
+                State {
+                    name: "hidden"
+                    when: notificationRoot.visibleBanners.length === 0
+                    PropertyChanges { target: toastColumn; x: -320 }
+                }
+            ]
 
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-            }
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { id: toastSlideIn; property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                    }
+                }
+            ]
 
             Repeater {
                 model: notificationRoot.visibleBanners
@@ -227,9 +237,12 @@ Item {
 
     PanelWindow {
         id: notificationOverlayModal
-        visible: notificationRoot.menuOpen
+        visible: notificationRoot.windowAlive
         color: "transparent"
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -245,22 +258,43 @@ Item {
         Rectangle {
             id: popupMenuFrame
             width: 300 
-            anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.bottomMargin: 12
-            property int targetX: -655; property real targetOpacity: 0.0
-            anchors.leftMargin: targetX; opacity: targetOpacity
+            anchors.bottom: parent.bottom; anchors.bottomMargin: 12
             height: !notificationRoot.notificationsEnabled ? 92 : (notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300))
 
-            SequentialAnimation {
-                id: slideInAnimation
-                PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+            states: [
+                State {
+                    name: "visible"
+                    when: notificationRoot.menuOpen
+                    PropertyChanges { target: popupMenuFrame; x: 0; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !notificationRoot.menuOpen
+                    PropertyChanges { target: popupMenuFrame; x: -320; opacity: 0.0 }
                 }
-            }
-            
-            Behavior on anchors.leftMargin { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+            ]
+
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: { notificationRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
 
             color: "#9911111b"
             border.width: 0; radius: 0; focus: true
@@ -270,8 +304,6 @@ Item {
                     event.accepted = true;
                 }
             }
-            
-            Component.onCompleted: popupMenuFrame.forceActiveFocus()
             
             MouseArea {
                 id: cardHoverTracker
