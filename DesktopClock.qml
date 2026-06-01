@@ -1,117 +1,410 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 
-PanelWindow {
-    id: desktopClockWindow
+Item {
+    id: notesRoot
+    implicitWidth: 32
+    implicitHeight: 32
 
-    WlrLayershell.layer: isAlwaysVisible ? WlrLayer.Overlay : WlrLayer.Bottom
-    WlrLayershell.namespace: "desktop-clock-widget"
-    WlrLayershell.anchors.top: true
-    WlrLayershell.anchors.left: true
-    WlrLayershell.anchors.bottom: true
-    WlrLayershell.anchors.right: true
-    
-    color: "transparent"
-
-    property date currentDateTime: new Date()
-    property bool isAlwaysVisible: false 
+    property bool menuOpen: false
+    property var notesList: [""]
+    property int activeIndex: 0
+    property bool isAlwaysVisible: false
 
     Timer {
-        interval: 1000; running: true; repeat: true
-        onTriggered: desktopClockWindow.currentDateTime = new Date()
+        id: closeTimer
+        interval: 180
+        repeat: false
+        onTriggered: {
+            notesRoot.menuOpen = false;
+        }
+    }
+
+    function toggleMenu(): void {
+        if (isAlwaysVisible) {
+            isAlwaysVisible = false;
+            openMenu();
+        } else if (menuOpen) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    }
+
+    function openMenu(): void {
+        popupMenuFrame.targetX = -655;
+        popupMenuFrame.targetOpacity = 0.0;
+        
+        rootScope.requestOpen("notes");
+        menuOpen = true;
+        
+        slideInAnimation.start();
+    }
+
+    function closeMenu(): void {
+        popupMenuFrame.targetX = -655;
+        popupMenuFrame.targetOpacity = 0.0;
+        closeTimer.start();
+    }
+
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== "notes" && menuOpen && !isAlwaysVisible) {
+                closeMenu();
+            }
+        }
     }
 
     Rectangle {
-        id: clockContentWrapper
-        
-        property int posX: desktopClockWindow.width - width - 25
-        property int posY: 25
-
-        x: posX
-        y: posY
-        width: 400
-        height: 175
-        
-        color: "#9911111b"
-        radius: 0
-        border.width: 0
+        id: notesHitbox
+        anchors.fill: parent
+        color: notesMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        radius: 0 
 
         ColumnLayout {
-            id: layoutContainer
-            anchors.centerIn: parent
-            spacing: 2
+            anchors.fill: parent
+            spacing: 0
 
             Text {
-                text: Qt.formatDateTime(desktopClockWindow.currentDateTime, "h:mm ap")
-                font.family: "Rubik"; font.pixelSize: 75; font.weight: Font.Bold; color: "#ffffff"
                 Layout.alignment: Qt.AlignHCenter
-            }
-
-            Text {
-                text: Qt.formatDateTime(desktopClockWindow.currentDateTime, "dddd, MMMM d")
-                font.family: "Rubik"; font.pixelSize: 24; font.weight: Font.Normal; color: "#ffffff"
-                Layout.alignment: Qt.AlignHCenter
+                text: "description"
+                font.family: "Material Symbols Outlined"
+                font.pixelSize: 20
+                color: "#ffffff"
             }
         }
 
         MouseArea {
-            id: dragArea
+            id: notesMouseArea
             anchors.fill: parent
-            cursorShape: containsMouse ? Qt.SizeAllCursor : Qt.ArrowCursor
             hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: toggleMenu()
+        }
+    }
 
-            property int clickOffsetX: 0
-            property int clickOffsetY: 0
+    PanelWindow {
+        id: notesOverlayModal
+        visible: notesRoot.menuOpen || notesRoot.isAlwaysVisible
+        color: "transparent"
+        
+        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
 
-            onPressed: (mouse) => {
-                clickOffsetX = mouse.x
-                clickOffsetY = mouse.y
-            }
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "quickshell-overlay"
+        WlrLayershell.keyboardFocus: notesRoot.isAlwaysVisible ? WlrKeyboardFocus.None : WlrKeyboardFocus.OnDemand
 
-            onPositionChanged: (mouse) => {
-                if (pressed) {
-                    clockContentWrapper.posX = clockContentWrapper.posX + mouse.x - clickOffsetX
-                    clockContentWrapper.posY = clockContentWrapper.posY + mouse.y - clickOffsetY
-                }
+        onVisibleChanged: {
+            if (visible && notesRoot.menuOpen) {
+                popupMenuFrame.forceActiveFocus();
             }
         }
 
-        Rectangle {
-            id: toggleButton
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.topMargin: 8
-            anchors.rightMargin: 8
-            width: 110
-            height: 26
-            radius: 0 
-            
-            visible: dragArea.containsMouse || btnMouseArea.containsMouse
-            
-            color: desktopClockWindow.isAlwaysVisible ? "#45ffffff" : "transparent"
-            border.width: desktopClockWindow.isAlwaysVisible ? 0 : 1
-            border.color: "#26ffffff"
+        // Global background mask: captures click-away events, but disables completely when pinned
+        MouseArea {
+            anchors.fill: parent
+            enabled: !notesRoot.isAlwaysVisible
+            onClicked: closeMenu()
+        }
 
-            Text {
-                anchors.centerIn: parent
-                text: "Always Visible"
-                font.family: "Rubik"
-                font.pixelSize: 11
-                font.weight: Font.Medium
-                color: "#ffffff"
+        Rectangle {
+            id: popupMenuFrame
+            width: 400
+            height: 300
+            
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.bottomMargin: 12
+            
+            property int targetX: -655
+            property real targetOpacity: 0.0
+            
+            // Dynamic animation mapping to remain perfectly flush against your bar layout
+            anchors.leftMargin: notesRoot.isAlwaysVisible ? 0 : targetX
+            opacity: notesRoot.isAlwaysVisible ? 1.0 : targetOpacity
+
+            SequentialAnimation {
+                id: slideInAnimation
+                PauseAnimation { duration: 16 }
+                ParallelAnimation {
+                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+                }
             }
 
+            Behavior on anchors.leftMargin { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+
+            color: "#9911111b"
+            border.width: 0
+            radius: 0
+            focus: true
+
+            Keys.onPressed: (event) => {
+                if (event.key === Qt.Key_Escape && !notesRoot.isAlwaysVisible) {
+                    closeMenu();
+                    event.accepted = true;
+                }
+            }
+
+            Component.onCompleted: popupMenuFrame.forceActiveFocus()
+
             MouseArea {
-                id: btnMouseArea
+                id: mainContentArea
                 anchors.fill: parent
                 hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                preventStealing: true 
-                
-                onClicked: {
-                    desktopClockWindow.isAlwaysVisible = !desktopClockWindow.isAlwaysVisible
+                onPressed: (mouse) => { mouse.accepted = true; }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 14
+                    spacing: 10
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        
+                        Text { 
+                            text: "Notes"
+                            font.family: "Rubik"
+                            font.pixelSize: 16; font.weight: Font.Bold
+                            color: "#ffffff" 
+                        }
+                        
+                        Item { Layout.fillWidth: true }
+
+                        RowLayout {
+                            spacing: 8
+
+                            Rectangle {
+                                id: toggleButton
+                                width: 96
+                                height: 24
+                                radius: 0
+                                visible: mainContentArea.containsMouse || btnMouseArea.containsMouse
+                                color: notesRoot.isAlwaysVisible ? "#45ffffff" : "transparent"
+                                border.width: notesRoot.isAlwaysVisible ? 0 : 1
+                                border.color: "#26ffffff"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Always Visible"
+                                    font.family: "Rubik"
+                                    font.pixelSize: 10
+                                    font.weight: Font.Medium
+                                    color: "#ffffff"
+                                }
+
+                                MouseArea {
+                                    id: btnMouseArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    preventStealing: true
+                                    onClicked: {
+                                        if (notesRoot.isAlwaysVisible) {
+                                            notesRoot.menuOpen = true;
+                                            notesRoot.isAlwaysVisible = false;
+                                        } else {
+                                            notesRoot.isAlwaysVisible = true;
+                                            notesRoot.menuOpen = false;
+                                            if (rootScope.activeModal === "notes") {
+                                                rootScope.dismissAll();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                width: 24
+                                height: 24
+                                color: addMouse.containsMouse ? "#26ffffff" : "transparent"
+                                border.width: 1
+                                border.color: "#26ffffff"
+                                radius: 0
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "add"
+                                    font.family: "Material Symbols Outlined"
+                                    font.pixelSize: 16
+                                    color: "#ffffff"
+                                }
+
+                                MouseArea {
+                                    id: addMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        var newList = notesRoot.notesList;
+                                        newList.push("");
+                                        notesRoot.notesList = newList;
+                                        notesRoot.activeIndex = newList.length - 1;
+                                        notesRepeater.model = notesRoot.notesList;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
+
+                    ScrollView {
+                        Layout.fillWidth: true
+                        id: tabScrollView
+                        height: tabScrollView.contentWidth > tabScrollView.availableWidth ? 44 : 34
+                        bottomPadding: tabScrollView.contentWidth > tabScrollView.availableWidth ? 18 : 8
+                        clip: true
+                        ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+                        
+                        ScrollBar.horizontal: ScrollBar {
+                            id: hBar
+                            policy: ScrollBar.AsNeeded
+                            visible: tabScrollView.contentWidth > tabScrollView.availableWidth
+                            parent: tabScrollView
+                            x: tabScrollView.leftPadding
+                            y: tabScrollView.height - height
+                            width: tabScrollView.availableWidth
+                            
+                            contentItem: Rectangle {
+                                implicitHeight: 5
+                                color: hBar.hovered || hBar.pressed ? "#45ffffff" : "#26ffffff"
+                                radius: 0
+                            }
+
+                            background: Rectangle {
+                                implicitHeight: 5
+                                color: "transparent"
+                            }
+                        }
+
+                        Row {
+                            id: tabRow
+                            spacing: 6
+                            width: implicitWidth
+
+                            Repeater {
+                                id: notesRepeater
+                                model: notesRoot.notesList
+                                delegate: Rectangle {
+                                    width: tabText.implicitWidth + 36
+                                    height: 26
+                                    color: notesRoot.activeIndex === index ? "#45ffffff" : (tabMouse.containsMouse ? "#26ffffff" : "transparent")
+                                    border.width: notesRoot.activeIndex === index ? 0 : 1
+                                    border.color: "#26ffffff"
+                                    radius: 0
+
+                                    Text {
+                                        id: tabText
+                                        anchors.left: parent.left
+                                        anchors.leftMargin: 8
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "Note " + (index + 1)
+                                        font.family: "Rubik"
+                                        font.pixelSize: 11
+                                        font.weight: Font.Medium
+                                        color: "#ffffff"
+                                    }
+
+                                    Text {
+                                        id: closeIcon
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: 6
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "close"
+                                        font.family: "Material Symbols Outlined"
+                                        font.pixelSize: 12
+                                        color: closeTabMouse.containsMouse ? "#ffffff" : "#59ffffff"
+                                        z: 5
+
+                                        MouseArea {
+                                            id: closeTabMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                var list = notesRoot.notesList;
+                                                if (list.length > 1) {
+                                                    list.splice(index, 1);
+                                                    notesRoot.notesList = list;
+                                                    if (notesRoot.activeIndex >= list.length) {
+                                                        notesRoot.activeIndex = list.length - 1;
+                                                    }
+                                                    notesRepeater.model = notesRoot.notesList;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: tabMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            notesRoot.activeIndex = index;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: "#5911111b"
+                        border.color: "#26ffffff"
+                        border.width: 1
+                        radius: 0
+
+                        ScrollView {
+                            id: noteScroll
+                            anchors.fill: parent
+                            clip: true
+
+                            TextArea {
+                                id: noteTextArea
+                                width: noteScroll.width
+                                height: noteScroll.height
+                                font.family: "Rubik"
+                                font.pixelSize: 13
+                                color: "#ffffff"
+                                wrapMode: TextEdit.WordWrap
+                                selectByMouse: true
+                                background: null
+                                padding: 8
+                                
+                                property int lastIndex: -1
+
+                                Binding {
+                                    target: noteTextArea
+                                    property: "text"
+                                    value: notesRoot.notesList[notesRoot.activeIndex] || ""
+                                    when: noteTextArea.lastIndex !== notesRoot.activeIndex
+                                }
+
+                                onTextChanged: {
+                                    if (noteTextArea.lastIndex === notesRoot.activeIndex) {
+                                        var list = notesRoot.notesList;
+                                        list[notesRoot.activeIndex] = text;
+                                        notesRoot.notesList = list;
+                                    }
+                                }
+
+                                onActiveFocusChanged: {
+                                    if (activeFocus) {
+                                        noteTextArea.lastIndex = notesRoot.activeIndex;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
