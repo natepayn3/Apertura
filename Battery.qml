@@ -18,6 +18,7 @@ Item {
     property int capacity: 100
     property bool isCharging: false
     property bool menuOpen: false
+    property bool windowAlive: false
 
     Process {
         id: presenceCheck
@@ -95,15 +96,6 @@ Item {
         onTriggered: closeMenu()
     }
 
-    Timer {
-        id: closeTimer
-        interval: 180
-        repeat: false
-        onTriggered: {
-            batRoot.menuOpen = false;
-        }
-    }
-
     function toggleMenu(): void {
         if (menuOpen) {
             closeMenu();
@@ -113,18 +105,14 @@ Item {
     }
 
     function openMenu(): void {
-        popupMenuFrame.targetX = -655;
-        popupMenuFrame.targetOpacity = 0.0;
         rootScope.requestOpen("battery");
+        windowAlive = true;
         menuOpen = true;
-        slideInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        popupMenuFrame.targetX = -655;
-        popupMenuFrame.targetOpacity = 0.0;
-        closeTimer.start();
+        menuOpen = false;
     }
 
     function checkUserActivity() {
@@ -190,9 +178,12 @@ Item {
 
     PanelWindow {
         id: batteryOverlayModal
-        visible: batRoot.menuOpen
+        visible: batRoot.windowAlive
         color: "transparent"
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -211,20 +202,42 @@ Item {
         Rectangle {
             id: popupMenuFrame
             width: 300; height: 96 
-            anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.bottomMargin: 12
-            property int targetX: -655; property real targetOpacity: 0.0
-            anchors.leftMargin: targetX; opacity: targetOpacity
-
-            SequentialAnimation {
-                id: slideInAnimation; PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
-                }
-            }
+            anchors.bottom: parent.bottom; anchors.bottomMargin: 12
             
-            Behavior on anchors.leftMargin { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+            states: [
+                State {
+                    name: "visible"
+                    when: batRoot.menuOpen
+                    PropertyChanges { target: popupMenuFrame; x: 0; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !batRoot.menuOpen
+                    PropertyChanges { target: popupMenuFrame; x: -320; opacity: 0.0 }
+                }
+            ]
+
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: { batRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
 
             color: "#9911111b"
             border.width: 0; radius: 0; focus: true
@@ -251,7 +264,6 @@ Item {
                     Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" }
                     Item { Layout.fillWidth: true }
                     Text { 
-                        // Updated status parsing order to prevent capacity check short-circuiting AC line diagnostics
                         text: batRoot.isCharging ? (batRoot.capacity >= 99 ? "Fully Charged" : "󱐋 Charging") : "Discharging"
                         font.family: "Rubik"; font.pixelSize: 12
                         color: "#ffffff"
