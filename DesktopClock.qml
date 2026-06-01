@@ -5,10 +5,7 @@ import Quickshell.Wayland
 
 PanelWindow {
     id: desktopClockWindow
-    
-    // 🪟 STATIC FULLSCREEN CANVAS LAYER
-    // Pinning all edges to true forces the window to span the entire screen layout.
-    // Because this window never moves, its internal coordinate plane is perfectly rigid.
+
     WlrLayershell.layer: WlrLayer.Bottom
     WlrLayershell.namespace: "desktop-clock-widget"
     WlrLayershell.anchors.top: true
@@ -18,7 +15,6 @@ PanelWindow {
     
     color: "transparent"
 
-    // 🕒 TIME METADATA ENGINE
     property date currentDateTime: new Date()
 
     Timer {
@@ -26,7 +22,6 @@ PanelWindow {
         onTriggered: desktopClockWindow.currentDateTime = new Date()
     }
 
-    // 🎨 VISUAL FRAME CONTAINER
     Rectangle {
         id: clockContentWrapper
         
@@ -61,7 +56,6 @@ PanelWindow {
             }
         }
 
-        // 🛠️ ZERO-LATENCY INTERACTIVE DRAG SURFACE
         MouseArea {
             id: dragArea
             anchors.fill: parent
@@ -72,15 +66,12 @@ PanelWindow {
             property int clickOffsetY: 0
 
             onPressed: (mouse) => {
-                // Grab the offset inside the sub-rectangle target bounds
                 clickOffsetX = mouse.x
                 clickOffsetY = mouse.y
             }
 
             onPositionChanged: (mouse) => {
                 if (pressed) {
-                    // Updating properties inside a static coordinate plane avoids 
-                    // the jitter loop entirely, matching raw cursor movement precisely.
                     clockContentWrapper.posX = clockContentWrapper.posX + mouse.x - clickOffsetX
                     clockContentWrapper.posY = clockContentWrapper.posY + mouse.y - clickOffsetY
                 }
