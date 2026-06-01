@@ -254,7 +254,8 @@ Item {
                     Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" }
                     Item { Layout.fillWidth: true }
                     Text { 
-                        text: batRoot.capacity >= 99 ? "Fully Charged" : (batRoot.isCharging ? "󱐋 Charging" : "Discharging")
+                        // Updated status parsing order to prevent capacity check short-circuiting AC line diagnostics
+                        text: batRoot.isCharging ? (batRoot.capacity >= 99 ? "Fully Charged" : "󱐋 Charging") : "Discharging"
                         font.family: "Rubik"; font.pixelSize: 12
                         color: "#ffffff"
                     }
