@@ -14,14 +14,12 @@ Item {
     property bool isConnected: false
     property string currentTab: "paired" 
     property bool isScanning: false
-
-    // Controls actual PanelWindow visibility
     property bool menuOpen: false
+    property bool windowAlive: false
 
     ListModel { id: pairedDevicesModel }
     ListModel { id: discoveredDevicesModel }
 
-    // 🎯 Resolves the local absolute path safely using standard QML URL translation
     Component.onCompleted: {
         const localUri = Qt.resolvedUrl(".").toString();
         const basePath = localUri.replace("file://", "");
@@ -32,11 +30,9 @@ Item {
         discoveryScraper.command = [basePath + "/bluetooth_control.sh", "discover"];
         bluetoothToggleAction.command = [basePath + "/bluetooth_control.sh", "toggle"];
         
-        // Safe operational bootstrap trigger
         bluetoothWatcher.running = true;
     }
 
-    // Smart auto-hide countdown tracker
     Timer {
         id: osdAutohideTimer
         interval: 3500
@@ -45,17 +41,6 @@ Item {
         onTriggered: closeMenu()
     }
 
-    // 🎬 CLOSE FINALIZER
-    Timer {
-        id: closeTimer
-        interval: 180
-        repeat: false
-        onTriggered: {
-            bluetoothRoot.menuOpen = false;
-        }
-    }
-
-    // 🔓 PUBLIC INTERFACE
     function toggleMenu(): void {
         if (menuOpen) {
             closeMenu();
@@ -65,26 +50,19 @@ Item {
     }
 
     function openMenu(): void {
-        popupMenuFrame.targetX = -655;
-        popupMenuFrame.targetOpacity = 0.0;
-
         rootScope.requestOpen(bluetoothOverlayModal);
+        windowAlive = true;
         menuOpen = true;
 
-        slideInAnimation.start();
         bluetoothRoot.currentTab = "paired";
         refreshPairedList();
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        popupMenuFrame.targetX = -655;
-        popupMenuFrame.targetOpacity = 0.0;
-
-        closeTimer.start();
+        menuOpen = false;
     }
 
-    // 🛠 nighttime hover activity tracking
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse || pairedListView.isHoveringItems) {
             osdAutohideTimer.stop(); 
@@ -121,7 +99,6 @@ Item {
         }
     }
 
-    // 📡 STATUS WATCHER
     Process {
         id: bluetoothWatcher
         command: ["true"]
@@ -140,7 +117,6 @@ Item {
         }
     }
 
-    // 📡 PAIRED REFRESHER
     Process {
         id: deviceScraper
         command: ["true"]
@@ -169,7 +145,6 @@ Item {
         }
     }
 
-    // 📡 DISCOVERY LIVE SCANNER RUNNER
     Process {
         id: scanAction
         command: ["true"]
@@ -181,7 +156,6 @@ Item {
         }
     }
 
-    // 📡 DISCOVERED REFRESHER
     Process {
         id: discoveryScraper
         command: ["true"]
@@ -220,7 +194,6 @@ Item {
         }
     }
 
-    // 🔄 CORE OPERATION ACTIONS
     Process { 
         id: bluetoothToggleAction
         command: ["true"]
@@ -244,7 +217,6 @@ Item {
         onExited: { running = false; refreshStatus(); refreshPairedList(); }
     }
     
-    // 🗑️ FORGET DEVICE PIPE
     Process {
         id: unpairAction
         command: ["true"]
@@ -264,7 +236,6 @@ Item {
         scanAction.running = true;
     }
 
-    // POLL INTERVAL WHEN OVERLAY IS OPEN
     Timer {
         interval: 4000
         running: bluetoothOverlayModal.visible
@@ -277,7 +248,6 @@ Item {
         }
     }
 
-    // POLL INTERVAL WHEN OVERLAY IS CLOSED
     Timer {
         interval: 5000
         running: !bluetoothOverlayModal.visible
@@ -285,9 +255,6 @@ Item {
         onTriggered: refreshStatus()
     }
 
-    // ==========================================
-    // 🎨 UI PANEL TRIGGER BUTTON
-    // ==========================================
     Rectangle {
         id: triggerBox
         anchors.fill: parent
@@ -312,7 +279,6 @@ Item {
         }
     }
 
-    // 🔄 GLOBAL CLEANUP LISTENER
     Connections {
         target: rootScope
         function onActiveModalChanged() {
@@ -322,14 +288,14 @@ Item {
         }
     }
 
-    // ==========================================
-    // 🪟 OVERLAY CONTROL MODAL WINDOW
-    // ==========================================
     PanelWindow {
         id: bluetoothOverlayModal
-        visible: bluetoothRoot.menuOpen
-        anchors.top: true; anchors.bottom: true; anchors.left: true; anchors.right: true
+        visible: bluetoothRoot.windowAlive
         color: "transparent"
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -343,41 +309,49 @@ Item {
         Rectangle {
             id: popupMenuFrame
             width: 300
-            
             anchors.bottom: parent.bottom
-            anchors.left: parent.left
             anchors.bottomMargin: 12
-            
-            property int targetX: -655
-            property real targetOpacity: 0.0
 
-            anchors.leftMargin: targetX
-            opacity: targetOpacity
-
-            SequentialAnimation {
-                id: slideInAnimation
-                PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    NumberAnimation { target: popupMenuFrame; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupMenuFrame; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+            states: [
+                State {
+                    name: "visible"
+                    when: bluetoothRoot.menuOpen
+                    PropertyChanges { target: popupMenuFrame; x: 0; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !bluetoothRoot.menuOpen
+                    PropertyChanges { target: popupMenuFrame; x: -320; opacity: 0.0 }
                 }
-            }
+            ]
 
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-            }
-            
-            Behavior on opacity {
-                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
-            }
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: { bluetoothRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
 
             color: "#9911111b" 
             border.width: 0
-            
             antialiasing: false
             topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
 
-            // 🛠️ Modified height calculation to inject an extra 40px padding if either list counts hit 0
             height: {
                 if (!bluetoothRoot.isPowered) return 92;
                 const activeCount = (currentTab === "paired") ? pairedDevicesModel.count : discoveredDevicesModel.count;
@@ -412,7 +386,6 @@ Item {
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 12; spacing: 10
 
-                // HEADER SECTION
                 RowLayout {
                     Layout.fillWidth: true
                     Text { text: "Bluetooth"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" } 
@@ -446,12 +419,10 @@ Item {
                     }
                 }
 
-                // NAVIGATION TABS SECTION
                 RowLayout {
                     Layout.fillWidth: true; spacing: 4
                     visible: bluetoothRoot.isPowered
 
-                    // Tab Button: My Devices
                     Rectangle {
                         Layout.fillWidth: true; height: 26; radius: 6
                         color: bluetoothRoot.currentTab === "paired" ? "#26ffffff" : "transparent"
@@ -459,7 +430,6 @@ Item {
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { bluetoothRoot.currentTab = "paired"; checkUserActivity(); } }
                     }
 
-                    // Tab Button: Discover New Devices
                     Rectangle {
                         Layout.fillWidth: true; height: 26; radius: 6
                         color: bluetoothRoot.currentTab === "discover" ? "#26ffffff" : "transparent"
@@ -485,15 +455,12 @@ Item {
                     }
                 }
 
-                // SUBSECTION SEPARATOR
                 Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff"; visible: bluetoothRoot.isPowered }
 
-                // PANE MULTIPLEXER STACK
                 Item {
                     id: multiplexStackContainer
                     Layout.fillWidth: true; Layout.fillHeight: true
 
-                    // PANE 1: PAIRED LIST
                     ListView {
                         id: pairedListView
                         anchors.fill: parent; spacing: 4; clip: true
@@ -605,7 +572,6 @@ Item {
                         }
                     }
 
-                    // PANE 2: DISCOVERY LIVE LIST
                     ListView {
                         id: discoveryListView
                         anchors.fill: parent; spacing: 4; clip: true 
