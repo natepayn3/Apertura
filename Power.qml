@@ -11,6 +11,7 @@ Item {
     implicitHeight: 32
 
     property bool menuOpen: false
+    property bool windowAlive: false
 
     Timer {
         id: osdAutohideTimer
@@ -18,15 +19,6 @@ Item {
         running: false
         repeat: false
         onTriggered: closeMenu()
-    }
-
-    Timer {
-        id: closeTimer
-        interval: 180
-        repeat: false
-        onTriggered: {
-            powerRoot.menuOpen = false;
-        }
     }
 
     function toggleMenu(): void {
@@ -38,18 +30,14 @@ Item {
     }
 
     function openMenu(): void {
-        popupPowerWrapper.targetX = -320;
-        popupPowerWrapper.targetOpacity = 0.0;
         rootScope.requestOpen("power");
+        windowAlive = true;
         menuOpen = true;
-        slideInAnimation.start();
         checkUserActivity();
     }
 
     function closeMenu(): void {
-        popupPowerWrapper.targetX = -320;
-        popupPowerWrapper.targetOpacity = 0.0;
-        closeTimer.start();
+        menuOpen = false;
     }
 
     function checkUserActivity() {
@@ -63,7 +51,7 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (menuOpen && rootScope.activeModal !== "power" && !slideInAnimation.running) {
+            if (menuOpen && rootScope.activeModal !== "power") {
                 closeMenu();
             }
         }
@@ -96,11 +84,11 @@ Item {
 
     PanelWindow {
         id: globalPowerModal
-        visible: powerRoot.menuOpen
-        anchors.left: true
-        anchors.top: true
-        anchors.bottom: true
-        anchors.right: true
+        visible: powerRoot.windowAlive
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         color: "transparent"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
@@ -121,13 +109,16 @@ Item {
         }
 
         function runCommand(args) {
-            closeMenu();
             if (args[0] === "INTERNAL_LOCK") {
+                powerRoot.menuOpen = false;
+                osdAutohideTimer.stop();
+                
                 Quickshell.execDetached([
                     "sh", "-c", 
-                    "loginctl lock-session || hyprlock || swaylock || waylock"
+                    "hyprlock"
                 ]);
             } else {
+                closeMenu();
                 sysCmd.command = args;
                 sysCmd.running = true;
             }
@@ -147,28 +138,41 @@ Item {
             height: 200
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 12
-            anchors.left: parent.left
-            property int targetX: -320
-            property real targetOpacity: 0.0
-            anchors.leftMargin: targetX
-            opacity: targetOpacity
 
-            SequentialAnimation {
-                id: slideInAnimation
-                PauseAnimation { duration: 16 }
-                ParallelAnimation {
-                    NumberAnimation { target: popupPowerWrapper; property: "targetX"; to: 0; duration: 180; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: popupPowerWrapper; property: "targetOpacity"; to: 1.0; duration: 140; easing.type: Easing.OutQuad }
+            states: [
+                State {
+                    name: "visible"
+                    when: powerRoot.menuOpen
+                    PropertyChanges { target: popupPowerWrapper; x: 0; opacity: 1.0 }
+                },
+                State {
+                    name: "hidden"
+                    when: !powerRoot.menuOpen
+                    PropertyChanges { target: popupPowerWrapper; x: -180; opacity: 0.0 }
                 }
-            }
+            ]
 
-            Behavior on anchors.leftMargin {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-            }
-
-            Behavior on opacity {
-                NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
-            }
+            transitions: [
+                Transition {
+                    from: "hidden"; to: "visible"
+                    ParallelAnimation {
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                },
+                Transition {
+                    from: "visible"; to: "hidden"
+                    SequentialAnimation {
+                        ParallelAnimation {
+                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                        }
+                        ScriptAction {
+                            script: { powerRoot.windowAlive = false; }
+                        }
+                    }
+                }
+            ]
 
             color: "#9911111b" 
             border.width: 0
