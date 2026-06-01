@@ -58,6 +58,15 @@ Scope {
         }
     }
 
+    IpcHandler {
+        target: "sysmonitor"
+        function toggle(): void {
+            for (let s in rootScope.instantiatedBars)
+                if (rootScope.instantiatedBars[s].sysMonitorModule)
+                    rootScope.instantiatedBars[s].sysMonitorModule.toggleMenu();
+        }
+    }
+
     Instantiator {
         id: barWindows
         model: Quickshell.screens
@@ -76,6 +85,7 @@ Scope {
                 property alias wallpaperModule: wallpaperItem
                 property alias calendarModule: calendarItem
                 property alias notesModule: notesItem
+                property alias sysMonitorModule: sysMonitorItem
 
                 screen: modelData
                 anchors { left: true; top: true; bottom: true }
@@ -148,6 +158,7 @@ Scope {
                                 Notification { Layout.alignment: Qt.AlignHCenter }
                                 Bluetooth { Layout.alignment: Qt.AlignHCenter }
                                 Audio { Layout.alignment: Qt.AlignHCenter }
+                                SysMonitor { id: sysMonitorItem; Layout.alignment: Qt.AlignHCenter }
                                 Power { Layout.alignment: Qt.AlignHCenter }
                             }
                         }
