@@ -10,26 +10,15 @@ import "."
 Scope {
     id: rootScope
 
+    Theme { id: theme }
+
     property var activeModal: null
     property bool audioSliderActive: false
     property var instantiatedBars: ({})
     property bool sessionLocked: false
 
-    property int clockX: 200
-    property int clockY: 200
-    property bool isDraggingClock: false
-    property int dragStartX: 0
-    property int dragStartY: 0
-    property int initialClockX: 0
-    property int initialClockY: 0
-
     function requestOpen(modalName) { activeModal = modalName; }
     function dismissAll() { activeModal = null; }
-
-    IpcHandler {
-        target: "session"
-        function lock(): void { rootScope.sessionLocked = true; }
-    }
 
     IpcHandler {
         target: "launcher"
@@ -108,9 +97,15 @@ Scope {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: "#9911111b"
+                    // Transparency is now handled solely by the theme's alpha channel
+                    color: theme.bg
 
-                    MouseArea { anchors.fill: parent; hoverEnabled: true; z: -1; onPressed: rootScope.dismissAll() }
+                    MouseArea { 
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        z: -1
+                        onPressed: rootScope.dismissAll() 
+                    }
 
                     Column {
                         id: topStackColumn
@@ -123,8 +118,6 @@ Scope {
                         Item { height: 8; width: 1 }
                         Workspaces { anchors.horizontalCenter: parent.horizontalCenter; z: 1 }
                     }
-
-                    Item { anchors.top: topStackColumn.bottom; anchors.left: parent.left; anchors.right: parent.right }
 
                     ColumnLayout {
                         id: bottomGroupControls
@@ -178,8 +171,5 @@ Scope {
                 }
             }
         }
-    }
-    DesktopClock {
-        id: desktopClockWidget
     }
 }
