@@ -119,7 +119,8 @@ Item {
 
     Process {
         id: taskListFetcher
-        command: ["ps", "-eo", "comm,pcpu", "--sort=-pcpu"]
+        // Added nproc to the pipeline to dynamically get the total thread count
+        command: ["sh", "-c", "threads=$(nproc); ps -eo comm,pcpu --sort=-pcpu | awk -v t=\"$threads\" 'NR>1 {print $1, $2/t}'"]
         running: false
 
         stdout: StdioCollector {
@@ -130,7 +131,10 @@ Item {
                 let lines = cleaned.split("\n");
                 processListModel.clear();
 
-                for (let i = 1; i < lines.length; i++) {
+                // Limit loop to top 5-6 processes to keep the overlay performant
+                let maxLines = Math.min(lines.length, 7); 
+
+                for (let i = 0; i < maxLines; i++) {
                     let line = lines[i].trim();
                     if (!line) continue;
 
@@ -138,12 +142,15 @@ Item {
                     if (lastSpace === -1) continue;
 
                     let pName = line.substring(0, lastSpace).trim();
-                    let pCpu = line.substring(lastSpace + 1).trim();
+                    let pCpuRaw = parseFloat(line.substring(lastSpace + 1).trim());
 
+                    // Filter out the metrics pipeline noise
                     if (pName === "ps" || pName === "sh" || pName === "awk" || pName === "quickshell") continue;
 
-                    if (pName && pCpu) {
-                        processListModel.append({ "name": pName, "cpu": pCpu });
+                    if (pName && !isNaN(pCpuRaw)) {
+                        // Round to 1 decimal place to match your system-wide UI layout
+                        let pCpuNormalized = pCpuRaw.toFixed(1);
+                        processListModel.append({ "name": pName, "cpu": pCpuNormalized });
                     }
                 }
             }
@@ -315,14 +322,29 @@ Item {
                         Text { text: monitorRoot.cpuTemp + "°C  |  " + monitorRoot.cpuPercent + "%"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                     }
 
-                    Rectangle {
-                        Layout.fillWidth: true; height: 4; color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"; radius: 0; clip: true
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 4 // Defines the bounding box for the bars
+
+                        // 1. Unfilled Background Track (Isolated Opacity)
                         Rectangle {
-                            width: parent.width * (monitorRoot.cpuPercent / 100.0)
+                            anchors.fill: parent
+                            color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
+                            opacity: 0.12
+                            radius: 0
+                        }
+
+                        // 2. Active Progress Bar (Full Brightness)
+                        Rectangle {
+                            id: cpuProgressBar
                             height: parent.height
+                            width: parent.width * (monitorRoot.cpuPercent / 100.0)
                             color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
-                            Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                            
+                            Behavior on width { 
+                                NumberAnimation { duration: 180; easing.type: Easing.OutCubic } 
+                            }
                         }
                     }
                 }
@@ -338,14 +360,29 @@ Item {
                         Text { text: monitorRoot.ramUsed.toFixed(1) + " / " + monitorRoot.ramTotal.toFixed(1) + " GB"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                     }
 
-                    Rectangle {
-                        Layout.fillWidth: true; height: 4; color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"; radius: 0; clip: true
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 4
+
+                        // Unfilled Background Track (Isolated Opacity)
                         Rectangle {
-                            width: parent.width * (monitorRoot.ramPercent / 100.0)
+                            anchors.fill: parent
+                            color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
+                            opacity: 0.12
+                            radius: 0
+                        }
+
+                        // Active Progress Bar (Full Brightness)
+                        Rectangle {
+                            id: ramProgressBar
                             height: parent.height
+                            width: parent.width * (monitorRoot.ramPercent / 100.0)
                             color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
-                            Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                            
+                            Behavior on width { 
+                                NumberAnimation { duration: 180; easing.type: Easing.OutCubic } 
+                            }
                         }
                     }
                 }
@@ -356,19 +393,34 @@ Item {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "DISK"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Medium; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
+                        Text { text: "Disk Usage"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Medium; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                         Item { Layout.fillWidth: true }
                         Text { text: monitorRoot.diskUsed + " / " + monitorRoot.diskTotal + " GB"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                     }
 
-                    Rectangle {
-                        Layout.fillWidth: true; height: 4; color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"; radius: 0; clip: true
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 4
+
+                        // Unfilled Background Track (Isolated Opacity)
                         Rectangle {
-                            width: parent.width * (monitorRoot.diskPercent / 100.0)
+                            anchors.fill: parent
+                            color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
+                            opacity: 0.12
+                            radius: 0
+                        }
+
+                        // Active Progress Bar (Full Brightness)
+                        Rectangle {
+                            id: diskProgressBar
                             height: parent.height
+                            width: parent.width * (monitorRoot.diskPercent / 100.0)
                             color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
-                            Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                            
+                            Behavior on width { 
+                                NumberAnimation { duration: 180; easing.type: Easing.OutCubic } 
+                            }
                         }
                     }
                 }
