@@ -258,7 +258,7 @@ Item {
     Rectangle {
         id: triggerBox
         anchors.fill: parent
-        color: bluetoothMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: bluetoothMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
 
         Text {
@@ -266,8 +266,8 @@ Item {
             text: bluetoothRoot.isPowered ? (bluetoothRoot.isConnected ? "󰂱" : "󰂯") : "󰂲"
             font.family: "Rubik"
             font.pixelSize: 20
-            color: bluetoothRoot.isConnected ? "#ffffff" : 
-                   bluetoothRoot.isPowered   ? "#ffffff" : "#59ffffff"
+            color: bluetoothRoot.isConnected ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") : 
+                   bluetoothRoot.isPowered   ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
         }
 
         MouseArea {
@@ -388,15 +388,15 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Bluetooth"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" } 
+                    Text { text: "Bluetooth"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" } 
                     Item { Layout.fillWidth: true }
                     
                     Rectangle {
                         width: 50; height: 24; radius: 12
-                        color: bluetoothRoot.isPowered ? "#45ffffff" : "#26ffffff"
+                        color: bluetoothRoot.isPowered ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff")
                         
                         Rectangle {
-                            width: 18; height: 18; radius: 9; color: "#11111b"
+                            width: 18; height: 18; radius: 9; color: rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"
                             anchors.verticalCenter: parent.verticalCenter
                             x: bluetoothRoot.isPowered ? 28 : 4
                             Behavior on x { NumberAnimation { duration: 120 } }
@@ -425,20 +425,20 @@ Item {
 
                     Rectangle {
                         Layout.fillWidth: true; height: 26; radius: 6
-                        color: bluetoothRoot.currentTab === "paired" ? "#26ffffff" : "transparent"
-                        Text { text: "My Devices"; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff"; anchors.centerIn: parent }
+                        color: bluetoothRoot.currentTab === "paired" ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
+                        Text { text: "My Devices"; font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; anchors.centerIn: parent }
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { bluetoothRoot.currentTab = "paired"; checkUserActivity(); } }
                     }
 
                     Rectangle {
                         Layout.fillWidth: true; height: 26; radius: 6
-                        color: bluetoothRoot.currentTab === "discover" ? "#26ffffff" : "transparent"
+                        color: bluetoothRoot.currentTab === "discover" ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
                         RowLayout {
                             anchors.centerIn: parent; spacing: 6
-                            Text { text: "Discover"; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff" }
+                            Text { text: "Discover"; font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
                             Text {
                                 text: ""; font.family: "FontAwesome"
-                                font.pixelSize: 10; color: "#ffffff"
+                                font.pixelSize: 10; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                                 visible: bluetoothRoot.isScanning
                                 RotationAnimator on rotation { loops: Animation.Infinite; from: 0; to: 360; running: bluetoothRoot.isScanning; duration: 1000 }
                             }
@@ -455,7 +455,7 @@ Item {
                     }
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff"; visible: bluetoothRoot.isPowered }
+                Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"; visible: bluetoothRoot.isPowered }
 
                 Item {
                     id: multiplexStackContainer
@@ -472,7 +472,7 @@ Item {
                         Text { 
                             anchors.centerIn: parent; 
                             text: bluetoothRoot.isPowered ? "No devices paired" : "Bluetooth is turned off"; 
-                            font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"; 
+                            font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"; 
                             visible: pairedListView.count === 0 || !bluetoothRoot.isPowered 
                         }
                         
@@ -482,7 +482,7 @@ Item {
                             
                             Rectangle {
                                 id: rowBox
-                                anchors.fill: parent; color: rowMasterArea.containsMouse ? "#26ffffff" : "transparent"; radius: 6
+                                anchors.fill: parent; color: rowMasterArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 6
                                 
                                 RowLayout {
                                     anchors.fill: parent
@@ -490,8 +490,8 @@ Item {
                                     anchors.rightMargin: staticOptionsWrapper.width + 12
                                     spacing: 10
                                     
-                                    Text { text: model.isDeviceConnected ? "󰂱" : "󰂯"; font.family: "Rubik"; font.pixelSize: 16; color: "#ffffff"; Layout.alignment: Qt.AlignVCenter }
-                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight; Layout.alignment: Qt.AlignVCenter }
+                                    Text { text: model.isDeviceConnected ? "󰂱" : "󰂯"; font.family: "Rubik"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignVCenter }
+                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight; Layout.alignment: Qt.AlignVCenter }
                                 }
                                 
                                 RowLayout {
@@ -507,7 +507,7 @@ Item {
                                         id: actionLabel
                                         text: model.isTransitioning ? "Connecting..." : (model.isDeviceConnected ? "Disconnect" : "Connect")
                                         font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
-                                        color: "#ffffff"
+                                        color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
                                         Layout.alignment: Qt.AlignVCenter
 
                                         MouseArea {
@@ -532,7 +532,7 @@ Item {
                                     Text { 
                                         id: pipeDivider
                                         text: "|" 
-                                        font.family: "Rubik"; font.pixelSize: 11; color: "#26ffffff"
+                                        font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
                                         Layout.alignment: Qt.AlignVCenter
                                         visible: !model.isTransitioning
                                     }
@@ -540,7 +540,7 @@ Item {
                                     Text {
                                         id: forgetLabel
                                         text: "Forget"
-                                        font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#59ffffff"
+                                        font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
                                         Layout.alignment: Qt.AlignVCenter
                                         visible: !model.isTransitioning
 
@@ -581,7 +581,7 @@ Item {
                         Text { 
                             anchors.centerIn: parent; 
                             text: bluetoothRoot.isPowered ? (bluetoothRoot.isScanning ? "Scanning for local signals..." : "No new devices found") : "Bluetooth is turned off"; 
-                            font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"; 
+                            font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"; 
                             visible: discoveryListView.count === 0 || !bluetoothRoot.isPowered 
                         }
                         
@@ -589,7 +589,7 @@ Item {
                             width: discoveryListView.width; height: 36
                             
                             Rectangle {
-                                anchors.fill: parent; color: dArea.containsMouse ? "#26ffffff" : "transparent"; radius: 6
+                                anchors.fill: parent; color: dArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 6
                                 
                                 RowLayout {
                                     anchors.fill: parent; anchors.margins: 8; spacing: 10
@@ -598,12 +598,12 @@ Item {
                                         width: 14; height: 14
                                         Layout.alignment: Qt.AlignVCenter
                                         
-                                        Rectangle { width: 10; height: 2; color: "#ffffff"; anchors.centerIn: parent }
-                                        Rectangle { width: 2; height: 10; color: "#ffffff"; anchors.centerIn: parent }
+                                        Rectangle { width: 10; height: 2; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; anchors.centerIn: parent }
+                                        Rectangle { width: 2; height: 10; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; anchors.centerIn: parent }
                                     }
                                     
-                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight } 
-                                    Text { text: "Pair"; font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: "#ffffff"; visible: dArea.containsMouse } 
+                                    Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight } 
+                                    Text { text: "Pair"; font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"; visible: dArea.containsMouse } 
                                 }
                                 
                                 MouseArea {
