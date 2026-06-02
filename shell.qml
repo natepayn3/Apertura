@@ -99,7 +99,7 @@ Scope {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: theme.bg
+                    color: "#9911111b"
 
                     MouseArea { 
                         anchors.fill: parent
