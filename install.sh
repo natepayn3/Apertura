@@ -29,6 +29,7 @@ echo ""
 echo -e "${BLUE}[*]${RESET} Updating system repositories and checking dependencies..."
 DEPENDENCIES=(
     "quickshell"
+    "matugen"                      # Material You color generation backbone engine
     "awww"                         # Targeted standard AUR package instead of -git
     "bluez"
     "bluez-utils"                  # Provides 'bluetoothctl' binary used by Bluetooth.qml
@@ -131,37 +132,13 @@ fi
 # 2. Inject layer blur configurations if missing
 if ! grep -q "quickshell-bar-blur" "$HYPRLAND_LUA"; then
     echo -e "    ${GRAY}➔${RESET} Adding bar layer rule hooks..."
-    cat << 'EOF' | safe_append "$HYPRLAND_LUA"
-
--- Unique configuration for the bar layer
-hl.layer_rule({
-    name  = "quickshell-bar-blur",
-    match = { namespace = "quickshell-bar" },
-    blur  = true,
-    xray  = false,
-})
-
--- Combined rule for all other components using regex matching
-hl.layer_rule({
-    name         = "quickshell-components-blur",
-    match        = { namespace = "^quickshell-(overlay|wallpapers|launcher)$" },
-    blur         = true,
-    xray         = true,
-    ignore_alpha = 0.5,
-})
-EOF
+    echo -e "\n-- Unique configuration for the bar layer\nhl.layer_rule({\n    name  = \"quickshell-bar-blur\",\n    match = { namespace = \"quickshell-bar\" },\n    blur  = true,\n    xray  = true,\n})\n\n-- Combined rule for all other components using regex matching\nhl.layer_rule({\n    name         = \"quickshell-components-blur\",\n    match        = { namespace = \"^quickshell-(overlay|wallpapers|launcher)$\" },\n    blur         = true,\n    xray         = true,\n    ignore_alpha = 0.5,\n})" | safe_append "$HYPRLAND_LUA"
 fi
 
 # 3. Inject initializers hooks into startup blocks specifically for Apertura
 if ! grep -q 'hl.exec_cmd("qs -c Apertura")' "$HYPRLAND_LUA"; then
     echo -e "    ${GRAY}➔${RESET} Adding startup daemon execution engine..."
-    cat << 'EOF' | safe_append "$HYPRLAND_LUA"
-
-hl.on("hyprland.start", function () 
-  hl.exec_cmd("qs -c Apertura")
-  hl.exec_cmd("awww-daemon")
-end)
-EOF
+    echo -e "\nhl.on(\"hyprland.start\", function ()\n  hl.exec_cmd(\"qs -c Apertura\")\n  hl.exec_cmd(\"awww-daemon\")\nend)" | safe_append "$HYPRLAND_LUA"
 fi
 
 echo -e "${BLUE}[*]${RESET} Booting underlying hardware service engines..."
@@ -172,6 +149,13 @@ echo -e "${BLUE}[*]${RESET} Activating user space daemons..."
 if command -v awww-daemon &>/dev/null; then
     pkill awww-daemon || true
     awww-daemon & disown
+fi
+
+# Initialize color generation engine across active wallpaper target paths if files exist
+ACTIVE_WALLPAPER=$(ls -d "$WALLPAPER_DIR"/* 2>/dev/null | head -n 1 || echo "")
+if [ -n "$ACTIVE_WALLPAPER" ] && command -v matugen &>/dev/null; then
+    echo -e "${BLUE}[*]${RESET} Priming colorscheme generation profiles via Matugen..."
+    matugen image "$ACTIVE_WALLPAPER"
 fi
 
 echo ""
