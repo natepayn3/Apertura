@@ -26,6 +26,15 @@
 --     ignore_alpha = 0.5,
 -- })
 --
+-- -- Satty always floats
+-- hl.window_rule({
+--     name  = "satty-screenshot-floating",
+--     match = { 
+--        class = "com.gabm.satty" 
+--     },
+--     float = true,
+-- })
+--
 -- If you don't want to see the wallpaper and just have the bar and modules blur everything, change xray to "false" in both rules
 --
 -----------------------------------------
@@ -331,4 +340,13 @@ hl.layer_rule({
     blur         = true,
     xray         = true,
     ignore_alpha = 0.5,
+})
+
+-- Satty always floats
+hl.window_rule({
+    name  = "satty-screenshot-floating",
+    match = { 
+        class = "com.gabm.satty" 
+    },
+    float = true,
 })
