@@ -202,7 +202,7 @@ Item {
     Rectangle {
         id: volumeHitbox
         anchors.fill: parent
-        color: volumeMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: volumeMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
 
         ColumnLayout {
@@ -215,7 +215,7 @@ Item {
                 text: (audioRoot.isMuted || audioRoot.currentVol <= 0.01) ? "volume_off" : (audioRoot.currentVol > 0.50 ? "volume_up" : "volume_down")
                 font.family: "Material Symbols Outlined"
                 font.pixelSize: 24
-                color: "#ffffff" 
+                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
             }
         }
 
@@ -341,13 +341,13 @@ Item {
                 id: titleLabel
                 text: "Audio"
                 font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; 
-                color: "#ffffff" 
+                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
                 x: 14; y: 14
             }
 
             Rectangle {
                 id: headerDivider
-                width: parent.width - 24; height: 1; color: "#26ffffff"
+                width: parent.width - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
                 x: 12; y: 44
             }
 
@@ -368,7 +368,7 @@ Item {
                 }
 
                 background: Rectangle {
-                    height: 3; radius: 0; color: "#26ffffff"
+                    height: 3; radius: 0; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
                     width: globalVolumeSlider.availableWidth
                     x: globalVolumeSlider.leftPadding
                     y: globalVolumeSlider.topPadding + globalVolumeSlider.availableHeight / 2 - height / 2
@@ -376,13 +376,13 @@ Item {
                     Rectangle {
                         height: parent.height
                         width: globalVolumeSlider.visualPosition * parent.width
-                        color: "#ffffff" 
+                        color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" 
                         radius: 0
                     }
                 }
 
                 handle: Rectangle {
-                    width: 16; height: 16; radius: 8; color: "#ffffff" 
+                    width: 16; height: 16; radius: 8; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" 
                     x: globalVolumeSlider.leftPadding + globalVolumeSlider.visualPosition * (globalVolumeSlider.availableWidth - width)
                     y: globalVolumeSlider.topPadding + globalVolumeSlider.availableHeight / 2 - height / 2
 
@@ -404,14 +404,14 @@ Item {
 
             Text {
                 text: Math.round(globalVolumeSlider.value * 100) + "%"
-                font.family: "Rubik"; font.pixelSize: 12; font.bold: true; color: "#ffffff"
+                font.family: "Rubik"; font.pixelSize: 12; font.bold: true; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                 anchors.verticalCenter: globalVolumeSlider.verticalCenter
                 anchors.right: parent.right; anchors.rightMargin: 14
             }
 
             Rectangle {
                 id: sliderDivider
-                width: parent.width - 24; height: 1; color: "#26ffffff"
+                width: parent.width - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
                 x: 12; y: 94
             }
 
@@ -419,7 +419,7 @@ Item {
                 id: outputsLabel
                 text: "Outputs"
                 font.family: "Rubik"; font.pixelSize: 13; font.bold: true; 
-                color: "#ffffff" 
+                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
                 x: 14; y: 104
             }
 
@@ -454,7 +454,7 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             radius: 0
-                            color: active ? "#45ffffff" : (deviceMouse.containsMouse ? "#1affffff" : "transparent")
+                            color: active ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (deviceMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#1affffff") : "transparent")
                             border.width: 0
 
                             RowLayout {
@@ -464,14 +464,14 @@ Item {
 
                                 Rectangle {
                                     width: 6; height: 6; radius: 3
-                                    color: active ? "#ffffff" : "transparent"
+                                    color: active ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : "transparent"
                                     Layout.alignment: Qt.AlignVCenter
                                 }
 
                                 Text {
                                     text: name
                                     font.family: "Rubik"; font.pixelSize: 12
-                                    color: active ? "#ffffff" : "#59ffffff" 
+                                    color: active ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#59ffffff") 
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
                                 }
