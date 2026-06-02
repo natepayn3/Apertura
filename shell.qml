@@ -74,6 +74,10 @@ Scope {
         delegate: Scope {
             VolumeHud { targetScreen: modelData }
 
+            DesktopClock {
+                screen: modelData
+            }
+
             PanelWindow {
                 id: mainBarWindow
                 property string screenKey: modelData.name
@@ -129,15 +133,16 @@ Scope {
                         spacing: 12
                         property bool isExpanded: false
 
-                        Rectangle {
-                            id: toggleButton
-                            Layout.preferredWidth: 32; Layout.preferredHeight: 32; Layout.alignment: Qt.AlignHCenter
-                            color: toggleMouseArea.containsMouse ? "#26ffffff" : "transparent"; radius: 4
+                    Rectangle {
+                        id: toggleButton
+                        Layout.preferredWidth: 32; Layout.preferredHeight: 32; Layout.alignment: Qt.AlignHCenter
+                        color: toggleMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 4
 
                             Text {
                                 anchors.centerIn: parent
                                 text: bottomGroupControls.isExpanded ? "arrow_drop_down" : "arrow_drop_up"
-                                font.family: "Material Symbols Outlined"; font.pixelSize: 30; color: "#ffffff"
+                                font.family: "Material Symbols Outlined"; font.pixelSize: 30
+                                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                             }
 
                             MouseArea {
