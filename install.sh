@@ -29,6 +29,7 @@ echo ""
 echo -e "${BLUE}[*]${RESET} Updating system repositories and checking dependencies..."
 DEPENDENCIES=(
     "quickshell"
+    "satty"                         # Added dependency for screenshot annotations
     "matugen"                      # Material You color generation backbone engine
     "awww"                         # Targeted standard AUR package instead of -git
     "bluez"
@@ -57,13 +58,15 @@ for pkg in "${DEPENDENCIES[@]}"; do
             NEW_FONTS_INSTALLED=true
         fi
 
-        # Execute helper with safe fallback to handle manual conflict confirmations if needed
-        if command -v paru &>/dev/null; then
+        # Check cachyos repo or explicit helpers for installation
+        if command -v pacman &>/dev/null && pacman -Si "$pkg" &>/dev/null; then
+            sudo pacman -S --noconfirm --needed "$pkg"
+        elif command -v paru &>/dev/null; then
             paru -S --noconfirm --needed "$pkg" || paru -S --needed "$pkg"
         elif command -v yay &>/dev/null; then
             yay -S --noconfirm --needed "$pkg" || yay -S --needed "$pkg"
         else
-            echo -e "${RED}[X] Error:${RESET} Neither paru nor yay found. Please install $pkg manually."
+            echo -e "${RED}[X] Error:${RESET} Neither pacman (repo match), paru, nor yay found. Please install $pkg manually."
             exit 1
         fi
     fi
@@ -135,7 +138,13 @@ if ! grep -q "quickshell-bar-blur" "$HYPRLAND_LUA"; then
     echo -e "\n-- Unique configuration for the bar layer\nhl.layer_rule({\n    name  = \"quickshell-bar-blur\",\n    match = { namespace = \"quickshell-bar\" },\n    blur  = true,\n    xray  = true,\n})\n\n-- Combined rule for all other components using regex matching\nhl.layer_rule({\n    name         = \"quickshell-components-blur\",\n    match        = { namespace = \"^quickshell-(overlay|wallpapers|launcher)$\" },\n    blur         = true,\n    xray         = true,\n    ignore_alpha = 0.5,\n})" | safe_append "$HYPRLAND_LUA"
 fi
 
-# 3. Inject initializers hooks into startup blocks specifically for Apertura
+# 3. Inject satty window rule if missing
+if ! grep -q "satty-screenshot-floating" "$HYPRLAND_LUA"; then
+    echo -e "    ${GRAY}➔${RESET} Adding satty floating window rule..."
+    echo -e "\nhl.window_rule({\n    name  = \"satty-screenshot-floating\",\n    match = { \n        class = \"com.gabm.satty\" \n    },\n    float = true,\n})" | safe_append "$HYPRLAND_LUA"
+fi
+
+# 4. Inject initializers hooks into startup blocks specifically for Apertura
 if ! grep -q 'hl.exec_cmd("qs -c Apertura")' "$HYPRLAND_LUA"; then
     echo -e "    ${GRAY}➔${RESET} Adding startup daemon execution engine..."
     echo -e "\nhl.on(\"hyprland.start\", function ()\n  hl.exec_cmd(\"qs -c Apertura\")\n  hl.exec_cmd(\"awww-daemon\")\nend)" | safe_append "$HYPRLAND_LUA"
