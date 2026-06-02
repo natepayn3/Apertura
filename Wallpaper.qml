@@ -280,7 +280,7 @@ Item {
                             onPositionChanged: { if (verifyTruePointerAction()) { if (wallpaperListView.logicalMouseIndexStore !== index) { wallpaperListView.activeKeyIndex = -1; wallpaperListView.logicalMouseIndexStore = index; } } }
                             onExited: { if (wallpaperListView.logicalMouseIndexStore === index) { wallpaperListView.logicalMouseIndexStore = -1; } }
                             onClicked: { 
-                                wallpaperSetter.command = ["awww", "img", model.fullPath, "--transition-type", "wipe", "--transition-step", "16"]; 
+                                wallpaperSetter.command = ["awww", "img", model.fullPath, "--transition-type", "wipe", "--transition-step", "16", "--transition-duration", "1"];
                                 wallpaperSetter.running = true; 
                                 matugenSetter.command = [
                                     "sh",
