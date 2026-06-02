@@ -61,7 +61,7 @@ Item {
         id: powerHitbox
         width: 32
         height: 32
-        color: powerMouseArea.containsMouse || menuOpen ? "#26ffffff" : "transparent"
+        color: powerMouseArea.containsMouse || menuOpen ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
 
         Text {
@@ -69,7 +69,7 @@ Item {
             text: "power_settings_new"
             font.family: "Material Symbols Outlined"
             font.pixelSize: 16
-            color: "#ffffff"
+            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
             anchors.centerIn: parent
         }
 
@@ -212,7 +212,7 @@ Item {
                         font.family: "Rubik"
                         font.pixelSize: 16 
                         font.weight: Font.Bold 
-                        color: "#ffffff" 
+                        color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
                     }
                     Item { Layout.fillWidth: true }
                 }
@@ -220,7 +220,7 @@ Item {
                 Rectangle { 
                     Layout.fillWidth: true
                     height: 1 
-                    color: "#26ffffff" 
+                    color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" 
                 }
 
                 ColumnLayout {
@@ -250,7 +250,7 @@ Item {
                                 Rectangle {
                                     id: btnBg
                                     anchors.fill: parent
-                                    color: menuBtn.containsMouse ? "#26ffffff" : "transparent"
+                                    color: menuBtn.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
                                     radius: 0 
 
                                     Text {
@@ -258,7 +258,7 @@ Item {
                                         font.family: "Rubik"
                                         font.pixelSize: 13
                                         font.weight: Font.Normal
-                                        color: menuBtn.containsMouse ? "#ffffff" : "#8cffffff"
+                                        color: menuBtn.containsMouse ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#8cffffff")
                                         anchors.verticalCenter: btnBg.verticalCenter
                                         anchors.left: btnBg.left
                                         anchors.leftMargin: 8
