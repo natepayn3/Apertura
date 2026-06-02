@@ -15,7 +15,6 @@ Item {
     property var activeWorkspaceList: [1, 2]
     property var occupiedMap: ({})
 
-    // --- Query all workspaces ---
     Process {
         id: queryWorkspaceList
         command: ["hyprctl", "workspaces", "-j"]
@@ -50,7 +49,6 @@ Item {
         }
     }
 
-    // --- Query active workspace ---
     Process {
         id: queryActiveWorkspace
         command: ["hyprctl", "activeworkspace", "-j"]
@@ -150,7 +148,7 @@ Item {
                 height: workspaceContainer.isVertical ? (workspaceButton.isActive ? 58 : 28) : 28
                 radius: 6
                 anchors.centerIn: parent
-                color: workspaceContainer.theme ? workspaceContainer.theme.primary : "#89b4fa"
+                color: workspaceContainer.theme ? workspaceContainer.theme.theme_primary : "#89b4fa"
                 opacity: workspaceButton.containsMouse ? 0.3 : 0.0
                 z: 1
             }
@@ -165,16 +163,17 @@ Item {
 
                 color: {
                     if (!workspaceContainer.theme) return "transparent";
-                    if (workspaceContainer.activeWorkspace === wsId) return workspaceContainer.theme.primary;
-                    if (workspaceContainer.occupiedMap[wsId]) return workspaceContainer.theme.text;
+                    if (workspaceContainer.activeWorkspace === wsId) return workspaceContainer.theme.theme_primary;
+                    if (workspaceContainer.occupiedMap[wsId]) return workspaceContainer.theme.theme_fg;
                     return "transparent";
                 }
 
                 border.width: (!(workspaceContainer.activeWorkspace === wsId) && !workspaceContainer.occupiedMap[wsId]) ? 1.5 : 0
+                
                 border.color: {
                     if (!workspaceContainer.theme) return "transparent";
                     return (!(workspaceContainer.activeWorkspace === wsId) && !workspaceContainer.occupiedMap[wsId])
-                        ? workspaceContainer.theme.outline
+                        ? workspaceContainer.theme.theme_outline
                         : "transparent";
                 }
 
@@ -190,8 +189,8 @@ Item {
                     color: {
                         if (!workspaceContainer.theme) return "#ffffff";
                         return workspaceContainer.activeWorkspace === wsId
-                            ? workspaceContainer.theme.onPrimary
-                            : workspaceContainer.theme.text;
+                            ? workspaceContainer.theme.theme_onPrimary
+                            : workspaceContainer.theme.theme_fg;
                     }
                     opacity: workspaceContainer.activeWorkspace === wsId ? 1.0 : 0.0
                 }
