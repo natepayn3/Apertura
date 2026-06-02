@@ -284,12 +284,7 @@ Item {
                                 matugenSetter.command = [
                                     "sh",
                                     "-c",
-                                    "mkdir -p " + Quickshell.env("HOME") +
-                                    "/.config/matugen/templates/ && " +
-                                    "matugen -t scheme-fidelity image --source-color-index 0 \"" +
-                                    model.fullPath + "\" --json hex > " +
-                                    Quickshell.env("HOME") +
-                                    "/.config/matugen/templates/colors.json"
+                                    "mkdir -p " + Quickshell.env("HOME") + "/.config/matugen/templates/ && matugen -t scheme-fidelity image --source-color-index 0 \"" + model.fullPath + "\" --json hex > " + Quickshell.env("HOME") + "/.config/matugen/templates/colors.json"
                                 ];
                                 matugenSetter.running = true;
                                 closeMenu(); 
@@ -303,13 +298,14 @@ Item {
 
     Process { id: wallpaperSetter; command: ["true"]; running: false }
     Process {
-    id: matugenSetter
-    command: ["true"]
-    running: false
+        id: matugenSetter
+        command: ["true"]
+        running: false
 
-        onExited: {
-            console.log("Matugen finished → reloading theme")
-            rootScope.theme.reloadTheme()
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0) {
+                rootScope.theme.reloadTheme();
+            }
         }
     }
 }
