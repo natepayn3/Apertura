@@ -141,7 +141,7 @@ Item {
     Rectangle {
         id: triggerButton
         anchors.fill: parent
-        color: launcherMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: launcherMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
 
         Text {
@@ -149,7 +149,7 @@ Item {
             text: "󰣇" 
             font.family: "Rubik"
             font.pixelSize: 24
-            color: "#ffffff" 
+            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
         }
 
         MouseArea {
@@ -343,7 +343,7 @@ Item {
                     font.family: "Rubik"
                     font.pixelSize: 18
                     font.weight: Font.Bold
-                    color: "#ffffff" 
+                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
                     Layout.alignment: Qt.AlignLeft
                     Layout.bottomMargin: 2
                     Layout.topMargin: 4
@@ -366,7 +366,7 @@ Item {
 
                         Rectangle {
                             anchors.fill: parent
-                            color: (appListView.currentIndex === index) ? "#26ffffff" : "transparent"
+                            color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
                             radius: 0 
                             z: 0 
                         }
@@ -392,14 +392,14 @@ Item {
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: 0 
-                                    color: "#1affffff" 
+                                    color: rootScope.theme ? rootScope.theme.theme_outline : "#1affffff" 
                                     visible: model.iconPath === ""
 
                                     Text {
                                         anchors.centerIn: parent
                                         text: model.name.charAt(0).toUpperCase()
                                         font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
-                                        color: "#ffffff" 
+                                        color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
                                     }
                                 }
                             }
@@ -407,7 +407,7 @@ Item {
                             Text {
                                 text: model.name
                                 font.family: "Rubik"; font.weight: Font.Medium; font.pixelSize: 14
-                                color: "#ffffff" 
+                                color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
                                 Layout.fillWidth: true
                                 elide: Text.ElideRight 
                                 Layout.alignment: Qt.AlignVCenter
