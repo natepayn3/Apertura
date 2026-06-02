@@ -167,6 +167,38 @@ Scope {
 
                                 Wifi { Layout.alignment: Qt.AlignHCenter }
                                 Battery { Layout.alignment: Qt.AlignHCenter }
+
+                                Rectangle {
+                                        id: screensnipButton
+                                        Layout.preferredWidth: 32
+                                        Layout.preferredHeight: 32
+                                        Layout.alignment: Qt.AlignHCenter
+                                        color: snipMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
+                                        radius: 4
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "screenshot_region"
+                                            font.family: "Material Symbols Outlined"
+                                            font.pixelSize: 22
+                                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                                        }
+
+                                        MouseArea {
+                                            id: snipMouseArea
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            
+                                            onClicked: {
+                                                Quickshell.execDetached([
+                                                    "bash", "-c", 
+                                                    "grim -g \"$(slurp)\" -t ppm - | satty --filename -"
+                                                ]);
+                                            }
+                                        }
+                                    }
+
                                 Notes { id: notesItem; Layout.alignment: Qt.AlignHCenter }
                                 Notification { Layout.alignment: Qt.AlignHCenter }
                                 Bluetooth { Layout.alignment: Qt.AlignHCenter }
