@@ -203,6 +203,8 @@ Item {
                         let targetWallpaper = wallpaperModel.get(finalTarget);
                         wallpaperSetter.command = ["awww", "img", targetWallpaper.fullPath, "--transition-type", "wipe", "--transition-step", "16"];
                         wallpaperSetter.running = true;
+                        matugenSetter.command = ["matugen", "image", "--type", "scheme-tonal-spot", "--source-color-index", "0", targetWallpaper.fullPath, "--output-file", Quickshell.env("HOME") + "/.config/matugen/templates/colors.json"];
+                        matugenSetter.running = true;
                         closeMenu();
                     }
                     event.accepted = true;
@@ -276,7 +278,22 @@ Item {
                             onEntered: { if (verifyTruePointerAction()) { wallpaperListView.activeKeyIndex = -1; wallpaperListView.logicalMouseIndexStore = index; } }
                             onPositionChanged: { if (verifyTruePointerAction()) { if (wallpaperListView.logicalMouseIndexStore !== index) { wallpaperListView.activeKeyIndex = -1; wallpaperListView.logicalMouseIndexStore = index; } } }
                             onExited: { if (wallpaperListView.logicalMouseIndexStore === index) { wallpaperListView.logicalMouseIndexStore = -1; } }
-                            onClicked: { wallpaperSetter.command = ["awww", "img", model.fullPath, "--transition-type", "wipe", "--transition-step", "16"]; wallpaperSetter.running = true; closeMenu(); }
+                            onClicked: { 
+                                wallpaperSetter.command = ["awww", "img", model.fullPath, "--transition-type", "wipe", "--transition-step", "16"]; 
+                                wallpaperSetter.running = true; 
+                                matugenSetter.command = [
+                                    "sh",
+                                    "-c",
+                                    "mkdir -p " + Quickshell.env("HOME") +
+                                    "/.config/matugen/templates/ && " +
+                                    "matugen -t scheme-fidelity image --source-color-index 0 \"" +
+                                    model.fullPath + "\" --json hex > " +
+                                    Quickshell.env("HOME") +
+                                    "/.config/matugen/templates/colors.json"
+                                ];
+                                matugenSetter.running = true;
+                                closeMenu(); 
+                            }
                         }
                     }
                 }
@@ -285,4 +302,14 @@ Item {
     }
 
     Process { id: wallpaperSetter; command: ["true"]; running: false }
+    Process {
+    id: matugenSetter
+    command: ["true"]
+    running: false
+
+        onExited: {
+            console.log("Matugen finished → reloading theme")
+            rootScope.theme.reloadTheme()
+        }
+    }
 }
