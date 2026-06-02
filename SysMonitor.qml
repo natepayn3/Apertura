@@ -24,7 +24,7 @@ Item {
     property string diskTotal: "0"
     property int diskPercent: 0
 
-    property var theme
+    property var theme: rootScope.theme
 
     Timer {
         id: osdAutohideTimer
@@ -167,7 +167,7 @@ Item {
     Rectangle {
         id: sysMonitorHitbox
         anchors.fill: parent
-        color: iconMouseArea.containsMouse ? (monitorRoot.theme ? monitorRoot.theme.outline : "#26ffffff") : "transparent"
+        color: iconMouseArea.containsMouse ? (monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0
 
         Text {
@@ -175,7 +175,7 @@ Item {
             text: "cardiology"
             font.family: "Material Symbols Outlined"
             font.pixelSize: 20
-            color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff"
+            color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
         }
 
         MouseArea {
@@ -279,7 +279,7 @@ Item {
             }
 
             MouseArea {
-                anchors.fill: parent
+                id: preventDismiss; anchors.fill: parent
                 onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
             }
 
@@ -287,14 +287,14 @@ Item {
                 id: titleLabel
                 text: "Usage"
                 font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold 
-                color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff"
+                color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
                 x: 14; y: 14
             }
 
             Rectangle {
                 id: headerDivider
                 width: parent.width - 24; height: 1
-                color: monitorRoot.theme ? monitorRoot.theme.outline : "#26ffffff"
+                color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"
                 x: 12; y: 44
             }
 
@@ -310,17 +310,17 @@ Item {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "CPU"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Medium; color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff" }
+                        Text { text: "CPU"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Medium; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                         Item { Layout.fillWidth: true }
-                        Text { text: monitorRoot.cpuTemp + "°C  |  " + monitorRoot.cpuPercent + "%"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff" }
+                        Text { text: monitorRoot.cpuTemp + "°C  |  " + monitorRoot.cpuPercent + "%"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                     }
 
                     Rectangle {
-                        Layout.fillWidth: true; height: 4; color: monitorRoot.theme ? monitorRoot.theme.outline : "#26ffffff"; radius: 0; clip: true
+                        Layout.fillWidth: true; height: 4; color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"; radius: 0; clip: true
                         Rectangle {
                             width: parent.width * (monitorRoot.cpuPercent / 100.0)
                             height: parent.height
-                            color: monitorRoot.theme ? monitorRoot.theme.primary : "#ffffff"
+                            color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
                             Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                         }
@@ -333,17 +333,17 @@ Item {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "RAM"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Medium; color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff" }
+                        Text { text: "RAM"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Medium; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                         Item { Layout.fillWidth: true }
-                        Text { text: monitorRoot.ramUsed.toFixed(1) + " / " + monitorRoot.ramTotal.toFixed(1) + " GB"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff" }
+                        Text { text: monitorRoot.ramUsed.toFixed(1) + " / " + monitorRoot.ramTotal.toFixed(1) + " GB"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                     }
 
                     Rectangle {
-                        Layout.fillWidth: true; height: 4; color: monitorRoot.theme ? monitorRoot.theme.outline : "#26ffffff"; radius: 0; clip: true
+                        Layout.fillWidth: true; height: 4; color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"; radius: 0; clip: true
                         Rectangle {
                             width: parent.width * (monitorRoot.ramPercent / 100.0)
                             height: parent.height
-                            color: monitorRoot.theme ? monitorRoot.theme.primary : "#ffffff"
+                            color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
                             Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                         }
@@ -356,17 +356,17 @@ Item {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "DISK"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Medium; color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff" }
+                        Text { text: "DISK"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Medium; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                         Item { Layout.fillWidth: true }
-                        Text { text: monitorRoot.diskUsed + " / " + monitorRoot.diskTotal + " GB"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff" }
+                        Text { text: monitorRoot.diskUsed + " / " + monitorRoot.diskTotal + " GB"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                     }
 
                     Rectangle {
-                        Layout.fillWidth: true; height: 4; color: monitorRoot.theme ? monitorRoot.theme.outline : "#26ffffff"; radius: 0; clip: true
+                        Layout.fillWidth: true; height: 4; color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"; radius: 0; clip: true
                         Rectangle {
                             width: parent.width * (monitorRoot.diskPercent / 100.0)
                             height: parent.height
-                            color: monitorRoot.theme ? monitorRoot.theme.primary : "#ffffff"
+                            color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
                             Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                         }
@@ -377,7 +377,7 @@ Item {
             Rectangle {
                 id: listDivider
                 width: parent.width - 24; height: 1
-                color: monitorRoot.theme ? monitorRoot.theme.outline : "#26ffffff"
+                color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"
                 x: 12; y: 154 
             }
 
@@ -385,7 +385,7 @@ Item {
                 id: tasksHeaderLabel
                 text: "Processes"
                 font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
-                color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff"
+                color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
                 x: 14; y: 166 
             }
 
@@ -418,7 +418,7 @@ Item {
                             Text {
                                 text: model.name
                                 font.family: "Rubik"; font.pixelSize: 11
-                                color: monitorRoot.theme ? monitorRoot.theme.text : "#59ffffff"
+                                color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#59ffffff"
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
                             }
@@ -426,7 +426,7 @@ Item {
                             Text {
                                 text: model.cpu + "%"
                                 font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Medium
-                                color: monitorRoot.theme ? monitorRoot.theme.text : "#ffffff"
+                                color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
                             }
                         }
                     }
