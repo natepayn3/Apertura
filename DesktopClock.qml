@@ -15,7 +15,6 @@ PanelWindow {
     
     color: "transparent"
 
-    // Constrain input tracking exclusively to the clock box when it sits on the overlay layer
     mask: isAlwaysVisible ? clockInputBounds : null
 
     Region {
@@ -53,13 +52,13 @@ PanelWindow {
 
             Text {
                 text: Qt.formatDateTime(desktopClockWindow.currentDateTime, "h:mm ap")
-                font.family: "Rubik"; font.pixelSize: 75; font.weight: Font.Bold; color: "#ffffff"
+                font.family: "Rubik"; font.pixelSize: 75; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                 Layout.alignment: Qt.AlignHCenter
             }
 
             Text {
                 text: Qt.formatDateTime(desktopClockWindow.currentDateTime, "dddd, MMMM d")
-                font.family: "Rubik"; font.pixelSize: 24; font.weight: Font.Normal; color: "#ffffff"
+                font.family: "Rubik"; font.pixelSize: 24; font.weight: Font.Normal; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                 Layout.alignment: Qt.AlignHCenter
             }
         }
@@ -98,9 +97,9 @@ PanelWindow {
             
             visible: dragArea.containsMouse || btnMouseArea.containsMouse
             
-            color: desktopClockWindow.isAlwaysVisible ? "#45ffffff" : "transparent"
+            color: desktopClockWindow.isAlwaysVisible ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : "transparent"
             border.width: desktopClockWindow.isAlwaysVisible ? 0 : 1
-            border.color: "#26ffffff"
+            border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
 
             Text {
                 anchors.centerIn: parent
@@ -108,7 +107,7 @@ PanelWindow {
                 font.family: "Rubik"
                 font.pixelSize: 11
                 font.weight: Font.Medium
-                color: "#ffffff"
+                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
             }
 
             MouseArea {
