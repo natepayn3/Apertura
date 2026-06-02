@@ -14,7 +14,6 @@ Item {
     property int activeIndex: 0
     property bool isAlwaysVisible: false
     
-    // Internal state to track if the window should physically exist/render
     property bool windowAlive: false
 
     function toggleMenu(): void {
@@ -30,12 +29,12 @@ Item {
 
     function openMenu(): void {
         rootScope.requestOpen("notes");
-        windowAlive = true; // Instantly mount window for entry animation
+        windowAlive = true; 
         menuOpen = true;
     }
 
     function closeMenu(): void {
-        menuOpen = false; // Triggers the "hidden" state transition immediately
+        menuOpen = false; 
     }
 
     Connections {
@@ -50,7 +49,7 @@ Item {
     Rectangle {
         id: notesHitbox
         anchors.fill: parent
-        color: notesMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: notesMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
 
         ColumnLayout {
@@ -62,7 +61,7 @@ Item {
                 text: "description"
                 font.family: "Material Symbols Outlined"
                 font.pixelSize: 20
-                color: "#ffffff"
+                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
             }
         }
 
@@ -77,7 +76,6 @@ Item {
 
     PanelWindow {
         id: notesOverlayModal
-        // Window stays rendered while alive or when explicitly forced open
         visible: notesRoot.windowAlive || notesRoot.isAlwaysVisible
         color: "transparent"
         
@@ -140,13 +138,11 @@ Item {
                 },
                 Transition {
                     from: "visible"; to: "hidden"
-                    // Perfectly symmetric reverse animation
                     SequentialAnimation {
                         ParallelAnimation {
                             NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
                             NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
                         }
-                        // Explicitly unmount window ONLY when the slide-out finishes
                         ScriptAction {
                             script: { notesRoot.windowAlive = false; }
                         }
@@ -186,7 +182,7 @@ Item {
                             text: "Notes"
                             font.family: "Rubik"
                             font.pixelSize: 16; font.weight: Font.Bold
-                            color: "#ffffff" 
+                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
                         }
                         
                         Item { Layout.fillWidth: true }
@@ -200,9 +196,9 @@ Item {
                                 height: 24
                                 radius: 0
                                 visible: mainContentArea.containsMouse || btnMouseArea.containsMouse
-                                color: notesRoot.isAlwaysVisible ? "#45ffffff" : "transparent"
+                                color: notesRoot.isAlwaysVisible ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : "transparent"
                                 border.width: notesRoot.isAlwaysVisible ? 0 : 1
-                                border.color: "#26ffffff"
+                                border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
 
                                 Text {
                                     anchors.centerIn: parent
@@ -210,7 +206,7 @@ Item {
                                     font.family: "Rubik"
                                     font.pixelSize: 10
                                     font.weight: Font.Medium
-                                    color: "#ffffff"
+                                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                                 }
 
                                 MouseArea {
@@ -237,9 +233,9 @@ Item {
                             Rectangle {
                                 width: 24
                                 height: 24
-                                color: addMouse.containsMouse ? "#26ffffff" : "transparent"
+                                color: addMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
                                 border.width: 1
-                                border.color: "#26ffffff"
+                                border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
                                 radius: 0
 
                                 Text {
@@ -247,7 +243,7 @@ Item {
                                     text: "add"
                                     font.family: "Material Symbols Outlined"
                                     font.pixelSize: 16
-                                    color: "#ffffff"
+                                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                                 }
 
                                 MouseArea {
@@ -268,7 +264,7 @@ Item {
                         }
                     }
 
-                    Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
+                    Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" }
 
                     ScrollView {
                         Layout.fillWidth: true
@@ -289,7 +285,7 @@ Item {
                             
                             contentItem: Rectangle {
                                 implicitHeight: 5
-                                color: hBar.hovered || hBar.pressed ? "#45ffffff" : "#26ffffff"
+                                color: hBar.hovered || hBar.pressed ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff")
                                 radius: 0
                             }
 
@@ -320,16 +316,16 @@ Item {
                             spacing: 6
                             width: implicitWidth
 
-                            Repeater {
-                                id: notesRepeater
-                                model: notesRoot.notesList
-                                delegate: Rectangle {
-                                    width: tabText.implicitWidth + 36
-                                    height: 26
-                                    color: notesRoot.activeIndex === index ? "#45ffffff" : (tabMouse.containsMouse ? "#26ffffff" : "transparent")
-                                    border.width: notesRoot.activeIndex === index ? 0 : 1
-                                    border.color: "#26ffffff"
-                                    radius: 0
+                        Repeater {
+                            id: notesRepeater
+                            model: notesRoot.notesList
+                            delegate: Rectangle {
+                                width: tabText.implicitWidth + 36
+                                height: 26
+                                color: notesRoot.activeIndex === index ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (tabMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent")
+                                border.width: notesRoot.activeIndex === index ? 0 : 1
+                                border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
+                                radius: 0
 
                                     Text {
                                         id: tabText
@@ -340,7 +336,7 @@ Item {
                                         font.family: "Rubik"
                                         font.pixelSize: 11
                                         font.weight: Font.Medium
-                                        color: "#ffffff"
+                                        color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                                     }
 
                                     Text {
@@ -351,7 +347,7 @@ Item {
                                         text: "close"
                                         font.family: "Material Symbols Outlined"
                                         font.pixelSize: 12
-                                        color: closeTabMouse.containsMouse ? "#ffffff" : "#59ffffff"
+                                        color: closeTabMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
                                         z: 5
 
                                         MouseArea {
@@ -399,8 +395,8 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        color: "#5911111b"
-                        border.color: "#26ffffff"
+                        color: "transparent"
+                        border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
                         border.width: 1
                         radius: 0
 
@@ -415,7 +411,7 @@ Item {
                                 height: noteScroll.height
                                 font.family: "Rubik"
                                 font.pixelSize: 13
-                                color: "#ffffff"
+                                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                                 wrapMode: TextEdit.WordWrap
                                 selectByMouse: true
                                 background: null
