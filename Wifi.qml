@@ -203,7 +203,7 @@ Item {
     Rectangle {
         id: wifiHitbox
         anchors.fill: parent
-        color: iconMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: iconMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
 
         ColumnLayout {
@@ -224,7 +224,7 @@ Item {
                                                                           "network_wifi")
                     font.family: "Material Symbols Outlined"
                     font.pixelSize: 20
-                    color: wifiRoot.wifiEnabled ? "#ffffff" : "#59ffffff"
+                    color: wifiRoot.wifiEnabled ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -317,7 +317,7 @@ Item {
                     
                     Text { 
                         text: "Wi-Fi"
-                        font.family: "Rubik"; font.pixelSize: 15; font.weight: Font.Bold; color: "#ffffff" 
+                        font.family: "Rubik"; font.pixelSize: 15; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
                         Layout.alignment: Qt.AlignVCenter
                     }
                     
@@ -328,11 +328,11 @@ Item {
                         opacity: (wifiRoot.wifiEnabled && wifiRoot.ssid !== "Disconnected" && wifiRoot.ssid !== "") ? 1.0 : 0.0
                         
                         Item { Layout.fillWidth: true }
-                        Text { text: "Connected to:"; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
+                        Text { text: "Connected to:"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" }
                         Text { 
                             text: wifiRoot.ssid
                             font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
-                            color: "#ffffff"
+                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                             elide: Text.ElideRight; Layout.maximumWidth: 100 
                         }
                         Item { Layout.fillWidth: true }
@@ -340,11 +340,11 @@ Item {
 
                     Rectangle {
                         width: 50; height: 24; radius: 12
-                        color: wifiRoot.wifiEnabled ? "#45ffffff" : "#26ffffff"
+                        color: wifiRoot.wifiEnabled ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff")
                         Layout.alignment: Qt.AlignVCenter
                         
                         Rectangle {
-                            width: 18; height: 18; radius: 9; color: "#11111b"
+                            width: 18; height: 18; radius: 9; color: rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"
                             anchors.verticalCenter: parent.verticalCenter
                             x: wifiRoot.wifiEnabled ? 28 : 4
                             Behavior on x { NumberAnimation { duration: 120 } }
@@ -370,7 +370,7 @@ Item {
                     }
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
+                Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" }
 
                 StackLayout {
                     Layout.fillWidth: true; Layout.fillHeight: true
@@ -379,13 +379,13 @@ Item {
                     ListView {
                         id: networkListView; model: wifiNetworksModel; clip: true; spacing: 4
                         delegate: Rectangle {
-                            width: networkListView.width; height: 34; color: itemMouseArea.containsMouse ? "#26ffffff" : "transparent"; radius: 4
+                            width: networkListView.width; height: 34; color: itemMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 4
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 8
                                 Text { text: model.isActive ? "🛜" : ""; font.pixelSize: 11 }
-                                Text { text: model.ssidName; font.family: "Rubik"; font.pixelSize: 12; font.weight: model.isActive ? Font.Bold : Font.Normal; color: "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight }
-                                Text { text: model.secured ? "lock" : ""; font.family: "Material Symbols Outlined"; font.pixelSize: 14; color: "#59ffffff" }
-                                Text { text: model.bars; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
+                                Text { text: model.ssidName; font.family: "Rubik"; font.pixelSize: 12; font.weight: model.isActive ? Font.Bold : Font.Normal; color: rootScope.theme ? (model.isActive ? rootScope.theme.theme_primary : rootScope.theme.theme_fg) : "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight }
+                                Text { text: model.secured ? "lock" : ""; font.family: "Material Symbols Outlined"; font.pixelSize: 14; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" }
+                                Text { text: model.bars; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" }
                             }
                             MouseArea {
                                 id: itemMouseArea; anchors.fill: parent; hoverEnabled: true
@@ -407,12 +407,13 @@ Item {
 
                     ColumnLayout {
                         spacing: 10; Layout.fillWidth: true
-                        Text { text: "Connect to: " + wifiRoot.selectedSsid; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff" }
+                        Text { text: "Connect to: " + wifiRoot.selectedSsid; font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
                         
                         TextField {
                             id: passInputField; Layout.fillWidth: true; height: 32; echoMode: TextInput.Password
-                            placeholderText: "Enter passkey..."; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff"
-                            background: Rectangle { color: "#11111b"; border.color: parent.activeFocus ? "#ffffff" : "#26ffffff"; border.width: 1; radius: 4 }
+                            placeholderText: "Enter passkey..."; font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                            placeholderTextColor: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
+                            background: Rectangle { color: rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"; border.color: parent.activeFocus ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"); border.width: 1; radius: 4 }
                             Keys.onPressed: (event) => { if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) connectToNetwork(wifiRoot.selectedSsid, text) }
                         }
 
@@ -420,14 +421,14 @@ Item {
                             Layout.fillWidth: true; spacing: 8
                             Button {
                                 Layout.preferredWidth: 140; Layout.fillWidth: true
-                                contentItem: Text { text: "Cancel"; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter }
-                                background: Rectangle { color: parent.hovered ? "#26ffffff" : "#11111b"; radius: 4 }
+                                contentItem: Text { text: "Cancel"; font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; horizontalAlignment: Text.AlignHCenter }
+                                background: Rectangle { color: parent.hovered ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : (rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"); radius: 4 }
                                 onClicked: wifiRoot.enteringPassword = false
                             }
                             Button {
                                 Layout.preferredWidth: 140; Layout.fillWidth: true
-                                contentItem: Text { text: "Connect"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter }
-                                background: Rectangle { color: parent.hovered ? "#40ffffff" : "#11111b"; radius: 4 }
+                                contentItem: Text { text: "Connect"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"; horizontalAlignment: Text.AlignHCenter }
+                                background: Rectangle { color: parent.hovered ? (rootScope.theme ? rootScope.theme.theme_outline : "#40ffffff") : (rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"); radius: 4 }
                                 onClicked: connectToNetwork(wifiRoot.selectedSsid, passInputField.text)
                             }
                         }
@@ -436,20 +437,20 @@ Item {
 
                     ColumnLayout {
                         spacing: 10; Layout.fillWidth: true
-                        Text { text: "Connected to: " + wifiRoot.selectedSsid; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff" }
+                        Text { text: "Connected to: " + wifiRoot.selectedSsid; font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
 
                         RowLayout {
                             Layout.fillWidth: true; spacing: 8
                             Button {
                                 Layout.preferredWidth: 140; Layout.fillWidth: true
-                                contentItem: Text { text: "Back"; font.family: "Rubik"; font.pixelSize: 12; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter }
-                                background: Rectangle { color: parent.hovered ? "#26ffffff" : "#11111b"; radius: 4 }
+                                contentItem: Text { text: "Back"; font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; horizontalAlignment: Text.AlignHCenter }
+                                background: Rectangle { color: parent.hovered ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : (rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"); radius: 4 }
                                 onClicked: wifiRoot.showingForgetConfirm = false
                             }
                             Button {
                                 Layout.preferredWidth: 140; Layout.fillWidth: true
-                                contentItem: Text { text: "Forget"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: "#ffffff"; horizontalAlignment: Text.AlignHCenter }
-                                background: Rectangle { color: parent.hovered ? "#40ffffff" : "#11111b"; radius: 4 }
+                                contentItem: Text { text: "Forget"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"; horizontalAlignment: Text.AlignHCenter }
+                                background: Rectangle { color: parent.hovered ? (rootScope.theme ? rootScope.theme.theme_outline : "#40ffffff") : (rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"); radius: 4 }
                                 onClicked: forgetNetwork(wifiRoot.selectedSsid)
                             }
                         }
@@ -461,7 +462,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         text: "Wi-Fi is turned off"
-                        font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff"
+                        font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
