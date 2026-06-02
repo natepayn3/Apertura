@@ -126,7 +126,7 @@ Item {
     Rectangle {
         id: batteryHitbox
         anchors.fill: parent
-        color: batteryMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: batteryMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
 
         ColumnLayout {
@@ -152,7 +152,7 @@ Item {
                 font.family: batteryMouseArea.containsMouse ? "Rubik" : "Material Symbols Outlined" 
                 font.pixelSize: batteryMouseArea.containsMouse ? 12 : 20
                 font.weight: batteryMouseArea.containsMouse ? Font.Bold : Font.Normal
-                color: "#ffffff"
+                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                 horizontalAlignment: Text.AlignHCenter
             }
         }
@@ -261,24 +261,24 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" }
+                    Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
                     Item { Layout.fillWidth: true }
                     Text { 
                         text: batRoot.isCharging ? (batRoot.capacity >= 99 ? "Fully Charged" : "󱐋 Charging") : "Discharging"
                         font.family: "Rubik"; font.pixelSize: 12
-                        color: "#ffffff"
+                        color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                     }
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
+                Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" }
 
                 ColumnLayout {
                     Layout.fillWidth: true; spacing: 4
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Current Charge:"; font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff" }
+                        Text { text: "Current Charge:"; font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" }
                         Item { Layout.fillWidth: true }
-                        Text { text: batRoot.capacity + "%"; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#ffffff" }
+                        Text { text: batRoot.capacity + "%"; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
                     }
                 }
             }
