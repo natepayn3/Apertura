@@ -147,7 +147,7 @@ Item {
                     Layout.preferredWidth: 4
                     Layout.fillHeight: true
                     Layout.alignment: Qt.AlignHCenter
-                    color: "#26ffffff"
+                    color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
                     radius: 0
                     clip: true
 
@@ -155,7 +155,7 @@ Item {
                         id: barFill
                         width: parent.width
                         height: parent.height * Math.min(hudRoot.volumeLevel, 1.0)
-                        color: hudRoot.isMuted ? "#59ffffff" : "#ffffff"
+                        color: hudRoot.isMuted ? (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff") : (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff")
                         anchors.bottom: parent.bottom
 
                         bottomLeftRadius: 0
@@ -178,7 +178,7 @@ Item {
                         font.family: "Rubik"
                         font.pixelSize: 13
                         font.weight: Font.Bold
-                        color: hudRoot.isMuted ? "#59ffffff" : "#ffffff"
+                        color: hudRoot.isMuted ? (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff")
                         Layout.alignment: Qt.AlignHCenter
                     }
 
@@ -186,7 +186,7 @@ Item {
                         text: hudRoot.isMuted ? "󰝟" : (hudRoot.volumeLevel > 0.50 ? "󰕾" : "󰖀")
                         font.family: "Material Design Icons"
                         font.pixelSize: 22
-                        color: hudRoot.isMuted ? "#59ffffff" : "#ffffff"
+                        color: hudRoot.isMuted ? (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff")
                         Layout.alignment: Qt.AlignHCenter
                     }
                 }
