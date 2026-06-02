@@ -78,7 +78,6 @@ Item {
             notificationRoot.updateCount();
             notificationRoot.activeHistoryReferences = [...notificationRoot.activeHistoryReferences, notification];
             notificationRoot.visibleBanners = [...notificationRoot.visibleBanners, notification];
-            toastSlideIn.restart();
 
             let toastTimer = Qt.createQmlObject('import QtQuick; Timer { interval: 5000; running: true; repeat: false }', notificationRoot);
             toastTimer.triggered.connect(() => {
@@ -98,7 +97,7 @@ Item {
     Rectangle {
         id: notificationHitbox
         anchors.fill: parent
-        color: notificationMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: notificationMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
 
         ColumnLayout {
@@ -111,7 +110,7 @@ Item {
                 text: !notificationRoot.notificationsEnabled ? "notifications_off" : (notificationRoot.unreadCount > 0 ? "notifications_unread" : "notifications")
                 font.family: "Material Symbols Outlined"
                 font.pixelSize: 20
-                color: notificationRoot.notificationsEnabled ? "#ffffff" : "#59ffffff"
+                color: notificationRoot.notificationsEnabled ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
             }
         }
 
@@ -133,7 +132,6 @@ Item {
                 }
                 notificationRoot.visibleBanners = [];
                 notificationRoot.activeHistoryReferences = [];
-                notificationRoot.updateCount();
             }
         }
     }
@@ -183,7 +181,7 @@ Item {
                 Transition {
                     from: "hidden"; to: "visible"
                     ParallelAnimation {
-                        NumberAnimation { id: toastSlideIn; property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
                     }
                 },
                 Transition {
@@ -211,14 +209,14 @@ Item {
                         Text {
                             id: tSummary
                             text: modelData.summary
-                            font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#ffffff"
+                            font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                             Layout.fillWidth: true; elide: Text.ElideRight
                         }
 
                         Text {
                             id: tBody
                             text: modelData.body
-                            font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"
+                            font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
                             Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 4; elide: Text.ElideRight
                         }
                     }
@@ -321,7 +319,7 @@ Item {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: "#ffffff" } 
+                        Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" } 
                         Item { Layout.fillWidth: true }
 
                         RowLayout {
@@ -339,7 +337,7 @@ Item {
                                     anchors.centerIn: parent
                                     text: "Clear All"
                                     font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
-                                    color: clearAllMouse.containsMouse ? "#ffffff" : "#59ffffff"
+                                    color: clearAllMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
                                 }
 
                                 MouseArea {
@@ -369,11 +367,11 @@ Item {
 
                             Rectangle {
                                 width: 50; height: 24; radius: 12
-                                color: notificationRoot.notificationsEnabled ? "#45ffffff" : "#26ffffff"
+                                color: notificationRoot.notificationsEnabled ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff")
                                 z: 100
                                 
                                 Rectangle {
-                                    width: 18; height: 18; radius: 9; color: "#11111b"
+                                    width: 18; height: 18; radius: 9; color: rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"
                                     anchors.verticalCenter: parent.verticalCenter
                                     x: notificationRoot.notificationsEnabled ? 28 : 4
                                     Behavior on x { NumberAnimation { duration: 120 } }
@@ -407,7 +405,7 @@ Item {
                         }
                     }
 
-                    Rectangle { Layout.fillWidth: true; height: 1; color: "#26ffffff" }
+                    Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" }
 
                     Item {
                         id: listContainer
@@ -424,7 +422,7 @@ Item {
                             Text {
                                 anchors.centerIn: parent
                                 text: "No new notifications"
-                                font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff" 
+                                font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" 
                                 visible: notifListView.count === 0 && notificationRoot.notificationsEnabled
                             }
 
@@ -434,8 +432,8 @@ Item {
 
                                 Rectangle {
                                     anchors.fill: parent
-                                    color: "#5911111b"
-                                    border.color: cellMouseArea.containsMouse ? "#ffffff" : "#26ffffff" 
+                                    color: "transparent"
+                                    border.color: cellMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") 
                                     border.width: 1
                                     radius: 0 
 
@@ -446,14 +444,14 @@ Item {
                                             id: summaryLabel
                                             text: modelData.summary
                                             font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
-                                            color: "#ffffff" 
+                                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
                                             Layout.fillWidth: true; elide: Text.ElideRight
                                         }
 
                                         Text {
                                             id: bodyLabel
                                             text: modelData.body
-                                            font.family: "Rubik"; font.pixelSize: 12; color: "#59ffffff"
+                                            font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
                                             Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight
                                         }
                                     }
@@ -480,7 +478,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         text: "Notifications are muted"
-                        font.family: "Rubik"; font.pixelSize: 13; color: "#59ffffff"
+                        font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         visible: !notificationRoot.notificationsEnabled
