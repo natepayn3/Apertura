@@ -163,15 +163,20 @@ Item {
                 radius: 6
                 z: 2
 
-                // BOTH active and occupied use primary color now
-                color: (workspaceContainer.activeWorkspace === wsId || workspaceContainer.occupiedMap[wsId])
-                    ? workspaceContainer.theme.primary
-                    : "transparent"
+                color: {
+                    if (!workspaceContainer.theme) return "transparent";
+                    if (workspaceContainer.activeWorkspace === wsId) return workspaceContainer.theme.primary;
+                    if (workspaceContainer.occupiedMap[wsId]) return workspaceContainer.theme.text;
+                    return "transparent";
+                }
 
                 border.width: (!(workspaceContainer.activeWorkspace === wsId) && !workspaceContainer.occupiedMap[wsId]) ? 1.5 : 0
-                border.color: (!(workspaceContainer.activeWorkspace === wsId) && !workspaceContainer.occupiedMap[wsId])
-                    ? workspaceContainer.theme.outline
-                    : "transparent"
+                border.color: {
+                    if (!workspaceContainer.theme) return "transparent";
+                    return (!(workspaceContainer.activeWorkspace === wsId) && !workspaceContainer.occupiedMap[wsId])
+                        ? workspaceContainer.theme.outline
+                        : "transparent";
+                }
 
                 Text {
                     text: wsId.toString()
@@ -181,9 +186,13 @@ Item {
                     font.family: "Rubik"
                     font.pixelSize: 11
                     font.bold: true
-                    color: workspaceContainer.activeWorkspace === wsId
-                        ? workspaceContainer.theme.onPrimary
-                        : workspaceContainer.theme.primary
+                    
+                    color: {
+                        if (!workspaceContainer.theme) return "#ffffff";
+                        return workspaceContainer.activeWorkspace === wsId
+                            ? workspaceContainer.theme.onPrimary
+                            : workspaceContainer.theme.text;
+                    }
                     opacity: workspaceContainer.activeWorkspace === wsId ? 1.0 : 0.0
                 }
             }
