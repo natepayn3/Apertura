@@ -88,14 +88,14 @@ Item {
         id: triggerButton
         anchors.fill: parent
         radius: 0 
-        color: wallpaperMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: wallpaperMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
 
         Text {
             anchors.centerIn: parent
             text: "wallpaper"
             font.family: "Material Symbols Outlined"
             font.pixelSize: 26
-            color: "#ffffff"
+            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
         }
 
         MouseArea {
@@ -221,7 +221,8 @@ Item {
 
                 Text {
                     text: "Wallpapers"
-                    font.family: "Rubik"; font.pixelSize: 18; font.weight: Font.Bold; color: "#ffffff"
+                    font.family: "Rubik"; font.pixelSize: 18; font.weight: Font.Bold; 
+                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                     Layout.alignment: Qt.AlignLeft
                     Layout.leftMargin: 10
                     Layout.bottomMargin: 2
@@ -247,8 +248,8 @@ Item {
                             readonly property bool isHighlighted: (wallpaperListView.activeKeyIndex === index && wallpaperCard.activeFocus) || 
                                                                   (wallpaperListView.activeMouseIndex === index)
 
-                            color: isHighlighted ? "#26ffffff" : "#11111b"
-                            border.color: isHighlighted ? "#ffffff" : "transparent"
+                            color: isHighlighted ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "#11111b"
+                            border.color: isHighlighted ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : "transparent"
                             border.width: 1
 
                             Image {
