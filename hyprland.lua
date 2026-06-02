@@ -16,7 +16,7 @@
 --     name  = "quickshell-bar-blur",
 --     match = { namespace = "quickshell-bar" },
 --     blur  = true,
---     xray  = false,
+--     xray  = true,
 -- })
 -- hl.layer_rule({
 --     name         = "quickshell-components-blur",
@@ -25,6 +25,8 @@
 --     xray         = true,
 --     ignore_alpha = 0.5,
 -- })
+--
+-- If you don't want to see the wallpaper and just have the bar and modules blur everything, change xray to "false" in both rules
 --
 -----------------------------------------
 ----------  END CREATOR NOTES  ----------
