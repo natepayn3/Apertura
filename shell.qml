@@ -166,7 +166,7 @@ Scope {
                                 Notification { Layout.alignment: Qt.AlignHCenter }
                                 Bluetooth { Layout.alignment: Qt.AlignHCenter }
                                 Audio { Layout.alignment: Qt.AlignHCenter }
-                                SysMonitor { id: sysMonitorItem; Layout.alignment: Qt.AlignHCenter }
+                                SysMonitor { id: sysMonitorItem; theme: rootScope.theme; Layout.alignment: Qt.AlignHCenter }
                                 NetMonitor { id: netMonitorItem; Layout.alignment: Qt.AlignHCenter }
                                 Power { Layout.alignment: Qt.AlignHCenter }
                             }
