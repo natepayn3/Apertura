@@ -118,7 +118,7 @@ Scope {
                         spacing: 12
 
                         AppLauncher { id: appLauncherItem; anchors.horizontalCenter: parent.horizontalCenter }
-                        Wallpaper { id: wallpaperItem; anchors.horizontalCenter: parent.horizontalCenter }
+                        Wallpaper { id: wallpaperItem; anchors.horizontalCenter: parent.horizontalCenter; property int barHeight: mainBarWindow.height }
                         Calendar { id: calendarItem; anchors.horizontalCenter: parent.horizontalCenter }
                         
                         Item {
