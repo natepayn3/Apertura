@@ -130,13 +130,13 @@ Scope {
                     ColumnLayout {
                         id: bottomGroupControls
                         anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; anchors.bottomMargin: 16
-                        spacing: 12
+                        spacing: 8 
                         property bool isExpanded: false
 
-                    Rectangle {
-                        id: toggleButton
-                        Layout.preferredWidth: 32; Layout.preferredHeight: 32; Layout.alignment: Qt.AlignHCenter
-                        color: toggleMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 4
+                        Rectangle {
+                            id: toggleButton
+                            Layout.preferredWidth: 32; Layout.preferredHeight: 32; Layout.alignment: Qt.AlignHCenter
+                            color: toggleMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 4
 
                             Text {
                                 anchors.centerIn: parent
@@ -147,66 +147,98 @@ Scope {
 
                             MouseArea {
                                 id: toggleMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onClicked: bottomGroupControls.isExpanded = !bottomGroupControls.isExpanded
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onClicked: (mouse) => {
+                                    if (mouse.button === Qt.LeftButton) {
+                                        bottomGroupControls.isExpanded = !bottomGroupControls.isExpanded
+                                    }
+                                }
                             }
                         }
 
-                        Item {
-                            id: drawerClipWrapper
-                            Layout.fillWidth: true
-                            implicitHeight: bottomGroupControls.isExpanded ? modulesSubColumn.implicitHeight : 0
-                            opacity: bottomGroupControls.isExpanded ? 1.0 : 0.0
-                            clip: true
+                        Column {
+                            id: modulesColumn
+                            Layout.alignment: Qt.AlignHCenter
+                            spacing: 8
 
-                            Behavior on implicitHeight { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-                            Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutQuad } }
+                            component DrawerModule : Item {
+                                id: moduleWrapper
+                                property bool isPinned: false
+                                default property alias moduleData: container.data
 
-                            ColumnLayout {
-                                id: modulesSubColumn
-                                anchors.top: parent.top; anchors.horizontalCenter: parent.horizontalCenter; spacing: 12
-
-                                Wifi { Layout.alignment: Qt.AlignHCenter }
-                                Battery { Layout.alignment: Qt.AlignHCenter }
+                                width: 38
+                                height: 38
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                
+                                visible: bottomGroupControls.isExpanded || isPinned
 
                                 Rectangle {
-                                        id: screensnipButton
-                                        Layout.preferredWidth: 32
-                                        Layout.preferredHeight: 32
-                                        Layout.alignment: Qt.AlignHCenter
-                                        color: snipMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
-                                        radius: 4
+                                    anchors.fill: parent
+                                    radius: 6
+                                    color: "transparent"
+                                    
+                                    // 1px border shows ONLY if the item is pinned AND the drawer is expanded
+                                    border.width: isPinned && bottomGroupControls.isExpanded ? 1 : 0
+                                    border.color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                                }
 
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: "screenshot_region"
-                                            font.family: "Material Symbols Outlined"
-                                            font.pixelSize: 22
-                                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
-                                        }
+                                Item {
+                                    id: container
+                                    width: 32
+                                    height: 32
+                                    anchors.centerIn: parent
+                                }
 
-                                        MouseArea {
-                                            id: snipMouseArea
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            cursorShape: Qt.PointingHandCursor
-                                            
-                                            onClicked: {
-                                                Quickshell.execDetached([
-                                                    "bash", "-c", 
-                                                    "grim -g \"$(slurp)\" -t ppm - | satty --filename -"
-                                                ]);
-                                            }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    acceptedButtons: Qt.RightButton
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: (mouse) => {
+                                        if (mouse.button === Qt.RightButton) {
+                                            moduleWrapper.isPinned = !moduleWrapper.isPinned
                                         }
                                     }
-
-                                Notes { id: notesItem; Layout.alignment: Qt.AlignHCenter }
-                                Notification { Layout.alignment: Qt.AlignHCenter }
-                                Bluetooth { Layout.alignment: Qt.AlignHCenter }
-                                Audio { Layout.alignment: Qt.AlignHCenter }
-                                SysMonitor { id: sysMonitorItem; theme: rootScope.theme; Layout.alignment: Qt.AlignHCenter }
-                                NetMonitor { id: netMonitorItem; Layout.alignment: Qt.AlignHCenter }
-                                Power { Layout.alignment: Qt.AlignHCenter }
+                                }
                             }
+
+                            DrawerModule { id: wrapWifi; Wifi { anchors.centerIn: parent } }
+                            DrawerModule { id: wrapBattery; Battery { anchors.centerIn: parent } }
+
+                            DrawerModule {
+                                id: wrapSnip
+                                Rectangle {
+                                    id: screensnipButton
+                                    width: 32; height: 32
+                                    anchors.centerIn: parent
+                                    color: snipMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
+                                    radius: 4
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "screenshot_region"
+                                        font.family: "Material Symbols Outlined"; font.pixelSize: 22
+                                        color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                                        }
+
+                                    MouseArea {
+                                        id: snipMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Quickshell.execDetached([
+                                                "bash", "-c", 
+                                                "grim -g \"$(slurp)\" -t ppm - | satty --filename -"
+                                            ]);
+                                        }
+                                    }
+                                }
+                            }
+
+                            DrawerModule { id: wrapNotes; Notes { id: notesItem; anchors.centerIn: parent } }
+                            DrawerModule { id: wrapNotif; Notification { anchors.centerIn: parent } }
+                            DrawerModule { id: wrapBlue; Bluetooth { anchors.centerIn: parent } }
+                            DrawerModule { id: wrapAudio; Audio { anchors.centerIn: parent } }
+                            DrawerModule { id: wrapSys; SysMonitor { id: sysMonitorItem; theme: rootScope.theme; anchors.centerIn: parent } }
+                            DrawerModule { id: wrapNet; NetMonitor { id: netMonitorItem; anchors.centerIn: parent } }
+                            DrawerModule { id: wrapPower; Power { anchors.centerIn: parent } }
                         }
                     }
                 }
