@@ -165,26 +165,37 @@ Item {
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
+        Shortcut {
+            sequence: "Escape"
+            enabled: netRoot.menuOpen
+            onActivated: closeMenu()
+        }
+
         MouseArea { anchors.fill: parent; onClicked: closeMenu() }
 
         Rectangle {
             id: popupCard
-            width: 300
             height: 180
+            
+            x: 0
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 12
+            radius: 0
+            
             color: "#9911111b"
-            border.color: "transparent"
+            border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
             border.width: 0
+            
+            clip: true
 
             states: [
                 State {
                     name: "visible"; when: netRoot.menuOpen
-                    PropertyChanges { target: popupCard; x: 0; opacity: 1.0 }
+                    PropertyChanges { target: popupCard; width: 300; opacity: 1.0 }
                 },
                 State {
                     name: "hidden"; when: !netRoot.menuOpen
-                    PropertyChanges { target: popupCard; x: -320; opacity: 0.0 }
+                    PropertyChanges { target: popupCard; width: 0; opacity: 0.0 }
                 }
             ]
 
@@ -192,16 +203,16 @@ Item {
                 Transition {
                     from: "hidden"; to: "visible"
                     ParallelAnimation {
-                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
-                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "width"; duration: 250; easing.type: Easing.OutQuad }
+                        NumberAnimation { property: "opacity"; duration: 150; easing.type: Easing.OutQuad }
                     }
                 },
                 Transition {
                     from: "visible"; to: "hidden"
                     SequentialAnimation {
                         ParallelAnimation {
-                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
-                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "width"; duration: 200; easing.type: Easing.InQuad }
+                            NumberAnimation { property: "opacity"; duration: 200; easing.type: Easing.InQuad }
                         }
                         ScriptAction { script: { netRoot.windowAlive = false; } }
                     }
@@ -213,57 +224,65 @@ Item {
                 onContainsMouseChanged: checkUserActivity()
             }
 
-            Text {
-                text: "Network Status"
-                font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold
-                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; x: 14; y: 14
-            }
+            Item {
+                id: textContentGroup
+                anchors.fill: parent
+                
+                opacity: popupCard.width > 200 ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
 
-            Rectangle { width: parent.width - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"; x: 12; y: 44 }
-
-            ColumnLayout {
-                x: 14; y: 56; width: parent.width - 28; spacing: 12
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    ColumnLayout {
-                        spacing: 2
-                        Text { text: "Interface"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
-                        Text { text: netRoot.activeIface; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
-                    }
-                    Item { Layout.fillWidth: true }
-                    ColumnLayout {
-                        spacing: 2; Layout.alignment: Qt.AlignRight
-                        Text { text: "IP Address"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
-                        Text { text: netRoot.ipAddress; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
-                    }
+                Text {
+                    text: "Network Status"
+                    font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold
+                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; x: 14; y: 14
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_outline, 0.5) : "#1affffff" }
+                Rectangle { width: 300 - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"; x: 12; y: 44 }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    ColumnLayout {
-                        spacing: 2
-                        Text { text: "Download"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
-                        RowLayout {
-                            spacing: 6
-                            Text { text: "arrow_downward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
-                            Text { text: netRoot.downloadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
+                ColumnLayout {
+                    x: 14; y: 56; width: 300 - 28; spacing: 12
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        ColumnLayout {
+                            spacing: 2
+                            Text { text: "Interface"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                            Text { text: netRoot.activeIface; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
+                        }
+                        Item { Layout.fillWidth: true }
+                        ColumnLayout {
+                            spacing: 2; Layout.alignment: Qt.AlignRight
+                            Text { text: "IP Address"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                            Text { text: netRoot.ipAddress; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
                         }
                     }
-                    Item { Layout.fillWidth: true }
-                    ColumnLayout {
-                        spacing: 2; Layout.alignment: Qt.AlignRight
-                        Text { text: "Upload"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
-                        RowLayout {
-                            spacing: 6; Layout.alignment: Qt.AlignRight
-                            Text { text: "arrow_upward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
-                            Text { text: netRoot.uploadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
+
+                    Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_outline, 0.5) : "#1affffff" }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        ColumnLayout {
+                            spacing: 2
+                            Text { text: "Download"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                            RowLayout {
+                                spacing: 6
+                                Text { text: "arrow_downward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
+                                Text { text: netRoot.downloadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
+                            }
+                        }
+                        Item { Layout.fillWidth: true }
+                        ColumnLayout {
+                            spacing: 2; Layout.alignment: Qt.AlignRight
+                            Text { text: "Upload"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                            RowLayout {
+                                spacing: 6; Layout.alignment: Qt.AlignRight
+                                Text { text: "arrow_upward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
+                                Text { text: netRoot.uploadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
+                            }
                         }
                     }
                 }
             }
-        }
+        } // popupCard closed correctly here
     }
 }
