@@ -248,6 +248,12 @@ Item {
             }
         }
 
+        Shortcut {
+            sequence: "Escape"
+            enabled: audioRoot.menuOpen
+            onActivated: closeMenu()
+        }
+
         MouseArea { 
             anchors.fill: parent
             onClicked: closeMenu() 
@@ -261,20 +267,28 @@ Item {
 
         Rectangle {
             id: popupCard
-            width: 300
+            height: Math.min(146 + (deviceListModel.count * 40), 300)
+            
+            x: 0
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 12
+            radius: 0
+            
+            color: "#9911111b" 
+            border.width: 0
+            clip: true
+            focus: true
 
             states: [
                 State {
                     name: "visible"
                     when: audioRoot.menuOpen
-                    PropertyChanges { target: popupCard; x: 0; opacity: 1.0 }
+                    PropertyChanges { target: popupCard; width: 300; opacity: 1.0 }
                 },
                 State {
                     name: "hidden"
                     when: !audioRoot.menuOpen
-                    PropertyChanges { target: popupCard; x: -320; opacity: 0.0 }
+                    PropertyChanges { target: popupCard; width: 0; opacity: 0.0 }
                 }
             ]
 
@@ -282,16 +296,16 @@ Item {
                 Transition {
                     from: "hidden"; to: "visible"
                     ParallelAnimation {
-                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
-                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "width"; duration: 250; easing.type: Easing.OutQuad }
+                        NumberAnimation { property: "opacity"; duration: 150; easing.type: Easing.OutQuad }
                     }
                 },
                 Transition {
                     from: "visible"; to: "hidden"
                     SequentialAnimation {
                         ParallelAnimation {
-                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
-                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "width"; duration: 200; easing.type: Easing.InQuad }
+                            NumberAnimation { property: "opacity"; duration: 200; easing.type: Easing.InQuad }
                         }
                         ScriptAction {
                             script: { audioRoot.windowAlive = false; }
@@ -299,24 +313,6 @@ Item {
                     }
                 }
             ]
-
-            color: "#9911111b" 
-            border.width: 0
-            topLeftRadius: 0
-            bottomLeftRadius: 0
-            topRightRadius: 0
-            bottomRightRadius: 0
-            height: Math.min(146 + (deviceListModel.count * 40), 300)
-            focus: true
-            
-            Keys.onPressed: (event) => {
-                if (event.key === Qt.Key_Escape) {
-                    closeMenu();
-                    event.accepted = true;
-                }
-            }
-
-            Component.onCompleted: popupCard.forceActiveFocus()
 
             Behavior on height {
                 NumberAnimation {
@@ -337,156 +333,164 @@ Item {
                 onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
             }
 
-            Text {
-                id: titleLabel
-                text: "Audio"
-                font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; 
-                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
-                x: 14; y: 14
-            }
-
-            Rectangle {
-                id: headerDivider
-                width: parent.width - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
-                x: 12; y: 44
-            }
-
-            Slider {
-                id: globalVolumeSlider
-                width: parent.width - 64; height: 32
-                x: 12; y: 54
-                orientation: Qt.Horizontal
-                from: 0.0
-                to: 1.0
-                value: 0.0
-
-                onPressedChanged: checkUserActivity()
-                onMoved: {
-                    adjustVolume.running = false;
-                    adjustVolume.running = true;
-                    checkUserActivity();
-                }
-
-                background: Rectangle {
-                    height: 3; radius: 0; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
-                    width: globalVolumeSlider.availableWidth
-                    x: globalVolumeSlider.leftPadding
-                    y: globalVolumeSlider.topPadding + globalVolumeSlider.availableHeight / 2 - height / 2
-
-                    Rectangle {
-                        height: parent.height
-                        width: globalVolumeSlider.visualPosition * parent.width
-                        color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" 
-                        radius: 0
-                    }
-                }
-
-                handle: Rectangle {
-                    width: 16; height: 16; radius: 8; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" 
-                    x: globalVolumeSlider.leftPadding + globalVolumeSlider.visualPosition * (globalVolumeSlider.availableWidth - width)
-                    y: globalVolumeSlider.topPadding + globalVolumeSlider.availableHeight / 2 - height / 2
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        acceptedButtons: Qt.NoButton 
-                    }
-                }
-
-                MouseArea {
-                    id: sliderHoverTracker
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    acceptedButtons: Qt.NoButton 
-                    onContainsMouseChanged: checkUserActivity()
-                }
-            }
-
-            Text {
-                text: Math.round(globalVolumeSlider.value * 100) + "%"
-                font.family: "Rubik"; font.pixelSize: 12; font.bold: true; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
-                anchors.verticalCenter: globalVolumeSlider.verticalCenter
-                anchors.right: parent.right; anchors.rightMargin: 14
-            }
-
-            Rectangle {
-                id: sliderDivider
-                width: parent.width - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
-                x: 12; y: 94
-            }
-
-            Text {
-                id: outputsLabel
-                text: "Outputs"
-                font.family: "Rubik"; font.pixelSize: 13; font.bold: true; 
-                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
-                x: 14; y: 104
-            }
-
             Item {
-                id: listContainer
-                width: parent.width - 24
-                x: 12
-                anchors.top: outputsLabel.bottom
-                anchors.bottom: parent.bottom
-                anchors.topMargin: 6
-                anchors.bottomMargin: 12
+                id: textContentGroup
+                anchors.fill: parent
+                
+                opacity: popupCard.width > 200 ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
 
-                MouseArea {
-                    id: listContainerMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    acceptedButtons: Qt.NoButton
-                    onContainsMouseChanged: checkUserActivity()
+                Text {
+                    id: titleLabel
+                    text: "Audio"
+                    font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; 
+                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
+                    x: 14; y: 14
                 }
 
-                ListView {
-                    id: deviceListView
-                    anchors.fill: parent
-                    model: deviceListModel
-                    clip: true
-                    spacing: 4
+                Rectangle {
+                    id: headerDivider
+                    width: 300 - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
+                    x: 12; y: 44
+                }
 
-                    delegate: Item {
-                        width: deviceListView.width
-                        height: 36
+                Slider {
+                    id: globalVolumeSlider
+                    width: 300 - 64; height: 32
+                    x: 12; y: 54
+                    orientation: Qt.Horizontal
+                    from: 0.0
+                    to: 1.0
+                    value: 0.0
+
+                    onPressedChanged: checkUserActivity()
+                    onMoved: {
+                        adjustVolume.running = false;
+                        adjustVolume.running = true;
+                        checkUserActivity();
+                    }
+
+                    background: Rectangle {
+                        height: 3; radius: 0; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
+                        width: globalVolumeSlider.availableWidth
+                        x: globalVolumeSlider.leftPadding
+                        y: globalVolumeSlider.topPadding + globalVolumeSlider.availableHeight / 2 - height / 2
 
                         Rectangle {
-                            anchors.fill: parent
+                            height: parent.height
+                            width: globalVolumeSlider.visualPosition * parent.width
+                            color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" 
                             radius: 0
-                            color: active ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (deviceMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#1affffff") : "transparent")
-                            border.width: 0
+                        }
+                    }
 
-                            RowLayout {
+                    handle: Rectangle {
+                        width: 16; height: 16; radius: 8; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" 
+                        x: globalVolumeSlider.leftPadding + globalVolumeSlider.visualPosition * (globalVolumeSlider.availableWidth - width)
+                        y: globalVolumeSlider.topPadding + globalVolumeSlider.availableHeight / 2 - height / 2
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            acceptedButtons: Qt.NoButton 
+                        }
+                    }
+
+                    MouseArea {
+                        id: sliderHoverTracker
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.NoButton 
+                        onContainsMouseChanged: checkUserActivity()
+                    }
+                }
+
+                Text {
+                    text: Math.round(globalVolumeSlider.value * 100) + "%"
+                    font.family: "Rubik"; font.pixelSize: 12; font.bold: true; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                    anchors.verticalCenter: globalVolumeSlider.verticalCenter
+                    anchors.right: parent.right; anchors.rightMargin: 14
+                }
+
+                Rectangle {
+                    id: sliderDivider
+                    width: 300 - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
+                    x: 12; y: 94
+                }
+
+                Text {
+                    id: outputsLabel
+                    text: "Outputs"
+                    font.family: "Rubik"; font.pixelSize: 13; font.bold: true; 
+                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
+                    x: 14; y: 104
+                }
+
+                Item {
+                    id: listContainer
+                    width: 300 - 24
+                    x: 12
+                    anchors.top: outputsLabel.bottom
+                    anchors.bottom: parent.bottom
+                    anchors.topMargin: 6
+                    anchors.bottomMargin: 12
+
+                    MouseArea {
+                        id: listContainerMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.NoButton
+                        onContainsMouseChanged: checkUserActivity()
+                    }
+
+                    ListView {
+                        id: deviceListView
+                        anchors.fill: parent
+                        model: deviceListModel
+                        clip: true
+                        spacing: 4
+
+                        delegate: Item {
+                            width: deviceListView.width
+                            height: 36
+
+                            Rectangle {
                                 anchors.fill: parent
-                                anchors.leftMargin: 8; anchors.rightMargin: 8
-                                spacing: 8
+                                radius: 0
+                                color: active ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (deviceMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#1affffff") : "transparent")
+                                border.width: 0
 
-                                Rectangle {
-                                    width: 6; height: 6; radius: 3
-                                    color: active ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : "transparent"
-                                    Layout.alignment: Qt.AlignVCenter
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8; anchors.rightMargin: 8
+                                    spacing: 8
+
+                                    Rectangle {
+                                        width: 6; height: 6; radius: 3
+                                        color: active ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : "transparent"
+                                        Layout.alignment: Qt.AlignVCenter
+                                    }
+
+                                    Text {
+                                        text: name
+                                        font.family: "Rubik"; font.pixelSize: 12
+                                        color: active ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#59ffffff") 
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
                                 }
 
-                                Text {
-                                    text: name
-                                    font.family: "Rubik"; font.pixelSize: 12
-                                    color: active ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#59ffffff") 
-                                    elide: Text.ElideRight
-                                    Layout.fillWidth: true
-                                }
-                            }
-
-                            MouseArea {
-                                id: deviceMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    changeDeviceProcess.switchSink(devId);
-                                    syncDevicesQuery.running = false;
-                                    syncDevicesQuery.running = true;
-                                    checkUserActivity();
+                                MouseArea {
+                                    id: deviceMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        changeDeviceProcess.switchSink(devId);
+                                        syncDevicesQuery.running = false;
+                                        syncDevicesQuery.running = true;
+                                        checkUserActivity();
+                                    }
                                 }
                             }
                         }
