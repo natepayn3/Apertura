@@ -308,17 +308,9 @@ Item {
                                 id: rawAppIcon
                                 anchors.fill: parent
                                 sourceSize.width: 22; sourceSize.height: 22
-                                visible: false // Kept hidden so the colorized overlay layer handles rendering
+                                visible: model.iconPath !== "" 
                                 source: model.iconPath ? "file://" + model.iconPath : ""
                                 fillMode: Image.PreserveAspectFit
-                            }
-
-                            // Forced hardware mapping of the color tokens down to the icon texture array
-                            ColorOverlay {
-                                anchors.fill: parent
-                                source: rawAppIcon
-                                visible: model.iconPath !== ""
-                                color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff")
                             }
 
                             Rectangle {
