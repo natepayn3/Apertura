@@ -169,7 +169,6 @@ Scope {
 
                                 readonly property bool shouldBeActive: (bottomGroupControls.isExpanded || isPinned) && moduleAvailable
 
-                                // Animate the height property smoothly
                                 property int targetHeight: shouldBeActive ? 38 : 0
                                 Behavior on targetHeight {
                                     NumberAnimation {
@@ -180,14 +179,13 @@ Scope {
 
                                 Layout.preferredWidth: shouldBeActive ? 38 : 0
                                 Layout.preferredHeight: targetHeight
+                                Layout.alignment: Qt.AlignHCenter
                                 
-                                // Keep visible true during animation so it doesn't instantly snap hide
                                 visible: targetHeight > 0
                                 opacity: targetHeight / 38
 
                                 width: 38
                                 height: 38
-                                anchors.horizontalCenter: parent.horizontalCenter
 
                                 Rectangle {
                                     anchors.fill: parent
