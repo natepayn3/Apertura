@@ -284,7 +284,7 @@ Item {
         isOpen: false
         modalToken: "bluetooth"
         anchorTop: false
-        width: 320 
+        implicitWidth: 320 
 
         drawerHeight: {
             if (!bluetoothRoot.isPowered) return 92;
