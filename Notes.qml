@@ -84,12 +84,11 @@ Item {
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
-        
-        // Changed: Maintain OnDemand focus so the compositor allows the TextArea to handle keyboard mapping
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
-        // Changed: Apply the input mask in both states to preserve correct pointer pass-through
-        mask: notesInputBounds
+        // Fixed: Only mask input to the frame when pinned. When open as a regular menu, 
+        // the mask is null so the fullscreen layout can intercept click-away events.
+        mask: notesRoot.isAlwaysVisible ? notesInputBounds : null
 
         Region {
             id: notesInputBounds
@@ -130,7 +129,7 @@ Item {
                 },
                 State {
                     name: "hidden"
-                    when: !notesRoot.notesRoot.menuOpen && !notesRoot.isAlwaysVisible
+                    when: !notesRoot.menuOpen && !notesRoot.isAlwaysVisible
                     PropertyChanges { target: popupMenuFrame; width: 0; opacity: 0.0 }
                 }
             ]
