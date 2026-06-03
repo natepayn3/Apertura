@@ -196,22 +196,28 @@ Item {
 
         Rectangle {
             id: menuCard
-            width: 300 
             height: 300 
             
+            // Drawer positioning anchors flush to the side panel
+            x: 0
             anchors.top: parent.top
             anchors.topMargin: 12
-            
+            radius: 0
+            color: "#9911111b" 
+            border.width: 0
+            clip: true
+            focus: true
+
             states: [
                 State {
                     name: "visible"
                     when: launcherModuleRoot.menuOpen
-                    PropertyChanges { target: menuCard; x: 0; opacity: 1.0 }
+                    PropertyChanges { target: menuCard; width: 300; opacity: 1.0 }
                 },
                 State {
                     name: "hidden"
                     when: !launcherModuleRoot.menuOpen
-                    PropertyChanges { target: menuCard; x: -320; opacity: 0.0 }
+                    PropertyChanges { target: menuCard; width: 0; opacity: 0.0 }
                 }
             ]
 
@@ -219,16 +225,16 @@ Item {
                 Transition {
                     from: "hidden"; to: "visible"
                     ParallelAnimation {
-                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
-                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "width"; duration: 250; easing.type: Easing.OutQuad }
+                        NumberAnimation { property: "opacity"; duration: 150; easing.type: Easing.OutQuad }
                     }
                 },
                 Transition {
                     from: "visible"; to: "hidden"
                     SequentialAnimation {
                         ParallelAnimation {
-                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
-                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "width"; duration: 200; easing.type: Easing.InQuad }
+                            NumberAnimation { property: "opacity"; duration: 200; easing.type: Easing.InQuad }
                         }
                         ScriptAction {
                             script: { launcherModuleRoot.windowAlive = false; }
@@ -236,13 +242,6 @@ Item {
                     }
                 }
             ]
-
-            color: "#9911111b" 
-            border.width: 0
-            focus: true
-
-            antialiasing: false
-            topLeftRadius: 0; bottomLeftRadius: 0; topRightRadius: 0; bottomRightRadius: 0
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
@@ -333,97 +332,106 @@ Item {
                 onPressed: (mouse) => mouse.accepted = true
             }
 
-            ColumnLayout {
+            // Cross-fade layout wrapper container
+            Item {
+                id: textContentGroup
                 anchors.fill: parent
-                anchors.margins: 12
-                spacing: 8
+                
+                opacity: menuCard.width > 200 ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
 
-                Text {
-                    text: activeSearchQuery === "" ? "Applications" : "Results for '" + activeSearchQuery + "'"
-                    font.family: "Rubik"
-                    font.pixelSize: 18
-                    font.weight: Font.Bold
-                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
-                    Layout.alignment: Qt.AlignLeft
-                    Layout.bottomMargin: 2
-                    Layout.topMargin: 4
-                }
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 8
 
-                ListView {
-                    id: appListView
-                    Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: 2
-                    model: dynamicAppModel
-                    
-                    property bool keyboardActive: false
+                    Text {
+                        text: activeSearchQuery === "" ? "Applications" : "Results for '" + activeSearchQuery + "'"
+                        font.family: "Rubik"
+                        font.pixelSize: 18
+                        font.weight: Font.Bold
+                        color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
+                        Layout.alignment: Qt.AlignLeft
+                        Layout.bottomMargin: 2
+                        Layout.topMargin: 4
+                    }
 
-                    highlightFollowsCurrentItem: true
-                    highlightMoveDuration: 60 
-                    highlight: null
+                    ListView {
+                        id: appListView
+                        Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: 2
+                        model: dynamicAppModel
+                        
+                        property bool keyboardActive: false
 
-                    delegate: Item {
-                        id: delegateRoot
-                        width: appListView.width; height: 36
+                        highlightFollowsCurrentItem: true
+                        highlightMoveDuration: 60 
+                        highlight: null
 
-                        Rectangle {
-                            anchors.fill: parent
-                            color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
-                            radius: 0 
-                            z: 0 
-                        }
+                        delegate: Item {
+                            id: delegateRoot
+                            width: appListView.width; height: 36
 
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 10; anchors.rightMargin: 10
-                            spacing: 12
-                            z: 1
+                            Rectangle {
+                                anchors.fill: parent
+                                color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
+                                radius: 0 
+                                z: 0 
+                            }
 
-                            Item {
-                                width: 22; height: 22
-                                Layout.alignment: Qt.AlignVCenter
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10; anchors.rightMargin: 10
+                                spacing: 12
+                                z: 1
 
-                                Image {
-                                    anchors.fill: parent
-                                    sourceSize.width: 22; sourceSize.height: 22
-                                    visible: model.iconPath !== ""
-                                    source: model.iconPath ? "file://" + model.iconPath : ""
-                                    fillMode: Image.PreserveAspectFit
-                                }
+                                Item {
+                                    width: 22; height: 22
+                                    Layout.alignment: Qt.AlignVCenter
 
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: 0 
-                                    color: rootScope.theme ? rootScope.theme.theme_outline : "#1affffff" 
-                                    visible: model.iconPath === ""
+                                    Image {
+                                        anchors.fill: parent
+                                        sourceSize.width: 22; sourceSize.height: 22
+                                        visible: model.iconPath !== ""
+                                        source: model.iconPath ? "file://" + model.iconPath : ""
+                                        fillMode: Image.PreserveAspectFit
+                                    }
 
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: model.name.charAt(0).toUpperCase()
-                                        font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
-                                        color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        radius: 0 
+                                        color: rootScope.theme ? rootScope.theme.theme_outline : "#1affffff" 
+                                        visible: model.iconPath === ""
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: model.name.charAt(0).toUpperCase()
+                                            font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
+                                            color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
+                                        }
                                     }
                                 }
+
+                                Text {
+                                    text: model.name
+                                    font.family: "Rubik"; font.weight: Font.Medium; font.pixelSize: 14
+                                    color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight 
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
                             }
 
-                            Text {
-                                text: model.name
-                                font.family: "Rubik"; font.weight: Font.Medium; font.pixelSize: 14
-                                color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight 
-                                Layout.alignment: Qt.AlignVCenter
-                            }
-                        }
+                            MouseArea {
+                                id: rowMouse
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                z: 2 
 
-                        MouseArea {
-                            id: rowMouse
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            z: 2 
-
-                            onClicked: {
-                                appListView.currentIndex = index;
-                                executeApplication(model.bin);
-                                closeMenu();
+                                onClicked: {
+                                    appListView.currentIndex = index;
+                                    executeApplication(model.bin);
+                                    closeMenu();
+                                }
                             }
                         }
                     }
