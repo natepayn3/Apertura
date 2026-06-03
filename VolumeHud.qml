@@ -124,11 +124,6 @@ Item {
             border.width: 0
             opacity: 0.0
 
-            topLeftRadius: 0
-            bottomLeftRadius: 0
-            topRightRadius: 0
-            bottomRightRadius: 0
-
             Behavior on opacity {
                 NumberAnimation { duration: 140; easing.type: Easing.OutQuad }
             }
@@ -157,11 +152,6 @@ Item {
                         height: parent.height * Math.min(hudRoot.volumeLevel, 1.0)
                         color: hudRoot.isMuted ? (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff") : (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff")
                         anchors.bottom: parent.bottom
-
-                        bottomLeftRadius: 0
-                        bottomRightRadius: 0
-                        topLeftRadius: 0
-                        topRightRadius: 0
 
                         Behavior on height {
                             NumberAnimation { duration: 80; easing.type: Easing.OutCubic }
