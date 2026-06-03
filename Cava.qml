@@ -44,7 +44,7 @@ Item {
                 height: 2
                 anchors.left: parent.left
                 width: Math.max(2, cavaVisualizer.barHeights[index] * parent.width)
-                radius: 1
+                radius: 0
                 color: cavaVisualizer.themeContext ? cavaVisualizer.themeContext.theme_primary : "#ffffff"
 
                 Behavior on width {
