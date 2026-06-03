@@ -4,6 +4,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import "."
 
 Item {
     id: netRoot
@@ -11,7 +12,6 @@ Item {
     implicitHeight: 32
 
     property bool menuOpen: false
-    property bool windowAlive: false
 
     property string activeIface: "None"
     property string ipAddress: "0.0.0.0"
@@ -22,35 +22,24 @@ Item {
 
     Timer {
         id: osdAutohideTimer
-        interval: 3500
+        interval: Config.autohideInterval
         running: false
         repeat: false
         onTriggered: closeMenu()
     }
 
     function toggleMenu(): void {
-        if (menuOpen) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
-    }
-
-    function openMenu(): void {
-        windowAlive = true;
-        rootScope.requestOpen(netOverlayModal);
-        menuOpen = true;
-        checkUserActivity();
+        drawerTemplate.isOpen = !drawerTemplate.isOpen;
     }
 
     function closeMenu(): void {
-        menuOpen = false;
+        drawerTemplate.isOpen = false;
     }
 
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse) {
             osdAutohideTimer.stop();
-        } else {
+        } else if (drawerTemplate.isOpen) {
             osdAutohideTimer.restart();
         }
     }
@@ -58,7 +47,7 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (rootScope.activeModal !== netOverlayModal && menuOpen) {
+            if (rootScope.activeModal !== drawerTemplate.modalToken && drawerTemplate.isOpen) {
                 closeMenu();
             }
         }
@@ -153,136 +142,103 @@ Item {
         }
     }
 
-    PanelWindow {
-        id: netOverlayModal
-        visible: netRoot.windowAlive
-        color: "transparent"
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    PanelDrawer {
+        id: drawerTemplate
+        isOpen: false
+        drawerHeight: 180
+        modalToken: "netmonitor"
+        anchorTop: false
 
-        Shortcut {
-            sequence: "Escape"
-            enabled: netRoot.menuOpen
-            onActivated: closeMenu()
+        onIsOpenChanged: {
+            if (isOpen) {
+                netRoot.menuOpen = true;
+                checkUserActivity();
+                mainContainerLayout.forceActiveFocus();
+            } else {
+                netRoot.menuOpen = false;
+            }
         }
 
-        MouseArea { anchors.fill: parent; onClicked: closeMenu() }
+        MouseArea {
+            id: cardHoverTracker
+            anchors.fill: parent
+            hoverEnabled: true
+            onContainsMouseChanged: checkUserActivity()
+        }
 
-        Rectangle {
-            id: popupCard
-            height: 180
-            
-            x: 0
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 12
-            radius: 0
-            
-            color: "#9911111b"
-            border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
-            border.width: 0
-            
-            clip: true
-
-            states: [
-                State {
-                    name: "visible"; when: netRoot.menuOpen
-                    PropertyChanges { target: popupCard; width: 300; opacity: 1.0 }
-                },
-                State {
-                    name: "hidden"; when: !netRoot.menuOpen
-                    PropertyChanges { target: popupCard; width: 0; opacity: 0.0 }
-                }
-            ]
-
-            transitions: [
-                Transition {
-                    from: "hidden"; to: "visible"
-                    ParallelAnimation {
-                        NumberAnimation { property: "width"; duration: 250; easing.type: Easing.OutQuad }
-                        NumberAnimation { property: "opacity"; duration: 150; easing.type: Easing.OutQuad }
-                    }
-                },
-                Transition {
-                    from: "visible"; to: "hidden"
-                    SequentialAnimation {
-                        ParallelAnimation {
-                            NumberAnimation { property: "width"; duration: 200; easing.type: Easing.InQuad }
-                            NumberAnimation { property: "opacity"; duration: 200; easing.type: Easing.InQuad }
-                        }
-                        ScriptAction { script: { netRoot.windowAlive = false; } }
-                    }
-                }
-            ]
-
-            MouseArea {
-                id: cardHoverTracker; anchors.fill: parent; hoverEnabled: true
-                onContainsMouseChanged: checkUserActivity()
-            }
+        ColumnLayout {
+            id: mainContainerLayout
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 0
+            focus: true
 
             Item {
-                id: textContentGroup
-                anchors.fill: parent
-                
-                opacity: popupCard.width > 200 ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                Layout.fillWidth: true
+                Layout.preferredHeight: 32
 
                 Text {
                     text: "Network Status"
-                    font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold
-                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; x: 14; y: 14
+                    font.family: "Rubik"
+                    font.pixelSize: 16
+                    font.weight: Font.Bold
+                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                    anchors.verticalCenter: parent.verticalCenter
+                    x: 2
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
+                Layout.bottomMargin: 12
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    ColumnLayout {
+                        spacing: 2
+                        Text { text: "Interface"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                        Text { text: netRoot.activeIface; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
+                    }
+                    Item { Layout.fillWidth: true }
+                    ColumnLayout {
+                        spacing: 2; Layout.alignment: Qt.AlignRight
+                        Text { text: "IP Address"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                        Text { text: netRoot.ipAddress; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
+                    }
                 }
 
-                Rectangle { width: 300 - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"; x: 12; y: 44 }
+                Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_outline, 0.5) : "#1affffff" }
 
-                ColumnLayout {
-                    x: 14; y: 56; width: 300 - 28; spacing: 12
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        ColumnLayout {
-                            spacing: 2
-                            Text { text: "Interface"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
-                            Text { text: netRoot.activeIface; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
-                        }
-                        Item { Layout.fillWidth: true }
-                        ColumnLayout {
-                            spacing: 2; Layout.alignment: Qt.AlignRight
-                            Text { text: "IP Address"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
-                            Text { text: netRoot.ipAddress; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
+                RowLayout {
+                    Layout.fillWidth: true
+                    ColumnLayout {
+                        spacing: 2
+                        Text { text: "Download"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                        RowLayout {
+                            spacing: 6
+                            Text { text: "arrow_downward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
+                            Text { text: netRoot.downloadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
                         }
                     }
-
-                    Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_outline, 0.5) : "#1affffff" }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        ColumnLayout {
-                            spacing: 2
-                            Text { text: "Download"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
-                            RowLayout {
-                                spacing: 6
-                                Text { text: "arrow_downward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
-                                Text { text: netRoot.downloadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
-                            }
-                        }
-                        Item { Layout.fillWidth: true }
-                        ColumnLayout {
-                            spacing: 2; Layout.alignment: Qt.AlignRight
-                            Text { text: "Upload"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
-                            RowLayout {
-                                spacing: 6; Layout.alignment: Qt.AlignRight
-                                Text { text: "arrow_upward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
-                                Text { text: netRoot.uploadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
-                            }
+                    Item { Layout.fillWidth: true }
+                    ColumnLayout {
+                        spacing: 2; Layout.alignment: Qt.AlignRight
+                        Text { text: "Upload"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                        RowLayout {
+                            spacing: 6; Layout.alignment: Qt.AlignRight
+                            Text { text: "arrow_upward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
+                            Text { text: netRoot.uploadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
                         }
                     }
                 }
             }
-        } // popupCard closed correctly here
+        }
     }
 }
