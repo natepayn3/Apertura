@@ -5,7 +5,7 @@ import Quickshell.Io
 Item {
     id: theme
 
-    property string configPath: Quickshell.shellDir + "/../Colors/colors.json"
+    property string configPath: Quickshell.shellDir + "/Colors/colors.json"
 
     property color theme_bg: "#9911111b"
     property color theme_primary: "#ffffff"
