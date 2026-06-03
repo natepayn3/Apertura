@@ -282,12 +282,18 @@ Item {
                             onClicked: { 
                                 wallpaperSetter.command = ["awww", "img", model.fullPath, "--transition-type", "wipe", "--transition-step", "16", "--transition-duration", "1"];
                                 wallpaperSetter.running = true; 
+                                
                                 matugenSetter.command = [
                                     "sh",
                                     "-c",
-                                    "mkdir -p " + Quickshell.env("HOME") + "/.config/matugen/templates/ && matugen -t scheme-fidelity image --source-color-index 0 \"" + model.fullPath + "\" --json hex > " + Quickshell.env("HOME") + "/.config/matugen/templates/colors.json"
+                                    "mkdir -p " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors && matugen image \"" + model.fullPath + "\" -m dark --source-color-index 0 --dry-run --json hex > " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors/colors.json"
                                 ];
                                 matugenSetter.running = true;
+                                
+                                // Force a clean restart of the quickshell process via IPC to completely clear the file cache
+                                let reloadProcess = Qt.createQmlObject('import Quickshell; Process { command: ["qs", "ipc", "reload"] }', theme);
+                                reloadProcess.running = true;
+
                                 closeMenu(); 
                             }
                         }
