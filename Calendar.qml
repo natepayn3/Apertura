@@ -18,6 +18,55 @@ Item {
     property int currentMonthOffsetIndex: 50
     property date viewerTargetDate: new Date()
 
+    // Location override option for VPN users. Examples: "90210", "London"
+    // Leave blank ("") to fallback to automated dynamic IP location detection.
+    property string weatherLocationOverride: ""
+
+    // Weather state storage
+    property string weatherTemp: "--"
+    property string weatherFeelsLike: "--"
+    property string weatherDesc: "Loading..."
+    property string weatherGlyph: "cloud"
+
+    // Maps Open-Meteo WMO Weather Interpretation Codes (WMO code) to Material Symbols
+    readonly property var weatherIconMap: {
+        "0": "clear_day",            // Clear sky
+        "1": "partly_cloudy_day",    // Mainly clear
+        "2": "partly_cloudy_day",    // Partly cloudy
+        "3": "cloudy",               // Overcast
+        "45": "foggy",               // Fog
+        "48": "foggy",               // Depositing rime fog
+        "51": "rainy",               // Light drizzle
+        "53": "rainy",               // Moderate drizzle
+        "55": "rainy",               // Dense drizzle
+        "61": "rainy",               // Slight rain
+        "63": "rainy",               // Moderate rain
+        "65": "rainy",               // Heavy rain
+        "71": "snowing",             // Slight snow fall
+        "73": "snowing",             // Moderate snow fall
+        "75": "snowing",             // Heavy snow fall
+        "77": "snowing",             // Snow grains
+        "80": "rainy",               // Slight rain showers
+        "81": "rainy",               // Moderate rain showers
+        "82": "rainy",               // Violent rain showers
+        "85": "snowing",             // Slight snow showers
+        "86": "snowing",             // Heavy snow showers
+        "95": "thunderstorm",        // Thunderstorm
+        "96": "thunderstorm",        // Thunderstorm with slight hail
+        "99": "thunderstorm"         // Thunderstorm with heavy hail
+    }
+
+    // Maps Open-Meteo WMO Codes to human-readable strings
+    readonly property var weatherDescMap: {
+        "0": "Clear Sky", "1": "Mainly Clear", "2": "Partly Cloudy", "3": "Overcast",
+        "45": "Foggy", "48": "Rime Fog", "51": "Light Drizzle", "53": "Moderate Drizzle",
+        "55": "Dense Drizzle", "61": "Slight Rain", "63": "Moderate Rain", "65": "Heavy Rain",
+        "71": "Light Snow", "73": "Moderate Snow", "75": "Heavy Snow", "77": "Snow Grains",
+        "80": "Light Showers", "81": "Moderate Showers", "82": "Heavy Showers",
+        "85": "Light Snow Showers", "86": "Heavy Snow Showers", "95": "Thunderstorm",
+        "96": "Storm w/ Hail", "99": "Severe Storm"
+    }
+
     Timer {
         interval: 1000; running: true; repeat: true
         onTriggered: calendarRoot.currentDateTime = new Date()
@@ -26,6 +75,105 @@ Item {
     Timer {
         id: osdAutohideTimer; interval: Config.autohideInterval; running: false; repeat: false
         onTriggered: closeMenu()
+    }
+
+    // Native asynchronous weather data engine sync (15 minute refresh layout)
+    Timer {
+        id: weatherTimer
+        interval: 900000; running: true; repeat: true; triggeredOnStart: true
+        onTriggered: startWeatherPipeline()
+    }
+
+    // Entry point that determines whether to use the override geocoder or the fallback IP tracker
+    function startWeatherPipeline() {
+        if (calendarRoot.weatherLocationOverride.trim() !== "") {
+            geocodeOverrideLocation(calendarRoot.weatherLocationOverride.trim());
+        } else {
+            bootstrapDynamicLocation();
+        }
+    }
+
+    // Pipeline Alternative: Resolves strings or ZIP codes to coordinates via Open-Meteo Geocoding
+    function geocodeOverrideLocation(query) {
+        let xhr = new XMLHttpRequest();
+        let targetUrl = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(query) + "&count=1&language=en&format=json";
+        
+        xhr.open("GET", targetUrl, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    try {
+                        let data = JSON.parse(xhr.responseText);
+                        if (data.results && data.results.length > 0) {
+                            let match = data.results[0];
+                            fetchWeatherAsync(match.latitude, match.longitude);
+                        } else {
+                            console.log("Geocoding failed to find matching coordinates for override query");
+                        }
+                    } catch (e) {
+                        console.log("Geocoding JSON parsing error: " + e);
+                    }
+                } else {
+                    console.log("Geocoding API endpoint dropped request: " + xhr.status);
+                }
+            }
+        };
+        xhr.send();
+    }
+
+    // Pipeline Fallback: Query location metrics dynamically based on current routing table path
+    function bootstrapDynamicLocation() {
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", "http://ip-api.com/json/", true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    try {
+                        let locationData = JSON.parse(xhr.responseText);
+                        if (locationData.status === "success" && locationData.lat !== undefined && locationData.lon !== undefined) {
+                            fetchWeatherAsync(locationData.lat, locationData.lon);
+                        } else {
+                            console.log("Location resolve returned success flag error");
+                        }
+                    } catch (e) {
+                        console.log("Location payload tracking parse exception: " + e);
+                    }
+                } else {
+                    console.log("Location diagnostic pipeline endpoint dropped request: " + xhr.status);
+                }
+            }
+        };
+        xhr.send();
+    }
+
+    // Core Fetch Operation: Request weather payload utilizing lat/lon constraints
+    function fetchWeatherAsync(lat, lon) {
+        let xhr = new XMLHttpRequest();
+        let targetUrl = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,apparent_temperature,weather_code&temperature_unit=fahrenheit";
+        
+        xhr.open("GET", targetUrl, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    try {
+                        let json = JSON.parse(xhr.responseText);
+                        let current = json.current;
+                        
+                        calendarRoot.weatherTemp = Math.round(current.temperature_2m) + "°F";
+                        calendarRoot.weatherFeelsLike = Math.round(current.apparent_temperature) + "°F";
+                        
+                        let code = current.weather_code.toString();
+                        calendarRoot.weatherDesc = calendarRoot.weatherDescMap[code] !== undefined ? calendarRoot.weatherDescMap[code] : "Unknown";
+                        calendarRoot.weatherGlyph = calendarRoot.weatherIconMap[code] !== undefined ? calendarRoot.weatherIconMap[code] : "cloud";
+                    } catch (e) {
+                        console.log("Native Weather evaluation formatting exception: " + e);
+                    }
+                } else {
+                    console.log("Weather API connection status code failure: " + xhr.status);
+                }
+            }
+        };
+        xhr.send();
     }
 
     function checkUserActivity() {
@@ -77,7 +225,7 @@ Item {
     PanelDrawer {
         id: drawerTemplate
         isOpen: false
-        drawerHeight: 300
+        drawerHeight: 375 
         modalToken: "calendar"
         anchorTop: true
 
@@ -87,6 +235,7 @@ Item {
                 calendarRoot.currentMonthOffsetIndex = 50;
                 updateViewerDate();
                 checkUserActivity();
+                startWeatherPipeline(); 
                 mainContainerLayout.forceActiveFocus();
             } else {
                 calendarRoot.menuOpen = false;
@@ -102,7 +251,7 @@ Item {
 
         ColumnLayout {
             id: mainContainerLayout
-            anchors.fill: parent; anchors.topMargin: 14; anchors.bottomMargin: 14; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 10
+            anchors.fill: parent; anchors.topMargin: 14; anchors.bottomMargin: 14; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 4 
             focus: true
 
             RowLayout {
@@ -140,6 +289,60 @@ Item {
                                 Text { anchors.centerIn: parent; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; opacity: model.month === grid.month ? 1.0 : 0.25; text: model.day; color: rootScope.theme ? (parent.isToday ? rootScope.theme.theme_primary : rootScope.theme.theme_fg) : "#ffffff"; font.family: grid.font.family; font.pixelSize: grid.font.pixelSize; font.weight: parent.isToday ? Font.Bold : Font.Normal }
                             }
                         }
+                    }
+                }
+            }
+
+            // Floating Weather Presentation row alignment
+            Item {
+                id: weatherCardSurface
+                Layout.fillWidth: true
+                Layout.preferredHeight: 56
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    spacing: 12
+
+                    Text {
+                        text: calendarRoot.weatherGlyph
+                        font.family: "Material Symbols Outlined"
+                        font.pixelSize: 26
+                        color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    ColumnLayout {
+                        spacing: 1
+                        Layout.alignment: Qt.AlignVCenter
+                        Layout.fillWidth: true
+
+                        Text {
+                            text: calendarRoot.weatherDesc
+                            font.family: "Rubik"
+                            font.pixelSize: 13
+                            font.weight: Font.Bold
+                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            text: "Feels like " + calendarRoot.weatherFeelsLike
+                            font.family: "Rubik"
+                            font.pixelSize: 11
+                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                            opacity: 0.6
+                        }
+                    }
+
+                    Text {
+                        text: calendarRoot.weatherTemp
+                        font.family: "Rubik"
+                        font.pixelSize: 18
+                        font.weight: Font.Bold
+                        color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                        Layout.alignment: Qt.AlignVCenter
                     }
                 }
             }
