@@ -16,6 +16,7 @@ Item {
     property string currentTab: "paired" 
     property bool isScanning: false
     property bool menuOpen: false
+    property bool isEvicting: false 
 
     ListModel { id: pairedDevicesModel }
     ListModel { id: discoveredDevicesModel }
@@ -64,7 +65,7 @@ Item {
     }
 
     function refreshPairedList() {
-        if (!bluetoothRoot.isPowered) return;
+        if (!bluetoothRoot.isPowered || bluetoothRoot.isEvicting) return; 
         if (deviceScraper.command && deviceScraper.command.length > 0 && !deviceScraper.running) {
             deviceScraper.running = true;
         }
@@ -110,6 +111,7 @@ Item {
         onExited: running = false 
         stdout: StdioCollector {
             onTextChanged: {
+                if (bluetoothRoot.isEvicting) return; 
                 const rawOutput = text.trim();
                 if (!rawOutput) return;
 
@@ -123,7 +125,7 @@ Item {
                             macAddress: segments[0].trim().toLowerCase(),
                             isDeviceConnected: segments[1].trim() === "true",
                             deviceName: segments[2].trim(),
-                            isTransitioning: false 
+                            isTransitioning: false // Hard-assigned baseline type fallback initialization
                         });
                     }
                 }
@@ -209,9 +211,12 @@ Item {
         running: false
         onExited: { 
             running = false; 
+            bluetoothRoot.isEvicting = false;
             Qt.callLater(() => {
                 refreshStatus(); 
-                refreshPairedList(); 
+                if (bluetoothRoot.currentTab === "paired") {
+                    if (deviceScraper.command && !deviceScraper.running) deviceScraper.running = true;
+                }
             });
         }
     }
@@ -228,7 +233,7 @@ Item {
         repeat: true
         onTriggered: {
             refreshStatus();
-            if (bluetoothRoot.currentTab === "paired") {
+            if (bluetoothRoot.currentTab === "paired" && !bluetoothRoot.isEvicting) {
                 refreshPairedList();
             }
         }
@@ -279,12 +284,13 @@ Item {
         isOpen: false
         modalToken: "bluetooth"
         anchorTop: false
+        width: 320 
 
         drawerHeight: {
             if (!bluetoothRoot.isPowered) return 92;
             const activeCount = (currentTab === "paired") ? pairedDevicesModel.count : discoveredDevicesModel.count;
-            const baseHeight = 100 + (activeCount * 40);
-            return Math.min(activeCount === 0 ? baseHeight + 40 : baseHeight, 300);
+            const baseHeight = 100 + (activeCount * 46);
+            return Math.min(activeCount === 0 ? baseHeight + 40 : baseHeight, 380);
         }
 
         onIsOpenChanged: {
@@ -404,37 +410,61 @@ Item {
                     
                     delegate: Item {
                         id: delegateRoot
-                        width: pairedListView.width; height: 36
-                        
+                        width: pairedListView.width; height: 42
+
                         Rectangle {
                             id: rowBox
                             anchors.fill: parent; color: rowMasterArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 6
                             
-                            RowLayout {
+                            MouseArea {
+                                id: rowMasterArea
                                 anchors.fill: parent
+                                hoverEnabled: true
+                                z: 1
+                                
+                                onContainsMouseChanged: {
+                                    pairedListView.isHoveringItems = rowMasterArea.containsMouse;
+                                    bluetoothRoot.checkUserActivity();
+                                }
+                            }
+
+                            RowLayout {
+                                id: mainMetaRow
+                                anchors.left: parent.left
                                 anchors.leftMargin: 8
-                                anchors.rightMargin: staticOptionsWrapper.width + 12
+                                anchors.right: controlButtonsRow.left
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
                                 spacing: 10
+                                z: 2
                                 
                                 Text { text: model.isDeviceConnected ? "󰂱" : "󰂯"; font.family: "Rubik"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignVCenter }
-                                Text { text: model.deviceName; font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.fillWidth: true; elide: Text.ElideRight; Layout.alignment: Qt.AlignVCenter }
+                                
+                                Text { 
+                                    text: model.deviceName
+                                    font.family: "Rubik"; font.pixelSize: 13
+                                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                    Layout.alignment: Qt.AlignVCenter 
+                                }
                             }
-                            
-                            RowLayout {
-                                id: staticOptionsWrapper
-                                height: parent.height
+
+                            Row {
+                                id: controlButtonsRow
                                 anchors.right: parent.right
                                 anchors.rightMargin: 8
-                                spacing: 8
-                                opacity: rowMasterArea.containsMouse || model.isTransitioning ? 1.0 : 0.0
-                                z: 20 
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 6
+                                visible: rowMasterArea.containsMouse || model.isTransitioning
+                                z: 3
 
                                 Text {
                                     id: actionLabel
                                     text: model.isTransitioning ? "Connecting..." : (model.isDeviceConnected ? "Disconnect" : "Connect")
                                     font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
                                     color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
-                                    Layout.alignment: Qt.AlignVCenter
+                                    anchors.verticalCenter: parent.verticalCenter
 
                                     MouseArea {
                                         anchors.fill: parent
@@ -456,18 +486,20 @@ Item {
                                 }
 
                                 Text { 
-                                    id: pipeDivider
                                     text: "|" 
-                                    font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
-                                    Layout.alignment: Qt.AlignVCenter
+                                    font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                                    opacity: 0.4
+                                    anchors.verticalCenter: parent.verticalCenter
                                     visible: !model.isTransitioning
                                 }
                                 
                                 Text {
                                     id: forgetLabel
                                     text: "Forget"
-                                    font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
-                                    Layout.alignment: Qt.AlignVCenter
+                                    font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
+                                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                                    opacity: 0.65
+                                    anchors.verticalCenter: parent.verticalCenter
                                     visible: !model.isTransitioning
 
                                     MouseArea {
@@ -475,23 +507,15 @@ Item {
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: {
                                             if (!unpairAction.running) {
+                                                bluetoothRoot.isEvicting = true; 
                                                 unpairAction.command = ["bash", "-c", "bluetoothctl remove " + model.macAddress];
                                                 unpairAction.running = true;
+                                                
+                                                pairedDevicesModel.remove(index);
                                                 bluetoothRoot.checkUserActivity();
                                             }
                                         }
                                     }
-                                }
-                            }
-
-                            MouseArea {
-                                id: rowMasterArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                
-                                onContainsMouseChanged: {
-                                    pairedListView.isHoveringItems = rowMasterArea.containsMouse;
-                                    bluetoothRoot.checkUserActivity();
                                 }
                             }
                         }
