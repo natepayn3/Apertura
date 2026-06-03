@@ -201,9 +201,15 @@ Item {
                     let finalTarget = wallpaperListView.activeKeyIndex !== -1 ? wallpaperListView.activeKeyIndex : wallpaperListView.activeMouseIndex;
                     if (finalTarget >= 0 && finalTarget < wallpaperListView.count) {
                         let targetWallpaper = wallpaperModel.get(finalTarget);
-                        wallpaperSetter.command = ["awww", "img", targetWallpaper.fullPath, "--transition-type", "wipe", "--transition-step", "16"];
+                        wallpaperSetter.command = ["awww", "img", targetWallpaper.fullPath, "--transition-type", "wipe", "--transition-step", "16", "--transition-duration", "1"];
                         wallpaperSetter.running = true;
-                        matugenSetter.command = ["matugen", "image", "--type", "scheme-tonal-spot", "--source-color-index", "0", targetWallpaper.fullPath, "--output-file", Quickshell.env("HOME") + "/.config/matugen/templates/colors.json"];
+                        
+                        // Updated keyboard selection handler to write to local directory
+                        matugenSetter.command = [
+                            "sh",
+                            "-c",
+                            "mkdir -p " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors && matugen image \"" + targetWallpaper.fullPath + "\" -m dark --source-color-index 0 --dry-run --json hex > " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors/colors.json"
+                        ];
                         matugenSetter.running = true;
                         closeMenu();
                     }
@@ -289,11 +295,6 @@ Item {
                                     "mkdir -p " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors && matugen image \"" + model.fullPath + "\" -m dark --source-color-index 0 --dry-run --json hex > " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors/colors.json"
                                 ];
                                 matugenSetter.running = true;
-                                
-                                // Force a clean restart of the quickshell process via IPC to completely clear the file cache
-                                let reloadProcess = Qt.createQmlObject('import Quickshell; Process { command: ["qs", "ipc", "reload"] }', theme);
-                                reloadProcess.running = true;
-
                                 closeMenu(); 
                             }
                         }
