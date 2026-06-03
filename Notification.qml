@@ -146,6 +146,14 @@ Item {
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
+        // Fixed: Map the input bounding layout box down to Wayland context so clicks fall through empty space
+        mask: toastInputBounds
+
+        Region {
+            id: toastInputBounds
+            item: toastColumn
+        }
+
         ColumnLayout {
             id: toastColumn
             width: Config.drawerTargetWidth 
