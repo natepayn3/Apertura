@@ -4,6 +4,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import "."
 
 Item {
     id: launcherModuleRoot
@@ -12,8 +13,6 @@ Item {
 
     property var allApps: []
     property string activeSearchQuery: ""
-    property bool menuOpen: false
-    property bool windowAlive: false
 
     ListModel {
         id: dynamicAppModel
@@ -28,35 +27,7 @@ Item {
     }
 
     function toggleMenu(): void {
-        if (menuOpen) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
-    }
-
-    function openMenu(): void {
-        rootScope.requestOpen(appLauncherModal);
-        windowAlive = true;
-        menuOpen = true;
-
-        if (appScanner.command && appScanner.command.length > 1) {
-            appScanner.running = false;
-            appScanner.running = true;
-        }
-    }
-
-    function closeMenu(): void {
-        menuOpen = false;
-    }
-
-    Connections {
-        target: rootScope
-        function onActiveModalChanged() {
-            if (rootScope.activeModal !== appLauncherModal && menuOpen) {
-                closeMenu();
-            }
-        }
+        drawerTemplate.isOpen = !drawerTemplate.isOpen;
     }
 
     function executeApplication(binString) {
@@ -138,6 +109,15 @@ Item {
         }
     }
 
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== drawerTemplate.modalToken && drawerTemplate.isOpen) {
+                drawerTemplate.isOpen = false;
+            }
+        }
+    }
+
     Rectangle {
         id: triggerButton
         anchors.fill: parent
@@ -161,22 +141,15 @@ Item {
         }
     }
 
-    PanelWindow {
-        id: appLauncherModal
-        visible: launcherModuleRoot.windowAlive
-        color: "transparent"
-        
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "quickshell-launcher"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    PanelDrawer {
+        id: drawerTemplate
+        isOpen: false
+        drawerHeight: 300
+        modalToken: "launcher"
+        anchorTop: true
 
-        onVisibleChanged: {
-            if (visible && launcherModuleRoot.menuOpen) {
+        onIsOpenChanged: {
+            if (isOpen) {
                 activeSearchQuery = "";
                 filterApps("");
                 appListView.currentIndex = 0;
@@ -185,67 +158,68 @@ Item {
                 globalTracker.lastWindowY = -1;
                 globalTracker.isOverValidItem = false;
                 appListView.positionViewAtBeginning();
-                menuCard.forceActiveFocus();
+                mainLayoutContainer.forceActiveFocus();
+            }
+        }
+
+        MouseArea {
+            id: globalTracker
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton 
+            z: 10 
+
+            property int lastWindowX: -1
+            property int lastWindowY: -1
+            
+            property bool isOverValidItem: false
+            cursorShape: isOverValidItem ? Qt.PointingHandCursor : Qt.ArrowCursor
+
+            onPositionChanged: (mouse) => {
+                let windowPoint = globalTracker.mapToItem(drawerTemplate.contentItem, mouse.x, mouse.y);
+                
+                if (lastWindowX === -1) {
+                    lastWindowX = windowPoint.x;
+                    lastWindowY = windowPoint.y;
+                    return;
+                }
+
+                if (windowPoint.x !== lastWindowX || windowPoint.y !== lastWindowY) {
+                    lastWindowX = windowPoint.x;
+                    lastWindowY = windowPoint.y;
+
+                    appListView.keyboardActive = false; 
+
+                    let listLocalPoint = drawerTemplate.contentItem.mapToItem(appListView, windowPoint.x, windowPoint.y);
+                    let calculatedIndex = appListView.indexAt(listLocalPoint.x, listLocalPoint.y + appListView.contentY);
+
+                    if (calculatedIndex !== -1) {
+                        isOverValidItem = true;
+                        if (calculatedIndex !== appListView.currentIndex) {
+                            appListView.currentIndex = calculatedIndex;
+                        }
+                    } else {
+                        isOverValidItem = false;
+                    }
+                }
             }
         }
 
         MouseArea {
             anchors.fill: parent
-            onClicked: closeMenu()
+            onPressed: (mouse) => mouse.accepted = true
         }
 
-        Rectangle {
-            id: menuCard
-            height: 300 
-            
-            // Drawer positioning anchors flush to the side panel
-            x: 0
-            anchors.top: parent.top
-            anchors.topMargin: 12
-            radius: 0
-            color: "#9911111b" 
-            border.width: 0
-            clip: true
+        ColumnLayout {
+            id: mainLayoutContainer
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 8
             focus: true
-
-            states: [
-                State {
-                    name: "visible"
-                    when: launcherModuleRoot.menuOpen
-                    PropertyChanges { target: menuCard; width: 300; opacity: 1.0 }
-                },
-                State {
-                    name: "hidden"
-                    when: !launcherModuleRoot.menuOpen
-                    PropertyChanges { target: menuCard; width: 0; opacity: 0.0 }
-                }
-            ]
-
-            transitions: [
-                Transition {
-                    from: "hidden"; to: "visible"
-                    ParallelAnimation {
-                        NumberAnimation { property: "width"; duration: 250; easing.type: Easing.OutQuad }
-                        NumberAnimation { property: "opacity"; duration: 150; easing.type: Easing.OutQuad }
-                    }
-                },
-                Transition {
-                    from: "visible"; to: "hidden"
-                    SequentialAnimation {
-                        ParallelAnimation {
-                            NumberAnimation { property: "width"; duration: 200; easing.type: Easing.InQuad }
-                            NumberAnimation { property: "opacity"; duration: 200; easing.type: Easing.InQuad }
-                        }
-                        ScriptAction {
-                            script: { launcherModuleRoot.windowAlive = false; }
-                        }
-                    }
-                }
-            ]
 
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape) {
-                    closeMenu();
+                    drawerTemplate.isOpen = false;
                     event.accepted = true;
                 } 
                 else if (event.key === Qt.Key_Down) {
@@ -266,7 +240,7 @@ Item {
                     if (appListView.currentIndex >= 0 && appListView.currentIndex < appListView.count) {
                         let targetApp = dynamicAppModel.get(appListView.currentIndex);
                         executeApplication(targetApp.bin);
-                        closeMenu();
+                        drawerTemplate.isOpen = false;
                     }
                     event.accepted = true;
                 } 
@@ -284,155 +258,92 @@ Item {
                 }
             }
 
-            MouseArea {
-                id: globalTracker
-                anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton 
-                z: 10 
+            Text {
+                text: activeSearchQuery === "" ? "Applications" : "Results for '" + activeSearchQuery + "'"
+                font.family: "Rubik"
+                font.pixelSize: 18
+                font.weight: Font.Bold
+                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
+                Layout.alignment: Qt.AlignLeft
+                Layout.bottomMargin: 2
+                Layout.topMargin: 4
+            }
 
-                property int lastWindowX: -1
-                property int lastWindowY: -1
+            ListView {
+                id: appListView
+                Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: 2
+                model: dynamicAppModel
                 
-                property bool isOverValidItem: false
-                cursorShape: isOverValidItem ? Qt.PointingHandCursor : Qt.ArrowCursor
+                property bool keyboardActive: false
 
-                onPositionChanged: (mouse) => {
-                    let windowPoint = globalTracker.mapToItem(appLauncherModal.contentItem, mouse.x, mouse.y);
-                    
-                    if (lastWindowX === -1) {
-                        lastWindowX = windowPoint.x;
-                        lastWindowY = windowPoint.y;
-                        return;
+                highlightFollowsCurrentItem: true
+                highlightMoveDuration: 60 
+                highlight: null
+
+                delegate: Item {
+                    id: delegateRoot
+                    width: appListView.width; height: 36
+
+                    Rectangle {
+                        anchors.fill: parent
+                        color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
+                        radius: 0 
+                        z: 0 
                     }
 
-                    if (windowPoint.x !== lastWindowX || windowPoint.y !== lastWindowY) {
-                        lastWindowX = windowPoint.x;
-                        lastWindowY = windowPoint.y;
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10; anchors.rightMargin: 10
+                        spacing: 12
+                        z: 1
 
-                        appListView.keyboardActive = false; 
+                        Item {
+                            width: 22; height: 22
+                            Layout.alignment: Qt.AlignVCenter
 
-                        let listLocalPoint = appLauncherModal.contentItem.mapToItem(appListView, windowPoint.x, windowPoint.y);
-                        let calculatedIndex = appListView.indexAt(listLocalPoint.x, listLocalPoint.y + appListView.contentY);
-
-                        if (calculatedIndex !== -1) {
-                            isOverValidItem = true;
-                            if (calculatedIndex !== appListView.currentIndex) {
-                                appListView.currentIndex = calculatedIndex;
+                            Image {
+                                anchors.fill: parent
+                                sourceSize.width: 22; sourceSize.height: 22
+                                visible: model.iconPath !== ""
+                                source: model.iconPath ? "file://" + model.iconPath : ""
+                                fillMode: Image.PreserveAspectFit
                             }
-                        } else {
-                            isOverValidItem = false;
-                        }
-                    }
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onPressed: (mouse) => mouse.accepted = true
-            }
-
-            // Cross-fade layout wrapper container
-            Item {
-                id: textContentGroup
-                anchors.fill: parent
-                
-                opacity: menuCard.width > 200 ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 8
-
-                    Text {
-                        text: activeSearchQuery === "" ? "Applications" : "Results for '" + activeSearchQuery + "'"
-                        font.family: "Rubik"
-                        font.pixelSize: 18
-                        font.weight: Font.Bold
-                        color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
-                        Layout.alignment: Qt.AlignLeft
-                        Layout.bottomMargin: 2
-                        Layout.topMargin: 4
-                    }
-
-                    ListView {
-                        id: appListView
-                        Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: 2
-                        model: dynamicAppModel
-                        
-                        property bool keyboardActive: false
-
-                        highlightFollowsCurrentItem: true
-                        highlightMoveDuration: 60 
-                        highlight: null
-
-                        delegate: Item {
-                            id: delegateRoot
-                            width: appListView.width; height: 36
 
                             Rectangle {
                                 anchors.fill: parent
-                                color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
                                 radius: 0 
-                                z: 0 
-                            }
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 10; anchors.rightMargin: 10
-                                spacing: 12
-                                z: 1
-
-                                Item {
-                                    width: 22; height: 22
-                                    Layout.alignment: Qt.AlignVCenter
-
-                                    Image {
-                                        anchors.fill: parent
-                                        sourceSize.width: 22; sourceSize.height: 22
-                                        visible: model.iconPath !== ""
-                                        source: model.iconPath ? "file://" + model.iconPath : ""
-                                        fillMode: Image.PreserveAspectFit
-                                    }
-
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        radius: 0 
-                                        color: rootScope.theme ? rootScope.theme.theme_outline : "#1affffff" 
-                                        visible: model.iconPath === ""
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: model.name.charAt(0).toUpperCase()
-                                            font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
-                                            color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
-                                        }
-                                    }
-                                }
+                                color: rootScope.theme ? rootScope.theme.theme_outline : "#1affffff" 
+                                visible: model.iconPath === ""
 
                                 Text {
-                                    text: model.name
-                                    font.family: "Rubik"; font.weight: Font.Medium; font.pixelSize: 14
+                                    anchors.centerIn: parent
+                                    text: model.name.charAt(0).toUpperCase()
+                                    font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Bold
                                     color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
-                                    Layout.fillWidth: true
-                                    elide: Text.ElideRight 
-                                    Layout.alignment: Qt.AlignVCenter
                                 }
                             }
+                        }
 
-                            MouseArea {
-                                id: rowMouse
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                z: 2 
+                        Text {
+                            text: model.name
+                            font.family: "Rubik"; font.weight: Font.Medium; font.pixelSize: 14
+                            color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight 
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                    }
 
-                                onClicked: {
-                                    appListView.currentIndex = index;
-                                    executeApplication(model.bin);
-                                    closeMenu();
-                                }
-                            }
+                    MouseArea {
+                        id: rowMouse
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        z: 2 
+
+                        onClicked: {
+                            appListView.currentIndex = index;
+                            executeApplication(model.bin);
+                            drawerTemplate.isOpen = false;
                         }
                     }
                 }
