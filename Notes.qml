@@ -84,9 +84,12 @@ Item {
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: notesRoot.isAlwaysVisible ? WlrKeyboardFocus.None : WlrKeyboardFocus.OnDemand
+        
+        // Changed: Maintain OnDemand focus so the compositor allows the TextArea to handle keyboard mapping
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
-        mask: notesRoot.isAlwaysVisible ? notesInputBounds : null
+        // Changed: Apply the input mask in both states to preserve correct pointer pass-through
+        mask: notesInputBounds
 
         Region {
             id: notesInputBounds
@@ -127,7 +130,7 @@ Item {
                 },
                 State {
                     name: "hidden"
-                    when: !notesRoot.menuOpen && !notesRoot.isAlwaysVisible
+                    when: !notesRoot.notesRoot.menuOpen && !notesRoot.isAlwaysVisible
                     PropertyChanges { target: popupMenuFrame; width: 0; opacity: 0.0 }
                 }
             ]
@@ -197,7 +200,7 @@ Item {
                                     radius: 0
                                     visible: mainContentArea.containsMouse || btnMouseArea.containsMouse
                                     color: notesRoot.isAlwaysVisible ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : "transparent"
-                                    border.width: notesRoot.isAlwaysVisible ? 0 : 1
+                                    border.width: 1
                                     border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
 
                                     Text {
