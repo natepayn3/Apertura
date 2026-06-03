@@ -81,10 +81,7 @@ Item {
     PanelDrawer {
         id: drawerTemplate
         isOpen: false
-        // By setting this to 2000, we exceed screen height, forcing the 
-        // anchors (anchors.topMargin/bottomMargin) in PanelDrawer to pin 
-        // it to the top and bottom of the parent container.
-        drawerHeight: 2000 
+        drawerHeight: 2000 // to make it fill and match the bar
         modalToken: "wallpaper"
         anchorTop: true
 
