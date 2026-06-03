@@ -125,13 +125,20 @@ Item {
         color: launcherMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
 
-        Text {
+        Image {
+            id: launcherLogo
             anchors.centerIn: parent
-            text: "󰣇" 
-            font.family: "Rubik"
-            font.pixelSize: 24
-            // Changes the primary bar launcher glyph color dynamically to primary Matugen accent colors
-            color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" 
+            source: "file://" + Qt.resolvedUrl(".").toString().replace("file://", "") + "/logo.png"
+            sourceSize.width: 24
+            sourceSize.height: 24
+            fillMode: Image.PreserveAspectFit
+            visible: false 
+        }
+
+        ColorOverlay {
+            anchors.fill: launcherLogo
+            source: launcherLogo
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
         }
 
         MouseArea {
