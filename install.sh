@@ -168,7 +168,7 @@ mkdir -p "$QUICKSHELL_DIR/Colors"
 ACTIVE_WALLPAPER=$(ls -d "$WALLPAPER_DIR"/* 2>/dev/null | head -n 1 || echo "")
 if [ -n "$ACTIVE_WALLPAPER" ] && command -v matugen &>/dev/null; then
     echo -e "${BLUE}[*]${RESET} Compiling dynamic JSON colorscheme via Matugen..."
-    # Execute a dry-run pass streaming hex format payload to the target directory mapping
+    # Stream validated nested hex JSON structure cleanly matching the updated Theme.qml configuration
     matugen image "$ACTIVE_WALLPAPER" -m dark --source-color-index 0 --dry-run --json hex > "$QUICKSHELL_DIR/Colors/colors.json"
 fi
 
