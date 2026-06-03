@@ -120,7 +120,18 @@ Scope {
                         AppLauncher { id: appLauncherItem; anchors.horizontalCenter: parent.horizontalCenter }
                         Wallpaper { id: wallpaperItem; anchors.horizontalCenter: parent.horizontalCenter }
                         Calendar { id: calendarItem; anchors.horizontalCenter: parent.horizontalCenter }
-                        Item { height: 8; width: 1 }
+                        
+                        Item {
+                            width: 32
+                            height: 56
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            Cava {
+                                anchors.centerIn: parent
+                                themeContext: rootScope.theme
+                            }
+                        }
+
                         Workspaces { 
                             theme: rootScope.theme 
                             anchors.horizontalCenter: parent.horizontalCenter; z: 1 
