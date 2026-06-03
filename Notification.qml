@@ -4,6 +4,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
+import "."
 
 Item {
     id: notificationRoot
@@ -15,39 +16,27 @@ Item {
     property var activeHistoryReferences: [] 
     property bool menuOpen: false
     property bool notificationsEnabled: true
-    property bool windowAlive: false
 
     Timer {
         id: osdAutohideTimer
-        interval: 3500
+        interval: Config.autohideInterval
         running: false
         repeat: false
         onTriggered: closeMenu()
     }
 
     function toggleMenu(): void {
-        if (menuOpen) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
-    }
-
-    function openMenu(): void {
-        rootScope.requestOpen("notifications");
-        windowAlive = true;
-        menuOpen = true;
-        checkUserActivity();
+        drawerTemplate.isOpen = !drawerTemplate.isOpen;
     }
 
     function closeMenu(): void {
-        menuOpen = false;
+        drawerTemplate.isOpen = false;
     }
 
     function checkUserActivity() {
         if (notificationMouseArea.containsMouse || cardHoverTracker.containsMouse) {
             osdAutohideTimer.stop(); 
-        } else if (notificationOverlayModal.visible && menuOpen) {
+        } else if (drawerTemplate.isOpen) {
             osdAutohideTimer.restart(); 
         }
     }
@@ -94,6 +83,15 @@ Item {
         onTriggered: notificationRoot.updateCount()
     }
 
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== drawerTemplate.modalToken && drawerTemplate.isOpen) {
+                closeMenu();
+            }
+        }
+    }
+
     Rectangle {
         id: notificationHitbox
         anchors.fill: parent
@@ -136,18 +134,9 @@ Item {
         }
     }
 
-    Connections {
-        target: rootScope
-        function onActiveModalChanged() {
-            if (rootScope.activeModal !== "notifications" && menuOpen) {
-                closeMenu();
-            }
-        }
-    }
-
     PanelWindow {
         id: popupToastWindow
-        visible: notificationRoot.visibleBanners.length > 0 && !notificationOverlayModal.visible && notificationRoot.notificationsEnabled
+        visible: notificationRoot.visibleBanners.length > 0 && !drawerTemplate.isOpen && notificationRoot.notificationsEnabled
         color: "transparent"
         anchors.top: parent.top
         anchors.bottom: parent.bottom
@@ -159,7 +148,7 @@ Item {
 
         ColumnLayout {
             id: toastColumn
-            width: 300 
+            width: Config.drawerTargetWidth 
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 12
             spacing: 8
@@ -181,13 +170,13 @@ Item {
                 Transition {
                     from: "hidden"; to: "visible"
                     ParallelAnimation {
-                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
+                        NumberAnimation { property: "x"; duration: Config.entryDuration; easing.type: Config.entryEasing }
                     }
                 },
                 Transition {
                     from: "visible"; to: "hidden"
                     ParallelAnimation {
-                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
+                        NumberAnimation { property: "x"; duration: Config.exitDuration; easing.type: Config.exitEasing }
                     }
                 }
             ]
@@ -233,257 +222,208 @@ Item {
         }
     }
 
-    PanelWindow {
-        id: notificationOverlayModal
-        visible: notificationRoot.windowAlive
-        color: "transparent"
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    PanelDrawer {
+        id: drawerTemplate
+        isOpen: false
+        modalToken: "notifications"
+        anchorTop: false
 
-        onVisibleChanged: {
-            if (visible && notificationRoot.menuOpen) {
-                popupMenuFrame.forceActiveFocus();
+        drawerHeight: !notificationRoot.notificationsEnabled ? 92 : (notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300))
+
+        onIsOpenChanged: {
+            if (isOpen) {
+                notificationRoot.menuOpen = true;
+                checkUserActivity();
+                mainContainerLayout.forceActiveFocus();
+            } else {
+                notificationRoot.menuOpen = false;
             }
         }
 
-        MouseArea { anchors.fill: parent; onClicked: closeMenu() }
+        MouseArea {
+            id: cardHoverTracker
+            anchors.fill: parent
+            hoverEnabled: true
+            onContainsMouseChanged: checkUserActivity()
+        }
 
-        Rectangle {
-            id: popupMenuFrame
-            width: 300 
-            anchors.bottom: parent.bottom; anchors.bottomMargin: 12
-            height: !notificationRoot.notificationsEnabled ? 92 : (notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300))
+        MouseArea {
+            anchors.fill: parent
+            onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
+        }
 
-            states: [
-                State {
-                    name: "visible"
-                    when: notificationRoot.menuOpen
-                    PropertyChanges { target: popupMenuFrame; x: 0; opacity: 1.0 }
-                },
-                State {
-                    name: "hidden"
-                    when: !notificationRoot.menuOpen
-                    PropertyChanges { target: popupMenuFrame; x: -320; opacity: 0.0 }
-                }
-            ]
+        ColumnLayout {
+            id: mainContainerLayout
+            anchors.fill: parent
+            anchors.margins: 14
+            spacing: 10
+            focus: true
 
-            transitions: [
-                Transition {
-                    from: "hidden"; to: "visible"
-                    ParallelAnimation {
-                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
-                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
-                    }
-                },
-                Transition {
-                    from: "visible"; to: "hidden"
-                    SequentialAnimation {
-                        ParallelAnimation {
-                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
-                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
-                        }
-                        ScriptAction {
-                            script: { notificationRoot.windowAlive = false; }
-                        }
-                    }
-                }
-            ]
+            RowLayout {
+                Layout.fillWidth: true
+                Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" } 
+                Item { Layout.fillWidth: true }
 
-            color: "#9911111b"
-            border.width: 0; radius: 0; focus: true
-            Keys.onPressed: (event) => {
-                if (event.key === Qt.Key_Escape) {
-                    closeMenu();
-                    event.accepted = true;
-                }
-            }
-            
-            MouseArea {
-                id: cardHoverTracker
-                anchors.fill: parent
-                hoverEnabled: true
-                onContainsMouseChanged: checkUserActivity()
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
-
-                ColumnLayout {
-                    anchors.fill: parent; anchors.margins: 14; spacing: 10
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" } 
-                        Item { Layout.fillWidth: true }
-
-                        RowLayout {
-                            spacing: 12
-                            Layout.alignment: Qt.AlignRight
-
-                            Item {
-                                width: clearAllText.implicitWidth
-                                height: 24
-                                visible: notificationRoot.unreadCount > 0 && notificationRoot.notificationsEnabled
-                                z: 100
-
-                                Text {
-                                    id: clearAllText
-                                    anchors.centerIn: parent
-                                    text: "Clear All"
-                                    font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
-                                    color: clearAllMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
-                                }
-
-                                MouseArea {
-                                    id: clearAllMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        try { nativeServer.clear(); } catch(e) {}
-                                        try { nativeServer.dismissAll(); } catch(e) {}
-                                        
-                                        for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
-                                            let item = notificationRoot.activeHistoryReferences[i];
-                                            if (item) {
-                                                try { item.dismiss(); } catch(e) {}
-                                                try { nativeServer.dismiss(item.id); } catch(e) {}
-                                            }
-                                        }
-                                        
-                                        notificationRoot.visibleBanners = [];
-                                        notificationRoot.activeHistoryReferences = [];
-                                        notificationRoot.updateCount();
-                                        checkUserActivity();
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                width: 50; height: 24; radius: 12
-                                color: notificationRoot.notificationsEnabled ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff")
-                                z: 100
-                                
-                                Rectangle {
-                                    width: 18; height: 18; radius: 9; color: rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    x: notificationRoot.notificationsEnabled ? 28 : 4
-                                    Behavior on x { NumberAnimation { duration: 120 } }
-                                }
-                                
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        notificationRoot.notificationsEnabled = !notificationRoot.notificationsEnabled;
-                                        if (!notificationRoot.notificationsEnabled) {
-                                            try { nativeServer.clear(); } catch(e) {}
-                                            try { nativeServer.dismissAll(); } catch(e) {}
-                                            
-                                            for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
-                                                let item = notificationRoot.activeHistoryReferences[i];
-                                                if (item) {
-                                                    try { item.dismiss(); } catch(e) {}
-                                                    try { nativeServer.dismiss(item.id); } catch(e) {}
-                                                }
-                                            }
-                                            
-                                            notificationRoot.visibleBanners = [];
-                                            notificationRoot.activeHistoryReferences = [];
-                                        }
-                                        notificationRoot.updateCount();
-                                        checkUserActivity();
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" }
+                RowLayout {
+                    spacing: 12
+                    Layout.alignment: Qt.AlignRight
 
                     Item {
-                        id: listContainer
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        visible: notificationRoot.notificationsEnabled
+                        width: clearAllText.implicitWidth
+                        height: 24
+                        visible: notificationRoot.unreadCount > 0 && notificationRoot.notificationsEnabled
+                        z: 100
 
-                        ListView {
-                            id: notifListView
+                        Text {
+                            id: clearAllText
+                            anchors.centerIn: parent
+                            text: "Clear All"
+                            font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold
+                            color: clearAllMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
+                        }
+
+                        MouseArea {
+                            id: clearAllMouse
                             anchors.fill: parent
-                            clip: true; spacing: 8
-                            model: nativeServer.trackedNotifications
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "No new notifications"
-                                font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" 
-                                visible: notifListView.count === 0 && notificationRoot.notificationsEnabled
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                try { nativeServer.clear(); } catch(e) {}
+                                try { nativeServer.dismissAll(); } catch(e) {}
+                                
+                                for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
+                                    let item = notificationRoot.activeHistoryReferences[i];
+                                    if (item) {
+                                        try { item.dismiss(); } catch(e) {}
+                                        try { nativeServer.dismiss(item.id); } catch(e) {}
+                                    }
+                                }
+                                
+                                notificationRoot.visibleBanners = [];
+                                notificationRoot.activeHistoryReferences = [];
+                                notificationRoot.updateCount();
+                                checkUserActivity();
                             }
+                        }
+                    }
 
-                            delegate: Item {
-                                width: notifListView.width
-                                height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    color: "transparent"
-                                    border.color: cellMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") 
-                                    border.width: 1
-                                    radius: 0 
-
-                                    ColumnLayout {
-                                        anchors.fill: parent; anchors.margins: 10; spacing: 2
-
-                                        Text {
-                                            id: summaryLabel
-                                            text: modelData.summary
-                                            font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
-                                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
-                                            Layout.fillWidth: true; elide: Text.ElideRight
-                                        }
-
-                                        Text {
-                                            id: bodyLabel
-                                            text: modelData.body
-                                            font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
-                                            Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight
+                    Rectangle {
+                        width: 50; height: 24; radius: 12
+                        color: notificationRoot.notificationsEnabled ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff")
+                        z: 100
+                        
+                        Rectangle {
+                            width: 18; height: 18; radius: 9; color: rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: notificationRoot.notificationsEnabled ? 28 : 4
+                            Behavior on x { NumberAnimation { duration: 120 } }
+                        }
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                notificationRoot.notificationsEnabled = !notificationRoot.notificationsEnabled;
+                                if (!notificationRoot.notificationsEnabled) {
+                                    try { nativeServer.clear(); } catch(e) {}
+                                    try { nativeServer.dismissAll(); } catch(e) {}
+                                    
+                                    for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
+                                        let item = notificationRoot.activeHistoryReferences[i];
+                                        if (item) {
+                                            try { item.dismiss(); } catch(e) {}
+                                            try { nativeServer.dismiss(item.id); } catch(e) {}
                                         }
                                     }
                                     
-                                    MouseArea {
-                                        id: cellMouseArea
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            try { nativeServer.dismiss(modelData.id); } catch(e) {}
-                                            try { modelData.dismiss(); } catch(e) {}
-                                            notificationRoot.updateCount();
-                                            checkUserActivity();
-                                        }
-                                    }
+                                    notificationRoot.visibleBanners = [];
+                                    notificationRoot.activeHistoryReferences = [];
+                                }
+                                notificationRoot.updateCount();
+                                checkUserActivity();
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" }
+
+            Item {
+                id: listContainer
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: notificationRoot.notificationsEnabled
+
+                ListView {
+                    id: notifListView
+                    anchors.fill: parent
+                    clip: true; spacing: 8
+                    model: nativeServer.trackedNotifications
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "No new notifications"
+                        font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" 
+                        visible: notifListView.count === 0 && notificationRoot.notificationsEnabled
+                    }
+
+                    delegate: Item {
+                        width: notifListView.width
+                        height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
+
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: cellMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") 
+                            border.width: 1
+                            radius: 0 
+
+                            ColumnLayout {
+                                anchors.fill: parent; anchors.margins: 10; spacing: 2
+
+                                Text {
+                                    id: summaryLabel
+                                    text: modelData.summary
+                                    font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
+                                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
+                                    Layout.fillWidth: true; elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    id: bodyLabel
+                                    text: modelData.body
+                                    font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
+                                    Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight
+                                }
+                            }
+                            
+                            MouseArea {
+                                id: cellMouseArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    try { nativeServer.dismiss(modelData.id); } catch(e) {}
+                                    try { modelData.dismiss(); } catch(e) {}
+                                    notificationRoot.updateCount();
+                                    checkUserActivity();
                                 }
                             }
                         }
                     }
-
-                    Text {
-                        id: mutedPlaceholder
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        text: "Notifications are muted"
-                        font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        visible: !notificationRoot.notificationsEnabled
-                    }
                 }
+            }
+
+            Text {
+                id: mutedPlaceholder
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                text: "Notifications are muted"
+                font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                visible: !notificationRoot.notificationsEnabled
             }
         }
     }
