@@ -22,41 +22,38 @@ Item {
     // Leave blank ("") to fallback to automated dynamic IP location detection.
     property string weatherLocationOverride: ""
 
-    // Weather state storage
     property string weatherTemp: "--"
     property string weatherFeelsLike: "--"
     property string weatherDesc: "Loading..."
     property string weatherGlyph: "cloud"
 
-    // Maps Open-Meteo WMO Weather Interpretation Codes (WMO code) to Material Symbols
     readonly property var weatherIconMap: {
-        "0": "clear_day",            // Clear sky
-        "1": "partly_cloudy_day",    // Mainly clear
-        "2": "partly_cloudy_day",    // Partly cloudy
-        "3": "cloudy",               // Overcast
-        "45": "foggy",               // Fog
-        "48": "foggy",               // Depositing rime fog
-        "51": "rainy",               // Light drizzle
-        "53": "rainy",               // Moderate drizzle
-        "55": "rainy",               // Dense drizzle
-        "61": "rainy",               // Slight rain
-        "63": "rainy",               // Moderate rain
-        "65": "rainy",               // Heavy rain
-        "71": "snowing",             // Slight snow fall
-        "73": "snowing",             // Moderate snow fall
-        "75": "snowing",             // Heavy snow fall
-        "77": "snowing",             // Snow grains
-        "80": "rainy",               // Slight rain showers
-        "81": "rainy",               // Moderate rain showers
-        "82": "rainy",               // Violent rain showers
-        "85": "snowing",             // Slight snow showers
-        "86": "snowing",             // Heavy snow showers
-        "95": "thunderstorm",        // Thunderstorm
-        "96": "thunderstorm",        // Thunderstorm with slight hail
-        "99": "thunderstorm"         // Thunderstorm with heavy hail
+        "0": "clear_day",
+        "1": "partly_cloudy_day",
+        "2": "partly_cloudy_day",
+        "3": "cloudy",
+        "45": "foggy",
+        "48": "foggy",
+        "51": "rainy",
+        "53": "rainy",
+        "55": "rainy",
+        "61": "rainy",
+        "63": "rainy",
+        "65": "rainy",
+        "71": "snowing",
+        "73": "snowing",
+        "75": "snowing",
+        "77": "snowing",
+        "80": "rainy",
+        "81": "rainy",
+        "82": "rainy",
+        "85": "snowing",
+        "86": "snowing",
+        "95": "thunderstorm",
+        "96": "thunderstorm",
+        "99": "thunderstorm"
     }
 
-    // Maps Open-Meteo WMO Codes to human-readable strings
     readonly property var weatherDescMap: {
         "0": "Clear Sky", "1": "Mainly Clear", "2": "Partly Cloudy", "3": "Overcast",
         "45": "Foggy", "48": "Rime Fog", "51": "Light Drizzle", "53": "Moderate Drizzle",
@@ -77,14 +74,12 @@ Item {
         onTriggered: closeMenu()
     }
 
-    // Native asynchronous weather data engine sync (15 minute refresh layout)
     Timer {
         id: weatherTimer
         interval: 900000; running: true; repeat: true; triggeredOnStart: true
         onTriggered: startWeatherPipeline()
     }
 
-    // Entry point that determines whether to use the override geocoder or the fallback IP tracker
     function startWeatherPipeline() {
         if (calendarRoot.weatherLocationOverride.trim() !== "") {
             geocodeOverrideLocation(calendarRoot.weatherLocationOverride.trim());
@@ -93,7 +88,6 @@ Item {
         }
     }
 
-    // Pipeline Alternative: Resolves strings or ZIP codes to coordinates via Open-Meteo Geocoding
     function geocodeOverrideLocation(query) {
         let xhr = new XMLHttpRequest();
         let targetUrl = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(query) + "&count=1&language=en&format=json";
@@ -121,7 +115,6 @@ Item {
         xhr.send();
     }
 
-    // Pipeline Fallback: Query location metrics dynamically based on current routing table path
     function bootstrapDynamicLocation() {
         let xhr = new XMLHttpRequest();
         xhr.open("GET", "http://ip-api.com/json/", true);
@@ -146,7 +139,6 @@ Item {
         xhr.send();
     }
 
-    // Core Fetch Operation: Request weather payload utilizing lat/lon constraints
     function fetchWeatherAsync(lat, lon) {
         let xhr = new XMLHttpRequest();
         let targetUrl = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,apparent_temperature,weather_code&temperature_unit=fahrenheit";
@@ -293,7 +285,6 @@ Item {
                 }
             }
 
-            // Floating Weather Presentation row alignment
             Item {
                 id: weatherCardSurface
                 Layout.fillWidth: true
