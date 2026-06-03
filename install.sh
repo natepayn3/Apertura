@@ -160,11 +160,16 @@ if command -v awww-daemon &>/dev/null; then
     awww-daemon & disown
 fi
 
-# Initialize color generation engine across active wallpaper target paths if files exist
+# Build Matugen tracking ecosystem directly inside target layout directory
+echo -e "${BLUE}[*]${RESET} Deploying color token architectures..."
+mkdir -p "$QUICKSHELL_DIR/Colors"
+
+# Initialize color generation engine and dump raw json payload straight to destination target
 ACTIVE_WALLPAPER=$(ls -d "$WALLPAPER_DIR"/* 2>/dev/null | head -n 1 || echo "")
 if [ -n "$ACTIVE_WALLPAPER" ] && command -v matugen &>/dev/null; then
-    echo -e "${BLUE}[*]${RESET} Priming colorscheme generation profiles via Matugen..."
-    matugen image "$ACTIVE_WALLPAPER"
+    echo -e "${BLUE}[*]${RESET} Compiling dynamic JSON colorscheme via Matugen..."
+    # Execute a dry-run pass streaming hex format payload to the target directory mapping
+    matugen image "$ACTIVE_WALLPAPER" -m dark --source-color-index 0 --dry-run --json hex > "$QUICKSHELL_DIR/Colors/colors.json"
 fi
 
 echo ""
