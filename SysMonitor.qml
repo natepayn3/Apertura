@@ -4,6 +4,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import "."
 
 Item {
     id: monitorRoot
@@ -12,7 +13,6 @@ Item {
     implicitHeight: 32
 
     property bool menuOpen: false
-    property bool windowAlive: false
 
     property int cpuPercent: 0
     property int cpuTemp: 0
@@ -28,35 +28,24 @@ Item {
 
     Timer {
         id: osdAutohideTimer
-        interval: 3500
+        interval: Config.autohideInterval
         running: false
         repeat: false
         onTriggered: closeMenu()
     }
 
     function toggleMenu(): void {
-        if (menuOpen) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
-    }
-
-    function openMenu(): void {
-        windowAlive = true;
-        rootScope.requestOpen(monitorOverlayModal);
-        menuOpen = true;
-        checkUserActivity();
+        drawerTemplate.isOpen = !drawerTemplate.isOpen;
     }
 
     function closeMenu(): void {
-        menuOpen = false;
+        drawerTemplate.isOpen = false;
     }
 
     function checkUserActivity() {
         if (cardHoverTracker.containsMouse) {
             osdAutohideTimer.stop();
-        } else {
+        } else if (drawerTemplate.isOpen) {
             osdAutohideTimer.restart();
         }
     }
@@ -64,7 +53,7 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (rootScope.activeModal !== monitorOverlayModal && menuOpen) {
+            if (rootScope.activeModal !== drawerTemplate.modalToken && drawerTemplate.isOpen) {
                 closeMenu();
             }
         }
@@ -119,7 +108,6 @@ Item {
 
     Process {
         id: taskListFetcher
-        // Added nproc to the pipeline to dynamically get the total thread count
         command: ["sh", "-c", "threads=$(nproc); ps -eo comm,pcpu --sort=-pcpu | awk -v t=\"$threads\" 'NR>1 {print $1, $2/t}'"]
         running: false
 
@@ -131,7 +119,6 @@ Item {
                 let lines = cleaned.split("\n");
                 processListModel.clear();
 
-                // Limit loop to top 5-6 processes to keep the overlay performant
                 let maxLines = Math.min(lines.length, 7); 
 
                 for (let i = 0; i < maxLines; i++) {
@@ -144,11 +131,9 @@ Item {
                     let pName = line.substring(0, lastSpace).trim();
                     let pCpuRaw = parseFloat(line.substring(lastSpace + 1).trim());
 
-                    // Filter out the metrics pipeline noise
                     if (pName === "ps" || pName === "sh" || pName === "awk" || pName === "quickshell") continue;
 
                     if (pName && !isNaN(pCpuRaw)) {
-                        // Round to 1 decimal place to match your system-wide UI layout
                         let pCpuNormalized = pCpuRaw.toFixed(1);
                         processListModel.append({ "name": pName, "cpu": pCpuNormalized });
                     }
@@ -160,7 +145,7 @@ Item {
     Timer {
         id: metricsTicker
         interval: 1000
-        running: monitorRoot.windowAlive
+        running: drawerTemplate.isOpen
         repeat: true
         triggeredOnStart: true
         onTriggered: {
@@ -194,121 +179,70 @@ Item {
         }
     }
 
-    PanelWindow {
-        id: monitorOverlayModal
-        visible: monitorRoot.windowAlive
-        color: "transparent"
-        
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    PanelDrawer {
+        id: drawerTemplate
+        isOpen: false
+        drawerHeight: 340
+        modalToken: "sysmonitor"
+        anchorTop: false
 
-        onVisibleChanged: {
-            if (visible && monitorRoot.menuOpen) {
-                popupCard.forceActiveFocus();
+        onIsOpenChanged: {
+            if (isOpen) {
+                monitorRoot.menuOpen = true;
+                checkUserActivity();
+                mainContainerLayout.forceActiveFocus();
+            } else {
+                monitorRoot.menuOpen = false;
             }
         }
 
-        MouseArea { 
+        MouseArea {
+            id: cardHoverTracker
             anchors.fill: parent
-            onClicked: closeMenu() 
+            hoverEnabled: true
+            onContainsMouseChanged: checkUserActivity()
         }
 
-        Rectangle {
-            id: popupCard
-            width: 300
-            height: 340
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 12
+        MouseArea {
+            id: preventDismiss
+            anchors.fill: parent
+            onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
+        }
 
-            states: [
-                State {
-                    name: "visible"
-                    when: monitorRoot.menuOpen
-                    PropertyChanges { target: popupCard; x: 0; opacity: 1.0 }
-                },
-                State {
-                    name: "hidden"
-                    when: !monitorRoot.menuOpen
-                    PropertyChanges { target: popupCard; x: -320; opacity: 0.0 }
-                }
-            ]
-
-            transitions: [
-                Transition {
-                    from: "hidden"; to: "visible"
-                    ParallelAnimation {
-                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
-                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
-                    }
-                },
-                Transition {
-                    from: "visible"; to: "hidden"
-                    SequentialAnimation {
-                        ParallelAnimation {
-                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
-                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
-                        }
-                        ScriptAction {
-                            script: { monitorRoot.windowAlive = false; }
-                        }
-                    }
-                }
-            ]
-
-            color: "#9911111b"
-            border.width: 0
-            topLeftRadius: 0
-            bottomLeftRadius: 0
-            topRightRadius: 0
-            bottomRightRadius: 0
+        ColumnLayout {
+            id: mainContainerLayout
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 0
             focus: true
-            
-            Keys.onPressed: (event) => {
-                if (event.key === Qt.Key_Escape) {
-                    closeMenu();
-                    event.accepted = true;
+
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 32
+
+                Text {
+                    id: titleLabel
+                    text: "Usage"
+                    font.family: "Rubik"
+                    font.pixelSize: 16
+                    font.weight: Font.Bold 
+                    color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
+                    anchors.verticalCenter: parent.verticalCenter
+                    x: 2
                 }
-            }
-
-            Component.onCompleted: popupCard.forceActiveFocus()
-
-            MouseArea {
-                id: cardHoverTracker
-                anchors.fill: parent
-                hoverEnabled: true
-                onContainsMouseChanged: checkUserActivity()
-            }
-
-            MouseArea {
-                id: preventDismiss; anchors.fill: parent
-                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); }
-            }
-
-            Text {
-                id: titleLabel
-                text: "Usage"
-                font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold 
-                color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
-                x: 14; y: 14
             }
 
             Rectangle {
                 id: headerDivider
-                width: parent.width - 24; height: 1
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
                 color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"
-                x: 12; y: 44
+                Layout.bottomMargin: 8
             }
 
             ColumnLayout {
                 id: metricsBlock
-                x: 14; y: 52
-                width: parent.width - 28
+                Layout.fillWidth: true
                 spacing: 8 
 
                 ColumnLayout {
@@ -324,9 +258,8 @@ Item {
 
                     Item {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 4 // Defines the bounding box for the bars
+                        Layout.preferredHeight: 4
 
-                        // 1. Unfilled Background Track (Isolated Opacity)
                         Rectangle {
                             anchors.fill: parent
                             color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
@@ -334,7 +267,6 @@ Item {
                             radius: 0
                         }
 
-                        // 2. Active Progress Bar (Full Brightness)
                         Rectangle {
                             id: cpuProgressBar
                             height: parent.height
@@ -364,7 +296,6 @@ Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 4
 
-                        // Unfilled Background Track (Isolated Opacity)
                         Rectangle {
                             anchors.fill: parent
                             color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
@@ -372,7 +303,6 @@ Item {
                             radius: 0
                         }
 
-                        // Active Progress Bar (Full Brightness)
                         Rectangle {
                             id: ramProgressBar
                             height: parent.height
@@ -402,7 +332,6 @@ Item {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 4
 
-                        // Unfilled Background Track (Isolated Opacity)
                         Rectangle {
                             anchors.fill: parent
                             color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
@@ -410,7 +339,6 @@ Item {
                             radius: 0
                         }
 
-                        // Active Progress Bar (Full Brightness)
                         Rectangle {
                             id: diskProgressBar
                             height: parent.height
@@ -428,27 +356,27 @@ Item {
 
             Rectangle {
                 id: listDivider
-                width: parent.width - 24; height: 1
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
                 color: monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff"
-                x: 12; y: 154 
+                Layout.topMargin: 12
+                Layout.bottomMargin: 8
             }
 
             Text {
                 id: tasksHeaderLabel
                 text: "Processes"
-                font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
+                font.family: "Rubik"
+                font.pixelSize: 13
+                font.weight: Font.Bold
                 color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
-                x: 14; y: 166 
+                Layout.bottomMargin: 6
             }
 
             Item {
                 id: listBoundsFrame
-                width: parent.width - 24
-                x: 12
-                anchors.top: tasksHeaderLabel.bottom
-                anchors.bottom: parent.bottom
-                anchors.topMargin: 6
-                anchors.bottomMargin: 12
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
                 ListView {
                     id: processListView
@@ -465,11 +393,13 @@ Item {
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: 4; anchors.rightMargin: 4
+                            anchors.leftMargin: 4
+                            anchors.rightMargin: 4
 
                             Text {
                                 text: model.name
-                                font.family: "Rubik"; font.pixelSize: 11
+                                font.family: "Rubik"
+                                font.pixelSize: 11
                                 color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#59ffffff"
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
@@ -477,7 +407,9 @@ Item {
 
                             Text {
                                 text: model.cpu + "%"
-                                font.family: "Rubik"; font.pixelSize: 11; font.weight: Font.Medium
+                                font.family: "Rubik"
+                                font.pixelSize: 11
+                                font.weight: Font.Medium
                                 color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
                             }
                         }
