@@ -4,6 +4,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import "."
 
 Item {
     id: batRoot
@@ -18,7 +19,6 @@ Item {
     property int capacity: 100
     property bool isCharging: false
     property bool menuOpen: false
-    property bool windowAlive: false
 
     Process {
         id: presenceCheck
@@ -90,29 +90,18 @@ Item {
 
     Timer {
         id: osdAutohideTimer
-        interval: 3500
+        interval: Config.autohideInterval
         running: false
         repeat: false
         onTriggered: closeMenu()
     }
 
     function toggleMenu(): void {
-        if (menuOpen) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
-    }
-
-    function openMenu(): void {
-        rootScope.requestOpen("battery");
-        windowAlive = true;
-        menuOpen = true;
-        checkUserActivity();
+        drawerTemplate.isOpen = !drawerTemplate.isOpen;
     }
 
     function closeMenu(): void {
-        menuOpen = false;
+        drawerTemplate.isOpen = false;
     }
 
     function checkUserActivity() {
@@ -126,7 +115,7 @@ Item {
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (rootScope.activeModal !== "battery" && menuOpen) {
+            if (rootScope.activeModal !== drawerTemplate.modalToken && drawerTemplate.isOpen) {
                 closeMenu();
             }
         }
@@ -176,132 +165,77 @@ Item {
         }
     }
 
-    PanelWindow {
-        id: batteryOverlayModal
-        visible: batRoot.windowAlive
-        color: "transparent"
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "quickshell-overlay"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    PanelDrawer {
+        id: drawerTemplate
+        isOpen: false
+        drawerHeight: 96
+        modalToken: "battery"
+        anchorTop: false
 
-        onVisibleChanged: {
-            if (visible && batRoot.menuOpen) {
-                popupMenuFrame.forceActiveFocus();
+        onIsOpenChanged: {
+            if (isOpen) {
+                checkUserActivity();
+            } else {
+                batRoot.menuOpen = false;
             }
         }
 
-        MouseArea { 
+        MouseArea {
+            id: cardHoverTracker
             anchors.fill: parent
-            onClicked: closeMenu()
+            hoverEnabled: true
+            onContainsMouseChanged: checkUserActivity()
+            onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } 
         }
 
-        Rectangle {
-            id: popupMenuFrame
-            width: 300; height: 96 
-            anchors.bottom: parent.bottom; anchors.bottomMargin: 12
-            
-            states: [
-                State {
-                    name: "visible"
-                    when: batRoot.menuOpen
-                    PropertyChanges { target: popupMenuFrame; x: 0; opacity: 1.0 }
-                },
-                State {
-                    name: "hidden"
-                    when: !batRoot.menuOpen
-                    PropertyChanges { target: popupMenuFrame; x: -320; opacity: 0.0 }
-                }
-            ]
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 14
+            spacing: 10
+            focus: true
 
-            transitions: [
-                Transition {
-                    from: "hidden"; to: "visible"
-                    ParallelAnimation {
-                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
-                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
-                    }
-                },
-                Transition {
-                    from: "visible"; to: "hidden"
-                    SequentialAnimation {
-                        ParallelAnimation {
-                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
-                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
-                        }
-                        ScriptAction {
-                            script: { batRoot.windowAlive = false; }
-                        }
-                    }
-                }
-            ]
-
-            color: "#9911111b"
-            border.width: 0; radius: 0; focus: true
-            Keys.onPressed: (event) => {
-                if (event.key === Qt.Key_Escape) {
-                    closeMenu();
-                    event.accepted = true;
+            RowLayout {
+                Layout.fillWidth: true
+                Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
+                Item { Layout.fillWidth: true }
+                Text { 
+                    text: batRoot.isCharging ? (batRoot.capacity >= 99 ? "Fully Charged" : "󱐋 Charging") : "Discharging"
+                    font.family: "Rubik"; font.pixelSize: 12
+                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                 }
             }
 
-            MouseArea {
-                id: cardHoverTracker
-                anchors.fill: parent
-                hoverEnabled: true
-                onContainsMouseChanged: checkUserActivity()
-                onPressed: (mouse) => { mouse.accepted = true; checkUserActivity(); } 
-            }
+            Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" }
 
             ColumnLayout {
-                anchors.fill: parent; anchors.margins: 14; spacing: 10
-
+                Layout.fillWidth: true; spacing: 4
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Battery"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
+                    Text { text: "Current Charge:"; font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
                     Item { Layout.fillWidth: true }
-                    Text { 
-                        text: batRoot.isCharging ? (batRoot.capacity >= 99 ? "Fully Charged" : "󱐋 Charging") : "Discharging"
-                        font.family: "Rubik"; font.pixelSize: 12
-                        color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
-                    }
-                }
-
-                Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" }
-
-                ColumnLayout {
-                    Layout.fillWidth: true; spacing: 4
+                    
                     RowLayout {
-                        Layout.fillWidth: true
-                        Text { text: "Current Charge:"; font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
-                        Item { Layout.fillWidth: true }
-                        
-                        RowLayout {
-                            spacing: 6
-                            Text {
-                                text: batRoot.isCharging        ? "battery_android_frame_bolt" : 
-                                      batRoot.capacity >= 95    ? "battery_android_full" :
-                                      batRoot.capacity < 15     ? "battery_android_0" :
-                                      batRoot.capacity < 30     ? "battery_android_1" : 
-                                      batRoot.capacity < 45     ? "battery_android_2" : 
-                                      batRoot.capacity < 60     ? "battery_android_3" : 
-                                      batRoot.capacity < 75     ? "battery_android_4" : 
-                                      batRoot.capacity < 90     ? "battery_android_5" : 
-                                                                  "battery_android_6"
-                                font.family: "Material Symbols Outlined"
-                                font.pixelSize: 20
-                                color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
-                            }
-                            Text { 
-                                text: batRoot.capacity + "%"
-                                font.family: "Rubik"
-                                font.pixelSize: 13
-                                font.weight: Font.Bold
-                                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
-                            }
+                        spacing: 6
+                        Text {
+                            text: batRoot.isCharging        ? "battery_android_frame_bolt" : 
+                                  batRoot.capacity >= 95    ? "battery_android_full" :
+                                  batRoot.capacity < 15     ? "battery_android_0" :
+                                  batRoot.capacity < 30     ? "battery_android_1" : 
+                                  batRoot.capacity < 45     ? "battery_android_2" : 
+                                  batRoot.capacity < 60     ? "battery_android_3" : 
+                                  batRoot.capacity < 75     ? "battery_android_4" : 
+                                  batRoot.capacity < 90     ? "battery_android_5" : 
+                                                              "battery_android_6"
+                            font.family: "Material Symbols Outlined"
+                            font.pixelSize: 20
+                            color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
+                        }
+                        Text { 
+                            text: batRoot.capacity + "%"
+                            font.family: "Rubik"
+                            font.pixelSize: 13
+                            font.weight: Font.Bold
+                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
                         }
                     }
                 }
