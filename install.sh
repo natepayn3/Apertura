@@ -2,10 +2,12 @@
 
 set -e
 
+# Target paths and directory structures
 QUICKSHELL_DIR="$HOME/.config/quickshell/Apertura"
 HYPRLAND_LUA="$HOME/.config/hypr/hyprland.lua"
 WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 
+# ANSI color escape codes for terminal feedback
 BLUE='\033;0;34m'
 WHITE='\033;0;37m'
 GRAY='\033;1;30m'
@@ -40,6 +42,7 @@ DEPENDENCIES=(
 
 NEW_FONTS_INSTALLED=false
 
+# Package deployment loops handling native cachyos / core repositories prior to AUR fallbacks
 for pkg in "${DEPENDENCIES[@]}"; do
     if [[ "$pkg" == "awww" ]] && command -v awww-daemon &>/dev/null; then
         echo -e "    ${GRAY}➔${RESET} awww daemon is already installed. Skipping..."
@@ -91,6 +94,7 @@ echo -e "${BLUE}[*]${RESET} Syncing Apertura core assets and helper scripts..."
 mkdir -p "$QUICKSHELL_DIR"
 cp -r Apertura/. "$QUICKSHELL_DIR/"
 
+# Dynamically map battery hardware interface identifiers
 DETECTED_BAT=$(ls -d /sys/class/power_supply/BAT* 2>/dev/null | head -n 1) || true
 if [ -n "$DETECTED_BAT" ]; then
     BAT_BASE=$(basename "$DETECTED_BAT")
@@ -107,24 +111,14 @@ fi
 
 echo -e "${BLUE}[*]${RESET} Deploying specialized CAVA profile structures..."
 mkdir -p "$HOME/.config/cava"
-cat << 'EOF' > "$HOME/.config/cava/quickshell_bar.conf"
-[general]
-bars = 10
-framerate = 60
 
-[input]
-method = pipewire
-source = auto
-
-[output]
-method = raw
-data_format = ascii
-ascii_max_range = 100
-EOF
+# Explicit CAVA runtime generation block mapping requirements to SplitParser interface
+printf '[general]\n# Match this to your visualizer bar count (e.g., 5 bars)\nbars = 10\nframerate = 60\n\n[input]\n# Explicitly leverage PipeWire loopback for perfect audio capture\nmethod = pipewire\nsource = auto\nsensitivity = 0.5\n\n[output]\n# Output raw data format: ascii values separated by semicolons\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\n' > "$HOME/.config/cava/quickshell_bar.conf"
 
 echo -e "${BLUE}[*]${RESET} Injecting configuration trees into hyprland.lua..."
 touch "$HYPRLAND_LUA"
 
+# Utility wrapper to append properties safely to script engines
 safe_append() {
     local file="$1"
     if [ -s "$file" ] && [ "$(tail -c1 "$file" | wc -l)" -eq 0 ]; then
@@ -145,7 +139,7 @@ fi
 
 if ! grep -q "satty-screenshot-floating" "$HYPRLAND_LUA"; then
     echo -e "    ${GRAY}➔${RESET} Adding satty floating window rule..."
-    echo -e "\nhl.window_rule({\n    name  = \"satty-screenshot-floating\",\n    match = { \n        class = \"com.gabm.satty\" \n    },\n    float = true,\n})" | safe_append "$HYPRLAND_LUA"
+    echo -e "\nhl.window_rule({\n    name  = \"satty-screenshot-floating\",\n    match = { \n        class = \"com.gabm.satty\" \n     },\n    float = true,\n})" | safe_append "$HYPRLAND_LUA"
 fi
 
 if ! grep -q 'hl.exec_cmd("qs -c Apertura")' "$HYPRLAND_LUA"; then
@@ -166,6 +160,7 @@ fi
 echo -e "${BLUE}[*]${RESET} Deploying color token architectures..."
 mkdir -p "$QUICKSHELL_DIR/Colors"
 
+# Handle fallback color palette extraction models via Matugen
 ACTIVE_WALLPAPER=$(ls -d "$WALLPAPER_DIR"/* 2>/dev/null | head -n 1 || echo "")
 if [ -n "$ACTIVE_WALLPAPER" ] && command -v matugen &>/dev/null; then
     echo -e "${BLUE}[*]${RESET} Compiling dynamic JSON colorscheme via Matugen..."
