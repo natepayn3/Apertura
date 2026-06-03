@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
@@ -129,7 +130,8 @@ Item {
             text: "󰣇" 
             font.family: "Rubik"
             font.pixelSize: 24
-            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
+            // Changes the primary bar launcher glyph color dynamically to primary Matugen accent colors
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" 
         }
 
         MouseArea {
@@ -298,15 +300,25 @@ Item {
                         z: 1
 
                         Item {
+                            id: appIconContainer
                             width: 22; height: 22
                             Layout.alignment: Qt.AlignVCenter
 
                             Image {
+                                id: rawAppIcon
                                 anchors.fill: parent
                                 sourceSize.width: 22; sourceSize.height: 22
-                                visible: model.iconPath !== ""
+                                visible: false // Kept hidden so the colorized overlay layer handles rendering
                                 source: model.iconPath ? "file://" + model.iconPath : ""
                                 fillMode: Image.PreserveAspectFit
+                            }
+
+                            // Forced hardware mapping of the color tokens down to the icon texture array
+                            ColorOverlay {
+                                anchors.fill: parent
+                                source: rawAppIcon
+                                visible: model.iconPath !== ""
+                                color: (appListView.currentIndex === index) ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff")
                             }
 
                             Rectangle {
