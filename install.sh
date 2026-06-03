@@ -9,17 +9,17 @@ HYPRLAND_LUA="$HOME/.config/hypr/hyprland.lua"
 WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 
 # Valid ANSI Escape Code Variable Identifiers
-BLUE='\033[0;34m'
-WHITE='\033[0;37m'
-GRAY='\033[1;30m'
-GREEN='\033[0;32m'
-RED='\033[0;31m'
+BLUE='\033;0;34m'
+WHITE='\033;0;37m'
+GRAY='\033;1;30m'
+GREEN='\033;0;32m'
+RED='\033;0;31m'
 RESET='\033[0m'
 
 # Clear screen and blast the block capital banner
 clear
 echo -e "${BLUE}    _   ____  _____ ____ _____ _   _ ____    _   "
-echo -e "   / \  |  _ \| ____|  _ \_   _| | | |  _ \  / \  "
+echo -e "   / \  |  _ \| ____|  _ \_  _\| | | |  _ \  / \  "
 echo -e "  / _ \ | |_) |  _| | |_) || | | | | | |_) |/ _ \ "
 echo -e " / ___ \|  __/| |___|  _ < | | | |_| |  _ <___  |"
 echo -e "/_/   \_\_|   |_____|_| \_\|_|  \___/|_| \_\  |_| ${RESET}"
@@ -30,10 +30,10 @@ echo -e "${BLUE}[*]${RESET} Updating system repositories and checking dependenci
 DEPENDENCIES=(
     "quickshell"
     "satty"                         # Added dependency for screenshot annotations
-    "matugen"                      # Material You color generation backbone engine
-    "awww"                         # Targeted standard AUR package instead of -git
+    "matugen"                       # Material You color generation backbone engine
+    "awww"                          # Targeted standard AUR package instead of -git
     "bluez"
-    "bluez-utils"                  # Provides 'bluetoothctl' binary used by Bluetooth.qml
+    "bluez-utils"                   # Provides 'bluetoothctl' binary used by Bluetooth.qml
     "networkmanager"               # Provides 'nmcli' binary used by Wifi.qml
     "python"                       # Provides 'python3' interpreter used by AppLauncher.qml
     "wireplumber"                  # Provides 'wpctl' used by Audio.qml & VolumeHud
@@ -91,21 +91,26 @@ fi
 if [ -d "Apertura" ]; then
     echo -e "    ${GRAY}➔${RESET} Updating existing local repository directory..."
     # Subshell block safely isolates directory changes and failure risks
-    (cd Apertura && git pull)
+    (cd Apertura && git reset --hard HEAD && git pull)
 else
     echo -e "    ${GRAY}➔${RESET} Cloning Apertura repository..."
     git clone https://github.com/natepayn3/Apertura.git
 fi
 
-# Dynamic battery sysfs routing locator
-DETECTED_BAT=$(basename $(ls -d /sys/class/power_supply/BAT* 2>/dev/null | head -n 1) 2>/dev/null || echo "BAT1")
-echo -e "    ${GRAY}➔${RESET} Mapping battery target identifier node to: $DETECTED_BAT"
-sed -i "s/BAT1/$DETECTED_BAT/g" Apertura/Battery.qml
-
 echo -e "${BLUE}[*]${RESET} Syncing Apertura core assets and helper scripts..."
 # Force clear path boundaries to ensure target syncing is clean and non-nested
 mkdir -p "$QUICKSHELL_DIR"
 cp -r Apertura/. "$QUICKSHELL_DIR/"
+
+# Dynamic battery sysfs routing locator executed safely outside of set -e restrictions
+DETECTED_BAT=$(ls -d /sys/class/power_supply/BAT* 2>/dev/null | head -n 1) || true
+if [ -n "$DETECTED_BAT" ]; then
+    BAT_BASE=$(basename "$DETECTED_BAT")
+    echo -e "    ${GRAY}➔${RESET} Mapping battery target identifier node to: $BAT_BASE"
+    sed -i "s/BAT1/$BAT_BASE/g" "$QUICKSHELL_DIR/Battery.qml"
+else
+    echo -e "    ${GRAY}➔${RESET} No battery interface found. Defaulting core layout configurations."
+fi
 
 # Ensure backend execution scripts have execution permissions mapped correctly
 if [ -f "$QUICKSHELL_DIR/bluetooth_control.sh" ]; then
