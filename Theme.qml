@@ -5,7 +5,7 @@ import Quickshell.Io
 Item {
     id: theme
 
-    property string configPath: Quickshell.shellDir + "/Colors/colors.json"
+    property string configPath: Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors/colors.json"
 
     property color theme_bg: "#9911111b"
     property color theme_primary: "#ffffff"
@@ -39,7 +39,6 @@ Item {
                             
                         if (parsed.colors.outline && parsed.colors.outline.dark && parsed.colors.outline.dark.color)
                             theme.theme_outline = parsed.colors.outline.dark.color;
-
                     }
                 }
             } catch (e) {
@@ -48,6 +47,7 @@ Item {
         }
     }
 
+    // Explicitly forces the FileView engine to discard cache and read disk bytes
     function reloadTheme() {
         colorConfigReader.reload();
     }
