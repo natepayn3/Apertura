@@ -81,7 +81,7 @@ Item {
     PanelDrawer {
         id: drawerTemplate
         isOpen: false
-        drawerHeight: 2000 // to make it fill and match the bar
+        drawerHeight: wallpaperItem.barHeight
         modalToken: "wallpaper"
         anchorTop: true
 
