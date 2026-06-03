@@ -4,10 +4,18 @@ import Quickshell.Io
 
 Item {
     id: cavaVisualizer
-    width: 32
-    height: 40
+    width: visible ? 32 : 0
+    height: visible ? 40 : 0
+    
     property var barHeights: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     property var themeContext: null
+
+    visible: {
+        for (var i = 0; i < barHeights.length; i++) {
+            if (barHeights[i] > 0) return true;
+        }
+        return false;
+    }
 
     Process {
         id: cavaProcess
@@ -43,7 +51,7 @@ Item {
             delegate: Rectangle {
                 height: 2
                 anchors.left: parent.left
-                width: Math.max(2, cavaVisualizer.barHeights[index] * parent.width)
+                width: cavaVisualizer.barHeights[index] * parent.width
                 radius: 0
                 color: cavaVisualizer.themeContext ? cavaVisualizer.themeContext.theme_primary : "#ffffff"
 
