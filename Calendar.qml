@@ -169,7 +169,7 @@ Item {
     }
 
     function checkUserActivity() {
-        if (cardMouseArea.containsMouse) {
+        if (mainContainerMouseArea.containsMouse) {
             osdAutohideTimer.stop(); 
         } else if (drawerTemplate.isOpen) {
             osdAutohideTimer.restart(); 
@@ -234,106 +234,109 @@ Item {
             }
         }
 
-        MouseArea {
-            id: cardMouseArea; anchors.fill: parent; hoverEnabled: true; propagateComposedEvents: true
-            onContainsMouseChanged: checkUserActivity()
-        }
-
         MouseArea { anchors.fill: parent; onPressed: (mouse) => { closeMenu(); mouse.accepted = true; } }
 
-        ColumnLayout {
-            id: mainContainerLayout
-            anchors.fill: parent; anchors.topMargin: 14; anchors.bottomMargin: 14; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 4 
-            focus: true
+        MouseArea {
+            id: mainContainerMouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            propagateComposedEvents: true
+            onContainsMouseChanged: checkUserActivity()
 
-            RowLayout {
-                Layout.fillWidth: true; spacing: 0
-                Rectangle {
-                    width: 28; height: 28; color: prevMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 6
-                    Text { anchors.centerIn: parent; text: "chevron_left"; font.family: "Material Symbols Outlined"; font.pixelSize: 18; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
-                    MouseArea { id: prevMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { if (calendarRoot.currentMonthOffsetIndex > 0) { calendarRoot.currentMonthOffsetIndex--; calendarRoot.updateViewerDate(); } } }
+            ColumnLayout {
+                id: mainContainerLayout
+                anchors.fill: parent; anchors.topMargin: 14; anchors.bottomMargin: 14; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 4 
+                focus: true
+
+                RowLayout {
+                    Layout.fillWidth: true; spacing: 0
+                    Rectangle {
+                        width: 28; height: 28; color: prevMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 6
+                        Text { anchors.centerIn: parent; text: "chevron_left"; font.family: "Material Symbols Outlined"; font.pixelSize: 18; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
+                        MouseArea { id: prevMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { if (calendarRoot.currentMonthOffsetIndex > 0) { calendarRoot.currentMonthOffsetIndex--; calendarRoot.updateViewerDate(); } } }
+                    }
+                    Item { Layout.fillWidth: true }
+                    Text { text: Qt.formatDateTime(calendarRoot.viewerTargetDate, "MMMM yyyy"); font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
+                    Item { Layout.fillWidth: true }
+                    Rectangle {
+                        width: 28; height: 28; color: nextMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 6
+                        Text { anchors.centerIn: parent; text: "chevron_right"; font.family: "Material Symbols Outlined"; font.pixelSize: 18; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
+                        MouseArea { id: nextMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { if (calendarRoot.currentMonthOffsetIndex < 100) { calendarRoot.currentMonthOffsetIndex++; calendarRoot.updateViewerDate(); } } }
+                    }
                 }
-                Item { Layout.fillWidth: true }
-                Text { text: Qt.formatDateTime(calendarRoot.viewerTargetDate, "MMMM yyyy"); font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
-                Item { Layout.fillWidth: true }
-                Rectangle {
-                    width: 28; height: 28; color: nextMouse.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 6
-                    Text { anchors.centerIn: parent; text: "chevron_right"; font.family: "Material Symbols Outlined"; font.pixelSize: 18; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
-                    MouseArea { id: nextMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { if (calendarRoot.currentMonthOffsetIndex < 100) { calendarRoot.currentMonthOffsetIndex++; calendarRoot.updateViewerDate(); } } }
-                }
-            }
 
-            StackLayout {
-                id: calendarDisplayStack; Layout.fillWidth: true; Layout.fillHeight: true; currentIndex: calendarRoot.currentMonthOffsetIndex
-                Repeater {
-                    model: 101
-                    delegate: Item {
-                        readonly property int currentVirtualOffset: index - 50
-                        readonly property int resolvedMonthPosition: calendarRoot.baseDate.getMonth() + currentVirtualOffset
-                        readonly property date loopCalculatedDate: new Date(calendarRoot.baseDate.getFullYear(), resolvedMonthPosition, 1)
+                StackLayout {
+                    id: calendarDisplayStack; Layout.fillWidth: true; Layout.fillHeight: true; currentIndex: calendarRoot.currentMonthOffsetIndex
+                    Repeater {
+                        model: 101
+                        delegate: Item {
+                            readonly property int currentVirtualOffset: index - 50
+                            readonly property int resolvedMonthPosition: calendarRoot.baseDate.getMonth() + currentVirtualOffset
+                            readonly property date loopCalculatedDate: new Date(calendarRoot.baseDate.getFullYear(), resolvedMonthPosition, 1)
 
-                        MonthGrid {
-                            id: grid; anchors.fill: parent; month: parent.loopCalculatedDate.getMonth(); year: parent.loopCalculatedDate.getFullYear(); font.family: "Rubik"; font.pixelSize: 12
-                            delegate: Item {
-                                implicitWidth: 32; implicitHeight: 32
-                                readonly property bool isToday: model.day === calendarRoot.currentDateTime.getDate() && model.month === calendarRoot.currentDateTime.getMonth() && model.year === calendarRoot.currentDateTime.getFullYear()
-                                Rectangle { anchors.fill: parent; anchors.margins: 2; color: "transparent"; border.width: parent.isToday ? 2 : 0; border.color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"; radius: 6 }
-                                Text { anchors.centerIn: parent; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; opacity: model.month === grid.month ? 1.0 : 0.25; text: model.day; color: rootScope.theme ? (parent.isToday ? rootScope.theme.theme_primary : rootScope.theme.theme_fg) : "#ffffff"; font.family: grid.font.family; font.pixelSize: grid.font.pixelSize; font.weight: parent.isToday ? Font.Bold : Font.Normal }
+                            MonthGrid {
+                                id: grid; anchors.fill: parent; month: parent.loopCalculatedDate.getMonth(); year: parent.loopCalculatedDate.getFullYear(); font.family: "Rubik"; font.pixelSize: 12
+                                delegate: Item {
+                                    implicitWidth: 32; implicitHeight: 32
+                                    readonly property bool isToday: model.day === calendarRoot.currentDateTime.getDate() && model.month === calendarRoot.currentDateTime.getMonth() && model.year === calendarRoot.currentDateTime.getFullYear()
+                                    Rectangle { anchors.fill: parent; anchors.margins: 2; color: "transparent"; border.width: parent.isToday ? 2 : 0; border.color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"; radius: 6 }
+                                    Text { anchors.centerIn: parent; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; opacity: model.month === grid.month ? 1.0 : 0.25; text: model.day; color: rootScope.theme ? (parent.isToday ? rootScope.theme.theme_primary : rootScope.theme.theme_fg) : "#ffffff"; font.family: grid.font.family; font.pixelSize: grid.font.pixelSize; font.weight: parent.isToday ? Font.Bold : Font.Normal }
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            Item {
-                id: weatherCardSurface
-                Layout.fillWidth: true
-                Layout.preferredHeight: 56
+                Item {
+                    id: weatherCardSurface
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 56
 
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
-                    spacing: 12
-
-                    Text {
-                        text: calendarRoot.weatherGlyph
-                        font.family: "Material Symbols Outlined"
-                        font.pixelSize: 26
-                        color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
-                        Layout.alignment: Qt.AlignVCenter
-                    }
-
-                    ColumnLayout {
-                        spacing: 1
-                        Layout.alignment: Qt.AlignVCenter
-                        Layout.fillWidth: true
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 12
 
                         Text {
-                            text: calendarRoot.weatherDesc
+                            text: calendarRoot.weatherGlyph
+                            font.family: "Material Symbols Outlined"
+                            font.pixelSize: 26
+                            color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        ColumnLayout {
+                            spacing: 1
+                            Layout.alignment: Qt.AlignVCenter
+                            Layout.fillWidth: true
+
+                        Text {
+                                text: calendarRoot.weatherDesc
+                                font.family: "Rubik"
+                                font.pixelSize: 13
+                                font.weight: Font.Bold
+                                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: "Feels like " + calendarRoot.weatherFeelsLike
+                                font.family: "Rubik"
+                                font.pixelSize: 11
+                                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                                opacity: 0.6
+                            }
+                        }
+
+                        Text {
+                            text: calendarRoot.weatherTemp
                             font.family: "Rubik"
-                            font.pixelSize: 13
+                            font.pixelSize: 18
                             font.weight: Font.Bold
                             color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
-                            elide: Text.ElideRight
+                            Layout.alignment: Qt.AlignVCenter
                         }
-
-                        Text {
-                            text: "Feels like " + calendarRoot.weatherFeelsLike
-                            font.family: "Rubik"
-                            font.pixelSize: 11
-                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
-                            opacity: 0.6
-                        }
-                    }
-
-                    Text {
-                        text: calendarRoot.weatherTemp
-                        font.family: "Rubik"
-                        font.pixelSize: 18
-                        font.weight: Font.Bold
-                        color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
-                        Layout.alignment: Qt.AlignVCenter
                     }
                 }
             }
