@@ -22,13 +22,13 @@ Item {
         command: ["cava", "-p", Quickshell.env("HOME") + "/.config/cava/quickshell_bar.conf"]
         running: true
         
-        stdout: StdioCollector {
-            waitForEnd: false
-            onTextChanged: {
-                var lines = text.split('\n');
-                if (lines.length < 2) return;
-                var lastCompleteLine = lines[lines.length - 2];
-                var rawValues = lastCompleteLine.trim().split(';');
+        // Handles data splitting by line immediately, avoiding memory build-up over time
+        stdout: SplitParser {
+            onRead: (line) => {
+                var cleanLine = line.trim();
+                if (!cleanLine) return;
+
+                var rawValues = cleanLine.split(';');
                 if (rawValues.length >= 10) {
                     var parsedHeights = [];
                     for (var i = 0; i < 10; i++) {
