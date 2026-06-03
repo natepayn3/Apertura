@@ -123,6 +123,15 @@ Item {
         }
     }
 
+    Connections {
+        target: rootScope
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== "battery" && menuOpen) {
+                closeMenu();
+            }
+        }
+    }
+
     Rectangle {
         id: batteryHitbox
         anchors.fill: parent
@@ -164,15 +173,6 @@ Item {
             cursorShape: Qt.PointingHandCursor
             onClicked: toggleMenu()
             onContainsMouseChanged: checkUserActivity()
-        }
-    }
-
-    Connections {
-        target: rootScope
-        function onActiveModalChanged() {
-            if (rootScope.activeModal !== "battery" && menuOpen) {
-                closeMenu();
-            }
         }
     }
 
@@ -276,9 +276,33 @@ Item {
                     Layout.fillWidth: true; spacing: 4
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Current Charge:"; font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" }
+                        Text { text: "Current Charge:"; font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
                         Item { Layout.fillWidth: true }
-                        Text { text: batRoot.capacity + "%"; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
+                        
+                        RowLayout {
+                            spacing: 6
+                            Text {
+                                text: batRoot.isCharging        ? "battery_android_frame_bolt" : 
+                                      batRoot.capacity >= 95    ? "battery_android_full" :
+                                      batRoot.capacity < 15     ? "battery_android_0" :
+                                      batRoot.capacity < 30     ? "battery_android_1" : 
+                                      batRoot.capacity < 45     ? "battery_android_2" : 
+                                      batRoot.capacity < 60     ? "battery_android_3" : 
+                                      batRoot.capacity < 75     ? "battery_android_4" : 
+                                      batRoot.capacity < 90     ? "battery_android_5" : 
+                                                                  "battery_android_6"
+                                font.family: "Material Symbols Outlined"
+                                font.pixelSize: 20
+                                color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
+                            }
+                            Text { 
+                                text: batRoot.capacity + "%"
+                                font.family: "Rubik"
+                                font.pixelSize: 13
+                                font.weight: Font.Bold
+                                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
+                            }
+                        }
                     }
                 }
             }
