@@ -133,7 +133,7 @@ Item {
     Rectangle {
         id: netHitbox
         anchors.fill: parent
-        color: iconMouseArea.containsMouse ? "#26ffffff" : "transparent"
+        color: iconMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0
 
         Text {
@@ -141,8 +141,7 @@ Item {
             text: netRoot.connectionIcon
             font.family: "Material Symbols Outlined"
             font.pixelSize: 20
-            // Red alert color if offline
-            color: activeIface === "None" ? "#ff5555" : "#ffffff"
+            color: activeIface === "None" ? "#ff5555" : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff")
         }
 
         MouseArea {
@@ -175,6 +174,8 @@ Item {
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 12
             color: "#9911111b"
+            border.color: "transparent"
+            border.width: 0
 
             states: [
                 State {
@@ -215,10 +216,10 @@ Item {
             Text {
                 text: "Network Status"
                 font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold
-                color: "#ffffff"; x: 14; y: 14
+                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; x: 14; y: 14
             }
 
-            Rectangle { width: parent.width - 24; height: 1; color: "#26ffffff"; x: 12; y: 44 }
+            Rectangle { width: parent.width - 24; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"; x: 12; y: 44 }
 
             ColumnLayout {
                 x: 14; y: 56; width: parent.width - 28; spacing: 12
@@ -227,38 +228,38 @@ Item {
                     Layout.fillWidth: true
                     ColumnLayout {
                         spacing: 2
-                        Text { text: "Interface"; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
-                        Text { text: netRoot.activeIface; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#ffffff" }
+                        Text { text: "Interface"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                        Text { text: netRoot.activeIface; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
                     }
                     Item { Layout.fillWidth: true }
                     ColumnLayout {
                         spacing: 2; Layout.alignment: Qt.AlignRight
-                        Text { text: "IP Address"; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
-                        Text { text: netRoot.ipAddress; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#ffffff"; Layout.alignment: Qt.AlignRight }
+                        Text { text: "IP Address"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
+                        Text { text: netRoot.ipAddress; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
                     }
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: "#1affffff" }
+                Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_outline, 0.5) : "#1affffff" }
 
                 RowLayout {
                     Layout.fillWidth: true
                     ColumnLayout {
                         spacing: 2
-                        Text { text: "Download"; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
+                        Text { text: "Download"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
                         RowLayout {
                             spacing: 6
-                            Text { text: "arrow_downward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: "#ffffff" }
-                            Text { text: netRoot.downloadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#ffffff" }
+                            Text { text: "arrow_downward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
+                            Text { text: netRoot.downloadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" }
                         }
                     }
                     Item { Layout.fillWidth: true }
                     ColumnLayout {
                         spacing: 2; Layout.alignment: Qt.AlignRight
-                        Text { text: "Upload"; font.family: "Rubik"; font.pixelSize: 11; color: "#59ffffff" }
+                        Text { text: "Upload"; font.family: "Rubik"; font.pixelSize: 11; color: rootScope.theme ? Qt.alpha(rootScope.theme.theme_fg, 0.35) : "#59ffffff" }
                         RowLayout {
                             spacing: 6; Layout.alignment: Qt.AlignRight
-                            Text { text: "arrow_upward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: "#ffffff" }
-                            Text { text: netRoot.uploadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: "#ffffff" }
+                            Text { text: "arrow_upward"; font.family: "Material Symbols Outlined"; font.pixelSize: 16; color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff" }
+                            Text { text: netRoot.uploadSpeed; font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignRight }
                         }
                     }
                 }
