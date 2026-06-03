@@ -4,21 +4,18 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import "."
 
 Item {
     id: wallpaperModuleRoot
-
     implicitWidth: 32
     implicitHeight: 32
 
     property string wallpaperDir: ""
     property bool menuOpen: false
     property point globalMousePos: Qt.point(-1, -1)
-    property bool windowAlive: false
 
-    ListModel {
-        id: wallpaperModel
-    }
+    ListModel { id: wallpaperModel }
 
     Component.onCompleted: {
         wallpaperDir = Quickshell.env("HOME") + "/Pictures/Wallpapers";
@@ -26,32 +23,13 @@ Item {
         wallpaperScanner.running = true;
     }
 
-    function toggleMenu(): void {
-        if (menuOpen) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
-    }
-
-    function openMenu(): void {
-        globalMousePos = Qt.point(-1, -1);
-        wallpaperListView.activeKeyIndex = -1;
-        wallpaperListView.logicalMouseIndexStore = -1;
-        
-        rootScope.requestOpen("wallpaper");
-        windowAlive = true;
-        menuOpen = true;
-    }
-
-    function closeMenu(): void {
-        menuOpen = false;
-    }
+    function toggleMenu(): void { drawerTemplate.isOpen = !drawerTemplate.isOpen; }
+    function closeMenu(): void { drawerTemplate.isOpen = false; }
 
     Connections {
         target: rootScope
         function onActiveModalChanged() {
-            if (rootScope.activeModal !== "wallpaper" && menuOpen) {
+            if (rootScope.activeModal !== drawerTemplate.modalToken && drawerTemplate.isOpen) {
                 closeMenu();
             }
         }
@@ -63,10 +41,7 @@ Item {
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             if (line !== "") {
-                wallpaperModel.append({
-                    fileName: line,
-                    fullPath: wallpaperDir + "/" + line
-                });
+                wallpaperModel.append({ fileName: line, fullPath: wallpaperDir + "/" + line });
             }
         }
         wallpaperListView.activeKeyIndex = -1;
@@ -77,11 +52,7 @@ Item {
         id: wallpaperScanner
         command: ["true"]
         running: false
-        stdout: StdioCollector {
-            onTextChanged: {
-                populateWallpapers(text);
-            }
-        }
+        stdout: StdioCollector { onTextChanged: populateWallpapers(text); }
     }
 
     Rectangle {
@@ -107,93 +78,50 @@ Item {
         }
     }
 
-    PanelWindow {
-        id: wallpaperModal
-        visible: wallpaperModuleRoot.windowAlive
-        anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right
-        color: "transparent"
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "quickshell-wallpapers"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    PanelDrawer {
+        id: drawerTemplate
+        isOpen: false
+        // By setting this to 2000, we exceed screen height, forcing the 
+        // anchors (anchors.topMargin/bottomMargin) in PanelDrawer to pin 
+        // it to the top and bottom of the parent container.
+        drawerHeight: 2000 
+        modalToken: "wallpaper"
+        anchorTop: true
 
-        onVisibleChanged: {
-            if (visible && wallpaperModuleRoot.menuOpen) {
+        onIsOpenChanged: {
+            if (isOpen) {
+                wallpaperModuleRoot.menuOpen = true;
+                globalMousePos = Qt.point(-1, -1);
                 wallpaperListView.activeKeyIndex = -1;
                 wallpaperListView.logicalMouseIndexStore = -1;
                 wallpaperListView.positionViewAtBeginning();
-                wallpaperCard.forceActiveFocus();
+                mainContainerLayout.forceActiveFocus();
+            } else {
+                wallpaperModuleRoot.menuOpen = false;
             }
         }
 
-        MouseArea {
+        MouseArea { anchors.fill: parent; onPressed: (mouse) => mouse.accepted = true }
+
+        ColumnLayout {
+            id: mainContainerLayout
             anchors.fill: parent
-            onClicked: closeMenu()
-        }
-
-        Rectangle {
-            id: wallpaperCard
-            width: 290
-            anchors.top: parent.top; anchors.bottom: parent.bottom
-            anchors.topMargin: 12; anchors.bottomMargin: 12
-
-            states: [
-                State {
-                    name: "visible"
-                    when: wallpaperModuleRoot.menuOpen
-                    PropertyChanges { target: wallpaperCard; x: 0; opacity: 1.0 }
-                },
-                State {
-                    name: "hidden"
-                    when: !wallpaperModuleRoot.menuOpen
-                    PropertyChanges { target: wallpaperCard; x: -310; opacity: 0.0 }
-                }
-            ]
-
-            transitions: [
-                Transition {
-                    from: "hidden"; to: "visible"
-                    ParallelAnimation {
-                        NumberAnimation { property: "x"; duration: 350; easing.type: Easing.OutCubic }
-                        NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.OutCubic }
-                    }
-                },
-                Transition {
-                    from: "visible"; to: "hidden"
-                    SequentialAnimation {
-                        ParallelAnimation {
-                            NumberAnimation { property: "x"; duration: 350; easing.type: Easing.InCubic }
-                            NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InCubic }
-                        }
-                        ScriptAction {
-                            script: { wallpaperModuleRoot.windowAlive = false; }
-                        }
-                    }
-                }
-            ]
-
-            color: "#9911111b"
-            border.width: 0; border.color: "transparent"; focus: true
+            anchors.margins: 12
+            spacing: 8
+            focus: true
 
             Keys.onPressed: (event) => {
-                if (event.key === Qt.Key_Escape) {
-                    closeMenu();
-                    event.accepted = true;
-                }
+                if (event.key === Qt.Key_Escape) { closeMenu(); event.accepted = true; }
                 else if (event.key === Qt.Key_Down) {
                     wallpaperListView.logicalMouseIndexStore = -1;
-                    if (wallpaperListView.activeKeyIndex === -1) {
-                        wallpaperListView.activeKeyIndex = 0;
-                    } else if (wallpaperListView.activeKeyIndex < wallpaperListView.count - 1) {
-                        wallpaperListView.activeKeyIndex++;
-                    }
+                    if (wallpaperListView.activeKeyIndex === -1) wallpaperListView.activeKeyIndex = 0;
+                    else if (wallpaperListView.activeKeyIndex < wallpaperListView.count - 1) wallpaperListView.activeKeyIndex++;
                     wallpaperListView.positionViewAtIndex(wallpaperListView.activeKeyIndex, ListView.Contain);
                     event.accepted = true;
                 }
                 else if (event.key === Qt.Key_Up) {
                     wallpaperListView.logicalMouseIndexStore = -1;
-                    if (wallpaperListView.activeKeyIndex > 0) {
-                        wallpaperListView.activeKeyIndex--;
-                    }
+                    if (wallpaperListView.activeKeyIndex > 0) wallpaperListView.activeKeyIndex--;
                     wallpaperListView.positionViewAtIndex(wallpaperListView.activeKeyIndex, ListView.Contain);
                     event.accepted = true;
                 }
@@ -203,11 +131,8 @@ Item {
                         let targetWallpaper = wallpaperModel.get(finalTarget);
                         wallpaperSetter.command = ["awww", "img", targetWallpaper.fullPath, "--transition-type", "wipe", "--transition-step", "16", "--transition-duration", "1"];
                         wallpaperSetter.running = true;
-                        
-                        // Updated keyboard selection handler to write to local directory
                         matugenSetter.command = [
-                            "sh",
-                            "-c",
+                            "sh", "-c",
                             "mkdir -p " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors && matugen image \"" + targetWallpaper.fullPath + "\" -m dark --source-color-index 0 --dry-run --json hex > " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors/colors.json"
                         ];
                         matugenSetter.running = true;
@@ -217,103 +142,89 @@ Item {
                 }
             }
 
-            MouseArea {
-                anchors.fill: parent
-                onPressed: (mouse) => mouse.accepted = true
+            Text {
+                text: "Wallpapers"
+                font.family: "Rubik"
+                font.pixelSize: 18
+                font.weight: Font.Bold 
+                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                Layout.alignment: Qt.AlignLeft
+                Layout.leftMargin: 10
             }
 
-            ColumnLayout {
-                anchors.fill: parent; anchors.margins: 12; spacing: 8
+            ListView {
+                id: wallpaperListView
+                Layout.fillWidth: true
+                Layout.fillHeight: true 
+                clip: true
+                spacing: 12
+                model: wallpaperModel
+                boundsBehavior: Flickable.StopAtBounds
 
-                Text {
-                    text: "Wallpapers"
-                    font.family: "Rubik"; font.pixelSize: 18; font.weight: Font.Bold; 
-                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
-                    Layout.alignment: Qt.AlignLeft
-                    Layout.leftMargin: 10
-                    Layout.bottomMargin: 2
-                    Layout.topMargin: 4
-                }
+                property int activeKeyIndex: -1
+                property int logicalMouseIndexStore: -1
+                property int activeMouseIndex: (activeKeyIndex === -1) ? logicalMouseIndexStore : -1
 
-                ListView {
-                    id: wallpaperListView
-                    Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: 12
-                    model: wallpaperModel; boundsBehavior: Flickable.StopAtBounds
+                delegate: Item {
+                    width: wallpaperListView.width
+                    height: 150
+                    Rectangle {
+                        width: 260
+                        height: 150
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        radius: 0 
+                        readonly property bool isHighlighted: (wallpaperListView.activeKeyIndex === index && mainContainerLayout.activeFocus) || (wallpaperListView.activeMouseIndex === index)
+                        color: isHighlighted ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "#11111b"
+                        border.color: isHighlighted ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : "transparent"
+                        border.width: 1
 
-                    property int activeKeyIndex: -1
-                    property int logicalMouseIndexStore: -1
-                    property int activeMouseIndex: (activeKeyIndex === -1) ? logicalMouseIndexStore : -1
-
-                    delegate: Item {
-                        width: wallpaperListView.width; height: 150
-
-                        Rectangle {
-                            width: 260; height: 150
-                            anchors.horizontalCenter: parent.horizontalCenter; radius: 0 
-                            
-                            readonly property bool isHighlighted: (wallpaperListView.activeKeyIndex === index && wallpaperCard.activeFocus) || 
-                                                                  (wallpaperListView.activeMouseIndex === index)
-
-                            color: isHighlighted ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "#11111b"
-                            border.color: isHighlighted ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : "transparent"
-                            border.width: 1
-
-                            Image {
-                                anchors.fill: parent; anchors.margins: 4
-                                source: "file://" + model.fullPath
-                                fillMode: Image.PreserveAspectCrop; clip: true
-                                cache: true
-                                asynchronous: true
-                                sourceSize.width: 260
-                                sourceSize.height: 150
-                            }
+                        Image {
+                            anchors.fill: parent; anchors.margins: 4
+                            source: "file://" + model.fullPath
+                            fillMode: Image.PreserveAspectCrop
+                            clip: true
+                            cache: true
+                            asynchronous: true
+                            sourceSize.width: 260
+                            sourceSize.height: 150
                         }
+                    }
 
-                        MouseArea {
-                            id: gridMouse
-                            anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            
-                            function verifyTruePointerAction() {
-                                var currentGlobalPoint = gridMouse.mapToItem(wallpaperModuleRoot, gridMouse.mouseX, gridMouse.mouseY);
-                                if (wallpaperModuleRoot.globalMousePos.x !== currentGlobalPoint.x || wallpaperModuleRoot.globalMousePos.y !== currentGlobalPoint.y) {
-                                    wallpaperModuleRoot.globalMousePos = currentGlobalPoint;
-                                    return true;
-                                }
-                                return false;
+                    MouseArea {
+                        id: gridMouse
+                        anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        function verifyTruePointerAction() {
+                            var currentGlobalPoint = gridMouse.mapToItem(wallpaperModuleRoot, gridMouse.mouseX, gridMouse.mouseY);
+                            if (wallpaperModuleRoot.globalMousePos.x !== currentGlobalPoint.x || wallpaperModuleRoot.globalMousePos.y !== currentGlobalPoint.y) {
+                                wallpaperModuleRoot.globalMousePos = currentGlobalPoint;
+                                return true;
                             }
-
-                            onEntered: { if (verifyTruePointerAction()) { wallpaperListView.activeKeyIndex = -1; wallpaperListView.logicalMouseIndexStore = index; } }
-                            onPositionChanged: { if (verifyTruePointerAction()) { if (wallpaperListView.logicalMouseIndexStore !== index) { wallpaperListView.activeKeyIndex = -1; wallpaperListView.logicalMouseIndexStore = index; } } }
-                            onExited: { if (wallpaperListView.logicalMouseIndexStore === index) { wallpaperListView.logicalMouseIndexStore = -1; } }
-                            onClicked: { 
-                                wallpaperSetter.command = ["awww", "img", model.fullPath, "--transition-type", "wipe", "--transition-step", "16", "--transition-duration", "1"];
-                                wallpaperSetter.running = true; 
-                                
-                                matugenSetter.command = [
-                                    "sh",
-                                    "-c",
-                                    "mkdir -p " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors && matugen image \"" + model.fullPath + "\" -m dark --source-color-index 0 --dry-run --json hex > " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors/colors.json"
-                                ];
-                                matugenSetter.running = true;
-                                closeMenu(); 
-                            }
+                            return false;
+                        }
+                        onEntered: { if (verifyTruePointerAction()) { wallpaperListView.activeKeyIndex = -1; wallpaperListView.logicalMouseIndexStore = index; } }
+                        onPositionChanged: { if (verifyTruePointerAction()) { if (wallpaperListView.logicalMouseIndexStore !== index) { wallpaperListView.activeKeyIndex = -1; wallpaperListView.logicalMouseIndexStore = index; } } }
+                        onExited: { if (wallpaperListView.logicalMouseIndexStore === index) { wallpaperListView.logicalMouseIndexStore = -1; } }
+                        onClicked: { 
+                            wallpaperSetter.command = ["awww", "img", model.fullPath, "--transition-type", "wipe", "--transition-step", "16", "--transition-duration", "1"];
+                            wallpaperSetter.running = true; 
+                            matugenSetter.command = [
+                                "sh", "-c",
+                                "mkdir -p " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors && matugen image \"" + model.fullPath + "\" -m dark --source-color-index 0 --dry-run --json hex > " + Quickshell.env("HOME") + "/.config/quickshell/Apertura/Colors/colors.json"
+                            ];
+                            matugenSetter.running = true;
+                            closeMenu(); 
                         }
                     }
                 }
             }
         }
-    }
 
-    Process { id: wallpaperSetter; command: ["true"]; running: false }
-    Process {
-        id: matugenSetter
-        command: ["true"]
-        running: false
-
-        onExited: (exitCode, exitStatus) => {
-            if (exitCode === 0) {
-                rootScope.theme.reloadTheme();
-            }
+        Process { id: wallpaperSetter; command: ["true"]; running: false }
+        Process {
+            id: matugenSetter
+            command: ["true"]
+            running: false
+            onExited: (exitCode, exitStatus) => { if (exitCode === 0) rootScope.theme.reloadTheme(); }
         }
     }
 }
