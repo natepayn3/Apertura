@@ -156,7 +156,7 @@ Scope {
                             }
                         }
 
-                        Column {
+                        ColumnLayout {
                             id: modulesColumn
                             Layout.alignment: Qt.AlignHCenter
                             spacing: 8
@@ -164,20 +164,35 @@ Scope {
                             component DrawerModule : Item {
                                 id: moduleWrapper
                                 property bool isPinned: false
+                                property bool moduleAvailable: true
                                 default property alias moduleData: container.data
+
+                                readonly property bool shouldBeActive: (bottomGroupControls.isExpanded || isPinned) && moduleAvailable
+
+                                // Animate the height property smoothly
+                                property int targetHeight: shouldBeActive ? 38 : 0
+                                Behavior on targetHeight {
+                                    NumberAnimation {
+                                        duration: 200
+                                        easing.type: Easing.OutCubic
+                                    }
+                                }
+
+                                Layout.preferredWidth: shouldBeActive ? 38 : 0
+                                Layout.preferredHeight: targetHeight
+                                
+                                // Keep visible true during animation so it doesn't instantly snap hide
+                                visible: targetHeight > 0
+                                opacity: targetHeight / 38
 
                                 width: 38
                                 height: 38
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                
-                                visible: bottomGroupControls.isExpanded || isPinned
 
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: 6
                                     color: "transparent"
-                                    
-                                    // 1px border shows ONLY if the item is pinned AND the drawer is expanded
                                     border.width: isPinned && bottomGroupControls.isExpanded ? 1 : 0
                                     border.color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                                 }
@@ -201,8 +216,17 @@ Scope {
                                 }
                             }
 
-                            DrawerModule { id: wrapWifi; Wifi { anchors.centerIn: parent } }
-                            DrawerModule { id: wrapBattery; Battery { anchors.centerIn: parent } }
+                            DrawerModule {
+                                id: wrapWifi
+                                moduleAvailable: wifiItem.hasWifiCard
+                                Wifi { id: wifiItem; anchors.centerIn: parent }
+                            }
+
+                            DrawerModule {
+                                id: wrapBattery
+                                moduleAvailable: batteryItem.isLaptop
+                                Battery { id: batteryItem; anchors.centerIn: parent }
+                            }
 
                             DrawerModule {
                                 id: wrapSnip
@@ -218,7 +242,7 @@ Scope {
                                         text: "screenshot_region"
                                         font.family: "Material Symbols Outlined"; font.pixelSize: 22
                                         color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
-                                        }
+                                    }
 
                                     MouseArea {
                                         id: snipMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
