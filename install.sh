@@ -36,6 +36,7 @@ DEPENDENCIES=(
     "bluez-utils"
     "networkmanager"
     "python"
+    "python-pyxdg"
     "wireplumber"
     "pipewire"
     "pipewire-audio"
