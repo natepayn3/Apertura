@@ -76,8 +76,6 @@ Item {
         onTriggered: {
             queryActiveWorkspace.running = false
             queryActiveWorkspace.running = true
-            queryWorkspaceList.running = false
-            queryWorkspaceList.running = true
         }
     }
 
@@ -129,10 +127,16 @@ Item {
             property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
             property bool isNewIndicatorSlot: index === (workspaceContainer.activeWorkspaceList.length - 1)
 
-            implicitWidth: workspaceContainer.isVertical ? 28 : (isActive ? 58 : 28)
-            implicitHeight: workspaceContainer.isVertical ? (isActive ? 58 : 28) : 28
+            property int targetWidth: workspaceContainer.isVertical ? 28 : (isActive ? 58 : 28)
+            property int targetHeight: workspaceContainer.isVertical ? (isActive ? 58 : 28) : 28
+
+            implicitWidth: targetWidth
+            implicitHeight: targetHeight
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
+
+            Behavior on targetWidth { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+            Behavior on targetHeight { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
 
             onClicked: {
                 workspaceContainer.activeWorkspace = wsId;
@@ -144,8 +148,8 @@ Item {
 
             Rectangle {
                 id: hoverBackground
-                width: workspaceContainer.isVertical ? 28 : (workspaceButton.isActive ? 58 : 28)
-                height: workspaceContainer.isVertical ? (workspaceButton.isActive ? 58 : 28) : 28
+                width: parent.width
+                height: parent.height
                 radius: 0
                 anchors.centerIn: parent
                 color: workspaceContainer.theme ? workspaceContainer.theme.theme_primary : "#89b4fa"
@@ -156,23 +160,30 @@ Item {
             Rectangle {
                 id: indicatorShape
                 anchors.centerIn: parent
-                width: workspaceContainer.isVertical ? (workspaceContainer.activeWorkspace === wsId ? 14 : 12) : (workspaceContainer.activeWorkspace === wsId ? 44 : 12)
-                height: workspaceContainer.isVertical ? (workspaceContainer.activeWorkspace === wsId ? 44 : 12) : (workspaceContainer.activeWorkspace === wsId ? 14 : 12)
+                
+                property int shapeWidth: workspaceContainer.isVertical ? (workspaceButton.isActive ? 14 : 12) : (workspaceButton.isActive ? 44 : 12)
+                property int shapeHeight: workspaceContainer.isVertical ? (workspaceButton.isActive ? 44 : 12) : (workspaceButton.isActive ? 14 : 12)
+                
+                width: shapeWidth
+                height: shapeHeight
                 radius: 0
                 z: 2
 
+                Behavior on shapeWidth { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                Behavior on shapeHeight { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
                 color: {
                     if (!workspaceContainer.theme) return "transparent";
-                    if (workspaceContainer.activeWorkspace === wsId) return workspaceContainer.theme.theme_primary;
-                    if (workspaceContainer.occupiedMap[wsId]) return workspaceContainer.theme.theme_fg;
+                    if (workspaceButton.isActive) return workspaceContainer.theme.theme_primary;
+                    if (workspaceButton.isOccupied) return workspaceContainer.theme.theme_fg;
                     return "transparent";
                 }
 
-                border.width: (!(workspaceContainer.activeWorkspace === wsId) && !workspaceContainer.occupiedMap[wsId]) ? 1.5 : 0
+                border.width: (!workspaceButton.isActive && !workspaceButton.isOccupied) ? 1.5 : 0
                 
                 border.color: {
                     if (!workspaceContainer.theme) return "transparent";
-                    return (!(workspaceContainer.activeWorkspace === wsId) && !workspaceContainer.occupiedMap[wsId])
+                    return (!workspaceButton.isActive && !workspaceButton.isOccupied)
                         ? workspaceContainer.theme.theme_outline
                         : "transparent";
                 }
@@ -188,11 +199,13 @@ Item {
                     
                     color: {
                         if (!workspaceContainer.theme) return "#ffffff";
-                        return workspaceContainer.activeWorkspace === wsId
+                        return workspaceButton.isActive
                             ? workspaceContainer.theme.theme_onPrimary
                             : workspaceContainer.theme.theme_fg;
                     }
-                    opacity: workspaceContainer.activeWorkspace === wsId ? 1.0 : 0.0
+                    
+                    opacity: workspaceButton.isActive ? 1.0 : 0.0
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
                 }
             }
         }
