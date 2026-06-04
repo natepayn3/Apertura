@@ -50,16 +50,26 @@ Item {
         id: powerHitbox
         width: 32
         height: 32
-        color: powerMouseArea.containsMouse || drawerTemplate.isOpen ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
-        radius: 0 
+        color: "transparent"
+        radius: 0
 
         Text {
             id: powerIcon
             text: "power_settings_new"
             font.family: "Material Symbols Outlined"
-            font.pixelSize: 16
+            font.pixelSize: 20
             color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
             anchors.centerIn: parent
+        }
+
+        Rectangle {
+            id: powerHoverOverlay
+            anchors.fill: parent
+            radius: 0
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+            // Use both MouseArea and isOpen state for the tint
+            opacity: (powerMouseArea.containsMouse || drawerTemplate.isOpen) ? 0.3 : 0.0
+            z: 1
         }
 
         MouseArea {
