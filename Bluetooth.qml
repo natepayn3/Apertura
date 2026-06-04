@@ -258,8 +258,8 @@ Item {
     Rectangle {
         id: triggerBox
         anchors.fill: parent
-        color: bluetoothMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
-        radius: 0 
+        color: "transparent"
+        radius: 0
 
         Text {
             anchors.centerIn: parent
@@ -268,6 +268,15 @@ Item {
             font.pixelSize: 20
             color: bluetoothRoot.isConnected ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") : 
                    bluetoothRoot.isPowered   ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
+        }
+
+        Rectangle {
+            id: bluetoothHoverOverlay
+            anchors.fill: parent
+            radius: 0
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+            opacity: bluetoothMouseArea.containsMouse ? 0.3 : 0.0
+            z: 1
         }
 
         MouseArea {
