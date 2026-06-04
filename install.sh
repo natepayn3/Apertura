@@ -42,19 +42,20 @@ DEPENDENCIES=(
 
 NEW_FONTS_INSTALLED=false
 
-# 1. Custom handling for quickshell-git to guarantee sysinfo feature compilation
+# 1. Custom handling for quickshell to guarantee local AUR build with sysinfo feature
 if ! pacman -Qi quickshell-git &>/dev/null; then
-    echo -e "    ${GRAY}➔${RESET} Installing quickshell-git (enforcing sysinfo features)..."
+    echo -e "    ${GRAY}➔${RESET} Building quickshell-git locally via AUR..."
     
-    # Strip native quickshell if it exists to avoid transaction blocking
+    # Clean out binary packages to avoid transaction blocks or dynamic link conflicts
     if pacman -Qi quickshell &>/dev/null; then
         sudo pacman -Rns --noconfirm quickshell
     fi
 
+    # Explicitly pull from the AUR instead of native mirrors to compile features locally
     if command -v paru &>/dev/null; then
-        paru -S --noconfirm --needed quickshell-git
+        paru -S --aur --noconfirm --needed quickshell-git
     elif command -v yay &>/dev/null; then
-        yay -S --noconfirm --needed quickshell-git
+        yay -S --aur --noconfirm --needed quickshell-git
     else
         echo -e "${RED}[X] Error:${RESET} An AUR helper (paru/yay) is required to build quickshell-git."
         exit 1
