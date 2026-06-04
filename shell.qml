@@ -161,7 +161,7 @@ Scope {
                             }
 
                             Rectangle {
-                                id: hoverOverlay
+                                id: toggleHoverOverlay
                                 anchors.fill: parent
                                 radius: 0
                                 color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
@@ -257,20 +257,34 @@ Scope {
                                 id: wrapSnip
                                 Rectangle {
                                     id: screensnipButton
-                                    width: 32; height: 32
+                                    width: 32
+                                    height: 32
                                     anchors.centerIn: parent
-                                    color: snipMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
-                                    radius: 4
+                                    color: "transparent"
+                                    radius: 0
 
                                     Text {
                                         anchors.centerIn: parent
                                         text: "screenshot_region"
-                                        font.family: "Material Symbols Outlined"; font.pixelSize: 22
+                                        font.family: "Material Symbols Outlined"
+                                        font.pixelSize: 22
                                         color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                                     }
 
+                                    Rectangle {
+                                        id: snipHoverOverlay
+                                        anchors.fill: parent
+                                        radius: 0
+                                        color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+                                        opacity: snipMouseArea.containsMouse ? 0.3 : 0.0
+                                        z: 1
+                                    }
+
                                     MouseArea {
-                                        id: snipMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                        id: snipMouseArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
                                         onClicked: {
                                             Quickshell.execDetached([
                                                 "bash", "-c", 
