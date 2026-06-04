@@ -27,6 +27,8 @@ echo ""
 echo -e "${BLUE}[*]${RESET} Updating system repositories and checking dependencies..."
 DEPENDENCIES=(
     "qt6-5compat"
+    "grim"
+    "slurp"
     "satty"
     "matugen"
     "awww"
@@ -140,7 +142,7 @@ echo -e "${BLUE}[*]${RESET} Deploying specialized CAVA profile structures..."
 mkdir -p "$HOME/.config/cava"
 
 # Explicit CAVA runtime generation block mapping requirements to SplitParser interface
-printf '[general]\n# Match this to your visualizer bar count (e.g., 5 bars)\nbars = 10\nframerate = 60\n\n[input]\n# Explicitly leverage PipeWire loopback for perfect audio capture\nmethod = pipewire\nsource = auto\nsensitivity = 0.5\n\n[output]\n# Output raw data format: ascii values separated by semicolons\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\n' > "$HOME/.config/cava/quickshell_bar.conf"
+printf '[general]\n# Match this to your visualizer bar count (e.g., 5 bars)\nbars = 10\nframerate = 60\n\n[input]\n# Explicitly leverage PipeWire loopback for perfect audio capture\nmethod = pipewire\nsource = auto\nsensitivity = 0.5\n\n[output]\n# Output raw data format: ascii values separated by semicolons\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\ndata_path = /tmp/cava_bar.fifo\n' > "$HOME/.config/cava/quickshell_bar.conf"
 
 echo -e "${BLUE}[*]${RESET} Injecting configuration trees into hyprland.lua..."
 touch "$HYPRLAND_LUA"
