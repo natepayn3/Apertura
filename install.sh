@@ -19,14 +19,14 @@ clear
 echo -e "${BLUE}    _   ____  _____ ____ _____ _   _ ____    _   "
 echo -e "   / \  |  _ \| ____|  _ \_  _\| | | |  _ \  / \  "
 echo -e "  / _ \ | |_) |  _| | |_) || | | | | | |_) |/ _ \ "
-echo -e " / ___ \|  __/| |___|  _ < | | | |_| |  _ <___  |"
+echo -e " / ___ \|  __/| |___|  _ < | | | |_| |  _<___  |"
 echo -e "/_/   \_\_|   |_____|_| \_\|_|  \___/|_| \_\  |_| ${RESET}"
 echo -e "${GRAY}────────────────────────────────────────────────────────────${RESET}"
 echo ""
 
 echo -e "${BLUE}[*]${RESET} Updating system repositories and checking dependencies..."
 DEPENDENCIES=(
-    "quickshell"
+    "qt6-5compat"
     "satty"
     "matugen"
     "awww"
@@ -42,7 +42,28 @@ DEPENDENCIES=(
 
 NEW_FONTS_INSTALLED=false
 
-# Package deployment loops handling native cachyos / core repositories prior to AUR fallbacks
+# 1. Custom handling for quickshell-git to guarantee sysinfo feature compilation
+if ! pacman -Qi quickshell-git &>/dev/null; then
+    echo -e "    ${GRAY}➔${RESET} Installing quickshell-git (enforcing sysinfo features)..."
+    
+    # Strip native quickshell if it exists to avoid transaction blocking
+    if pacman -Qi quickshell &>/dev/null; then
+        sudo pacman -Rns --noconfirm quickshell
+    fi
+
+    if command -v paru &>/dev/null; then
+        paru -S --noconfirm --needed quickshell-git
+    elif command -v yay &>/dev/null; then
+        yay -S --noconfirm --needed quickshell-git
+    else
+        echo -e "${RED}[X] Error:${RESET} An AUR helper (paru/yay) is required to build quickshell-git."
+        exit 1
+    fi
+else
+    echo -e "    ${GRAY}➔${RESET} quickshell-git is already installed. Skipping..."
+fi
+
+# 2. Package deployment loops handling native cachyos / core repositories prior to AUR fallbacks
 for pkg in "${DEPENDENCIES[@]}"; do
     if [[ "$pkg" == "awww" ]] && command -v awww-daemon &>/dev/null; then
         echo -e "    ${GRAY}➔${RESET} awww daemon is already installed. Skipping..."
@@ -152,6 +173,9 @@ sudo systemctl enable --now bluetooth.service
 sudo systemctl enable --now NetworkManager.service
 
 echo -e "${BLUE}[*]${RESET} Activating user space daemons..."
+# Ensure awww's local cache tree exists to prevent initialization warnings
+mkdir -p "$HOME/.cache/awww"
+
 if command -v awww-daemon &>/dev/null; then
     pkill awww-daemon || true
     awww-daemon & disown
