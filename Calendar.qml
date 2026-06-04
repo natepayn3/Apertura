@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Io
 import "."
 
 Item {
@@ -20,7 +21,7 @@ Item {
 
     // Location override option for VPN users. Examples: "90210", "London"
     // Leave blank ("") to fallback to automated dynamic IP location detection.
-    property string weatherLocationOverride: ""
+    property string weatherLocationOverride: "84040"
 
     property string weatherTemp: "--"
     property string weatherFeelsLike: "--"
@@ -80,36 +81,32 @@ Item {
         onTriggered: startWeatherPipeline()
     }
 
-    function startWeatherPipeline() {
-        let xhr = new XMLHttpRequest();
-        let location = calendarRoot.weatherLocationOverride.trim();
-        // Request the v2 JSON spec format (j1) from the wttr.is endpoint
-        let targetUrl = "https://wttr.is/" + encodeURIComponent(location) + "?format=j1";
+    Process {
+        id: weatherFetcher
+        command: ["curl", "-s", "https://wttr.is/" + calendarRoot.weatherLocationOverride.trim() + "?format=j1"]
         
-        xhr.open("GET", targetUrl, true);
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 200) {
-                    try {
-                        let data = JSON.parse(xhr.responseText);
-                        let current = data.current_condition[0];
-                        
-                        calendarRoot.weatherTemp = current.temp_F + "°F";
-                        calendarRoot.weatherFeelsLike = current.FeelsLikeF + "°F";
-                        
-                        // wttr.is provides the standardized WMO code in weatherCode
-                        let code = current.weatherCode.toString();
-                        calendarRoot.weatherDesc = calendarRoot.weatherDescMap[code] !== undefined ? calendarRoot.weatherDescMap[code] : current.weatherDesc[0].value;
-                        calendarRoot.weatherGlyph = calendarRoot.weatherIconMap[code] !== undefined ? calendarRoot.weatherIconMap[code] : "cloud";
-                    } catch (e) {
-                        console.log("wttr.is JSON processing exception: " + e);
-                    }
-                } else {
-                    console.log("Weather API connection status code failure: " + xhr.status);
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let data = JSON.parse(this.text);
+                    let current = data.current_condition[0];
+                    
+                    calendarRoot.weatherTemp = current.temp_F + "°F";
+                    calendarRoot.weatherFeelsLike = current.FeelsLikeF + "°F";
+                    
+                    let code = current.weatherCode.toString();
+                    calendarRoot.weatherDesc = calendarRoot.weatherDescMap[code] !== undefined ? calendarRoot.weatherDescMap[code] : current.weatherDesc[0].value;
+                    calendarRoot.weatherGlyph = calendarRoot.weatherIconMap[code] !== undefined ? calendarRoot.weatherIconMap[code] : "cloud";
+                } catch (e) {
+                    console.log("Shell stdout parsing exception: " + e);
                 }
+                weatherFetcher.running = false;
             }
-        };
-        xhr.send();
+        }
+    }
+
+    function startWeatherPipeline() {
+        weatherFetcher.running = true;
     }
 
     function checkUserActivity() {
