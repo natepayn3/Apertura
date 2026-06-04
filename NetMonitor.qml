@@ -57,13 +57,14 @@ Item {
         id: netFetcher
         command: [
             "sh", "-c",
-            "iface=$(/usr/bin/ip -j addr | /usr/bin/jq -r '.[] | select(.ifname != \"lo\" and .addr_info[].family == \"inet\") | .ifname' | /usr/bin/head -n1); " +
-            "if [ -n \"$iface\" ]; then " +
-            "  ip_addr=$(/usr/bin/ip -j addr show dev \"$iface\" | /usr/bin/jq -r '.[].addr_info[] | select(.family == \"inet\") | .local'); " +
-            "  stats=$(/usr/bin/grep \"$iface:\" /proc/net/dev | /usr/bin/awk '{print $2\" \"$10}'); " +
+            "iface=$(ip route show | awk '$1 == \"default\" {print $5; exit}'); " +
+            "if [ -z '$iface' ]; then iface=$(ip -4 link show up | awk -F': ' '$2 != \"lo\" {print $2; exit}'); fi; " +
+            "if [ -n '$iface' ]; then " +
+            "  ip_addr=$(ip -4 addr show dev \"$iface\" | awk '$1 == \"inet\" {split($2, a, \"/\"); print a[1]; exit}'); " +
+            "  stats=$(awk -v d=\"$iface\" '{gsub(/[: \t]+/, \" \"); if ($1 == d) print $2\" \"$10}' /proc/net/dev); " +
             "  echo \"$iface $ip_addr $stats\"; " +
             "else " +
-            "  echo \"None 0.0.0.0 0 0\"; " +
+            "  echo 'None 0.0.0.0 0 0'; " +
             "fi"
         ]
         running: false
