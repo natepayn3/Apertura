@@ -188,8 +188,8 @@ Item {
     Rectangle {
         id: volumeHitbox
         anchors.fill: parent
-        color: volumeMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
-        radius: 0 
+        color: "transparent"
+        radius: 0
 
         ColumnLayout {
             anchors.fill: parent
@@ -203,6 +203,15 @@ Item {
                 font.pixelSize: 24
                 color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
             }
+        }
+
+        Rectangle {
+            id: audioHoverOverlay
+            anchors.fill: parent
+            radius: 0
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+            opacity: volumeMouseArea.containsMouse ? 0.3 : 0.0
+            z: 1
         }
 
         MouseArea {
