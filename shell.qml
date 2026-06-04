@@ -146,18 +146,34 @@ Scope {
 
                         Rectangle {
                             id: toggleButton
-                            Layout.preferredWidth: 32; Layout.preferredHeight: 32; Layout.alignment: Qt.AlignHCenter
-                            color: toggleMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"; radius: 4
+                            Layout.preferredWidth: 32
+                            Layout.preferredHeight: 32
+                            Layout.alignment: Qt.AlignHCenter
+                            color: "transparent"
+                            radius: 0
 
                             Text {
                                 anchors.centerIn: parent
                                 text: bottomGroupControls.isExpanded ? "arrow_drop_down" : "arrow_drop_up"
-                                font.family: "Material Symbols Outlined"; font.pixelSize: 30
+                                font.family: "Material Symbols Outlined"
+                                font.pixelSize: 30
                                 color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
                             }
 
+                            Rectangle {
+                                id: hoverOverlay
+                                anchors.fill: parent
+                                radius: 0
+                                color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+                                opacity: toggleMouseArea.containsMouse ? 0.3 : 0.0
+                                z: 1
+                            }
+
                             MouseArea {
-                                id: toggleMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                id: toggleMouseArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 onClicked: (mouse) => {
                                     if (mouse.button === Qt.LeftButton) {
