@@ -157,7 +157,7 @@ Item {
     Rectangle {
         id: wifiHitbox
         anchors.fill: parent
-        color: iconMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
+        color: "transparent"
         radius: 0
 
         ColumnLayout {
@@ -178,6 +178,15 @@ Item {
                     color: wifiRoot.wifiEnabled ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
                 }
             }
+        }
+
+        Rectangle {
+            id: wifiHoverOverlay
+            anchors.fill: parent
+            radius: 0
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+            opacity: iconMouseArea.containsMouse ? 0.3 : 0.0
+            z: 1
         }
 
         MouseArea {
