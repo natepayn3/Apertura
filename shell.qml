@@ -216,7 +216,7 @@ Scope {
 
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: 6
+                                    radius: 0 // Changed from 6 to remove rounding on the pin border
                                     color: "transparent"
                                     border.width: isPinned && bottomGroupControls.isExpanded ? 1 : 0
                                     border.color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
