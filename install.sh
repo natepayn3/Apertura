@@ -35,9 +35,14 @@ DEPENDENCIES=(
     "networkmanager"
     "python"
     "wireplumber"
+    "pipewire"
+    "pipewire-audio"
+    "pipewire-pulse"
+    "pipewire-alsa"
     "cava"
-    "ttf-material-design-icons-git"
+    "ttf-material-symbols-variable-git"
     "ttf-nerd-fonts-symbols"
+    "ttf-rubik-vf"
 )
 
 NEW_FONTS_INSTALLED=false
@@ -185,6 +190,10 @@ fi
 echo -e "${BLUE}[*]${RESET} Booting underlying hardware service engines..."
 sudo systemctl enable --now bluetooth.service
 sudo systemctl enable --now NetworkManager.service
+
+echo -e "${BLUE}[*]${RESET} Initializing user session sound system modules..."
+# Set up default user session media states completely rootless
+systemctl --user enable --now pipewire.service pipewire-pulse.service wireplumber.service
 
 echo -e "${BLUE}[*]${RESET} Activating user space daemons..."
 mkdir -p "$HOME/.cache/awww"
