@@ -146,7 +146,7 @@ Item {
                 id: hoverBackground
                 width: workspaceContainer.isVertical ? 28 : (workspaceButton.isActive ? 58 : 28)
                 height: workspaceContainer.isVertical ? (workspaceButton.isActive ? 58 : 28) : 28
-                radius: 6
+                radius: 0
                 anchors.centerIn: parent
                 color: workspaceContainer.theme ? workspaceContainer.theme.theme_primary : "#89b4fa"
                 opacity: workspaceButton.containsMouse ? 0.3 : 0.0
@@ -158,7 +158,7 @@ Item {
                 anchors.centerIn: parent
                 width: workspaceContainer.isVertical ? (workspaceContainer.activeWorkspace === wsId ? 14 : 12) : (workspaceContainer.activeWorkspace === wsId ? 44 : 12)
                 height: workspaceContainer.isVertical ? (workspaceContainer.activeWorkspace === wsId ? 44 : 12) : (workspaceContainer.activeWorkspace === wsId ? 14 : 12)
-                radius: 6
+                radius: 0
                 z: 2
 
                 color: {
