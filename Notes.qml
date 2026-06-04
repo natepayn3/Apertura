@@ -47,8 +47,8 @@ Item {
     Rectangle {
         id: notesHitbox
         anchors.fill: parent
-        color: notesMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
-        radius: 0 
+        color: "transparent"
+        radius: 0
 
         ColumnLayout {
             anchors.fill: parent
@@ -61,6 +61,15 @@ Item {
                 font.pixelSize: 20
                 color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
             }
+        }
+
+        Rectangle {
+            id: notesHoverOverlay
+            anchors.fill: parent
+            radius: 0
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+            opacity: notesMouseArea.containsMouse ? 0.3 : 0.0
+            z: 1
         }
 
         MouseArea {
