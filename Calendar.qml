@@ -21,7 +21,7 @@ Item {
 
     // Location override option for VPN users. Examples: "90210", "London"
     // Leave blank ("") to fallback to automated dynamic IP location detection.
-    property string weatherLocationOverride: "84040"
+    property string weatherLocationOverride: ""
 
     property string weatherTemp: "--"
     property string weatherFeelsLike: "--"
@@ -142,8 +142,8 @@ Item {
     Rectangle {
         id: clockHitbox
         width: 44; height: verticalLayout.implicitHeight + 4
-        color: clockMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
-        radius: 6
+        color: "transparent"
+        radius: 0
 
         ColumnLayout {
             id: verticalLayout; anchors.centerIn: parent; spacing: 0
@@ -152,7 +152,22 @@ Item {
             Text { text: Qt.formatDateTime(calendarRoot.currentDateTime, "ap"); font.family: "Rubik"; font.pixelSize: 10; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"; Layout.alignment: Qt.AlignHCenter }
         }
 
-        MouseArea { id: clockMouseArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: toggleMenu() }
+        Rectangle {
+        id: hoverBackground
+        anchors.fill: parent
+        radius: 0
+        color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+        opacity: clockMouseArea.containsMouse ? 0.3 : 0.0
+        z: 1 // Ensures it sits above the base but below text
+    }
+
+        MouseArea { 
+            id: clockMouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: toggleMenu() 
+        }
     }
 
     PanelDrawer {
