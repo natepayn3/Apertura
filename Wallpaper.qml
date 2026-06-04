@@ -59,7 +59,7 @@ Item {
         id: triggerButton
         anchors.fill: parent
         radius: 0 
-        color: "transparent" // Set to transparent base
+        color: "transparent"
 
         Text {
             anchors.centerIn: parent
@@ -69,7 +69,6 @@ Item {
             color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
         }
 
-        // Add this overlay to match the tint behavior
         Rectangle {
             id: hoverOverlay
             anchors.fill: parent
