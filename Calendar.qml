@@ -81,16 +81,10 @@ Item {
     }
 
     function startWeatherPipeline() {
-        if (calendarRoot.weatherLocationOverride.trim() !== "") {
-            geocodeOverrideLocation(calendarRoot.weatherLocationOverride.trim());
-        } else {
-            bootstrapDynamicLocation();
-        }
-    }
-
-    function geocodeOverrideLocation(query) {
         let xhr = new XMLHttpRequest();
-        let targetUrl = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(query) + "&count=1&language=en&format=json";
+        let location = calendarRoot.weatherLocationOverride.trim();
+        // Request the v2 JSON spec format (j1) from the wttr.is endpoint
+        let targetUrl = "https://wttr.is/" + encodeURIComponent(location) + "?format=j1";
         
         xhr.open("GET", targetUrl, true);
         xhr.onreadystatechange = function() {
@@ -98,67 +92,17 @@ Item {
                 if (xhr.status === 200) {
                     try {
                         let data = JSON.parse(xhr.responseText);
-                        if (data.results && data.results.length > 0) {
-                            let match = data.results[0];
-                            fetchWeatherAsync(match.latitude, match.longitude);
-                        } else {
-                            console.log("Geocoding failed to find matching coordinates for override query");
-                        }
-                    } catch (e) {
-                        console.log("Geocoding JSON parsing error: " + e);
-                    }
-                } else {
-                    console.log("Geocoding API endpoint dropped request: " + xhr.status);
-                }
-            }
-        };
-        xhr.send();
-    }
-
-    function bootstrapDynamicLocation() {
-        let xhr = new XMLHttpRequest();
-        xhr.open("GET", "http://ip-api.com/json/", true);
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 200) {
-                    try {
-                        let locationData = JSON.parse(xhr.responseText);
-                        if (locationData.status === "success" && locationData.lat !== undefined && locationData.lon !== undefined) {
-                            fetchWeatherAsync(locationData.lat, locationData.lon);
-                        } else {
-                            console.log("Location resolve returned success flag error");
-                        }
-                    } catch (e) {
-                        console.log("Location payload tracking parse exception: " + e);
-                    }
-                } else {
-                    console.log("Location diagnostic pipeline endpoint dropped request: " + xhr.status);
-                }
-            }
-        };
-        xhr.send();
-    }
-
-    function fetchWeatherAsync(lat, lon) {
-        let xhr = new XMLHttpRequest();
-        let targetUrl = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,apparent_temperature,weather_code&temperature_unit=fahrenheit";
-        
-        xhr.open("GET", targetUrl, true);
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 200) {
-                    try {
-                        let json = JSON.parse(xhr.responseText);
-                        let current = json.current;
+                        let current = data.current_condition[0];
                         
-                        calendarRoot.weatherTemp = Math.round(current.temperature_2m) + "°F";
-                        calendarRoot.weatherFeelsLike = Math.round(current.apparent_temperature) + "°F";
+                        calendarRoot.weatherTemp = current.temp_F + "°F";
+                        calendarRoot.weatherFeelsLike = current.FeelsLikeF + "°F";
                         
-                        let code = current.weather_code.toString();
-                        calendarRoot.weatherDesc = calendarRoot.weatherDescMap[code] !== undefined ? calendarRoot.weatherDescMap[code] : "Unknown";
+                        // wttr.is provides the standardized WMO code in weatherCode
+                        let code = current.weatherCode.toString();
+                        calendarRoot.weatherDesc = calendarRoot.weatherDescMap[code] !== undefined ? calendarRoot.weatherDescMap[code] : current.weatherDesc[0].value;
                         calendarRoot.weatherGlyph = calendarRoot.weatherIconMap[code] !== undefined ? calendarRoot.weatherIconMap[code] : "cloud";
                     } catch (e) {
-                        console.log("Native Weather evaluation formatting exception: " + e);
+                        console.log("wttr.is JSON processing exception: " + e);
                     }
                 } else {
                     console.log("Weather API connection status code failure: " + xhr.status);
@@ -311,7 +255,7 @@ Item {
                             Layout.alignment: Qt.AlignVCenter
                             Layout.fillWidth: true
 
-                        Text {
+                            Text {
                                 text: calendarRoot.weatherDesc
                                 font.family: "Rubik"
                                 font.pixelSize: 13
