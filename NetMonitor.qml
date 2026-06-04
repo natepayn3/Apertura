@@ -123,7 +123,7 @@ Item {
     Rectangle {
         id: netHitbox
         anchors.fill: parent
-        color: iconMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
+        color: "transparent"
         radius: 0
 
         Text {
@@ -132,6 +132,15 @@ Item {
             font.family: "Material Symbols Outlined"
             font.pixelSize: 20
             color: activeIface === "None" ? "#ff5555" : (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff")
+        }
+
+        Rectangle {
+            id: netHoverOverlay
+            anchors.fill: parent
+            radius: 0
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+            opacity: iconMouseArea.containsMouse ? 0.3 : 0.0
+            z: 1
         }
 
         MouseArea {
