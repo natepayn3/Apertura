@@ -59,7 +59,7 @@ Item {
         id: triggerButton
         anchors.fill: parent
         radius: 0 
-        color: wallpaperMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
+        color: "transparent" // Set to transparent base
 
         Text {
             anchors.centerIn: parent
@@ -67,6 +67,16 @@ Item {
             font.family: "Material Symbols Outlined"
             font.pixelSize: 26
             color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+        }
+
+        // Add this overlay to match the tint behavior
+        Rectangle {
+            id: hoverOverlay
+            anchors.fill: parent
+            radius: 0
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+            opacity: wallpaperMouseArea.containsMouse ? 0.3 : 0.0
+            z: 1 // Sits above base, below text
         }
 
         MouseArea {
