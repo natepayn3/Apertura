@@ -3,7 +3,28 @@
 
 ***
 
-<img width="600" height="100" alt="image" src="https://github.com/user-attachments/assets/2acb41ab-1842-40b9-9e7a-86976955c11f" />
+<div align="center">
+ 
+  <h1>
+    <img width="50" height="50" alt="Apertura Logo" src="https://github.com/user-attachments/assets/d7f6dbd6-895d-40c7-8a8e-bf28352a16b1" style="display: inline; vertical-align: middle; margin-right: 10px; padding-bottom: 4px;" />
+    <span style="font-family: 'Rubik', system-ui, -apple-system, sans-serif; font-weight: 800; font-size: 50px; color: #ffffff; letter-spacing: -1px; vertical-align: middle;">Apertura</span>
+  </h1>
+  
+  <p align="center" style="margin-top: 10px; margin-bottom: 15px;">
+    <span style="font-size: 16px; color: #a3a8ce; font-family: system-ui, -apple-system, sans-serif;">A sleek and responsive shell built for Quickshell on Hyprland.</span>
+  </p>
+  
+  <p align="center">
+    <a href="https://archlinux.org"><img src="https://img.shields.io/badge/Arch%20Linux-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white" alt="Arch Linux" /></a>&nbsp;
+    <a href="https://hyprland.org"><img src="https://img.shields.io/badge/Hyprland-33CCFF?style=for-the-badge&logo=hyprland&logoColor=white" alt="Hyprland" /></a>&nbsp;
+    <a href="https://github.com/outfoxxed/quickshell"><img src="https://img.shields.io/badge/Quickshell-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell" /></a>
+  </p>
+  <br>
+</div>
+
+<img width="1920" height="1080" alt="01" src="https://github.com/user-attachments/assets/d07e79dd-5d86-47cc-9d0a-61b7adcdfb6e" />
+
+<img width="1920" height="1080" alt="02" src="https://github.com/user-attachments/assets/d2733138-4d1a-4b11-8626-56b320d3902d" />
 
 A sleek and responsive shell built for Quickshell on Hyprland.
 
