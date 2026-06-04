@@ -175,7 +175,7 @@ Item {
     Rectangle {
         id: sysMonitorHitbox
         anchors.fill: parent
-        color: iconMouseArea.containsMouse ? (monitorRoot.theme ? monitorRoot.theme.theme_outline : "#26ffffff") : "transparent"
+        color: "transparent"
         radius: 0
 
         Text {
@@ -184,6 +184,15 @@ Item {
             font.family: "Material Symbols Outlined"
             font.pixelSize: 20
             color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff"
+        }
+
+        Rectangle {
+            id: sysHoverOverlay
+            anchors.fill: parent
+            radius: 0
+            color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#89b4fa"
+            opacity: iconMouseArea.containsMouse ? 0.3 : 0.0
+            z: 1
         }
 
         MouseArea {
