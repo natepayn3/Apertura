@@ -106,6 +106,7 @@ fi
 
 echo -e "${BLUE}[*]${RESET} Setting up local deployment directories..."
 mkdir -p "$HOME/.config/quickshell"
+mkdir -p "$HOME/.config/hypr"
 
 if [ ! -d "$WALLPAPER_DIR" ]; then
     echo -e "    ${GRAY}➔${RESET} Creating missing wallpaper destination: $WALLPAPER_DIR"
@@ -145,8 +146,22 @@ mkdir -p "$HOME/.config/cava"
 # Explicit CAVA runtime generation block mapping requirements to SplitParser interface
 printf '[general]\n# Match this to your visualizer bar count (e.g., 5 bars)\nbars = 10\nframerate = 60\n\n[input]\n# Explicitly leverage PipeWire loopback for perfect audio capture\nmethod = pipewire\nsource = auto\nsensitivity = 0.5\n\n[output]\n# Output raw data format: ascii values separated by semicolons\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\ndata_path = /tmp/cava_bar.fifo\n' > "$HOME/.config/cava/quickshell_bar.conf"
 
-echo -e "${BLUE}[*]${RESET} Injecting configuration trees into hyprland.lua..."
-touch "$HYPRLAND_LUA"
+echo -e "${BLUE}[*]${RESET} Checking Hyprland configuration structure..."
+# Ensure hyprland.lua exists; fallback to the repo template if missing
+if [ ! -f "$HYPRLAND_LUA" ]; then
+    if [ -f "Apertura/hyprland.lua" ]; then
+        echo -e "    ${GRAY}➔${RESET} hyprland.lua missing. Copying template from repository root..."
+        cp "Apertura/hyprland.lua" "$HYPRLAND_LUA"
+    elif [ -f "$QUICKSHELL_DIR/hyprland.lua" ]; then
+        echo -e "    ${GRAY}➔${RESET} hyprland.lua missing. Copying template from asset directory..."
+        cp "$QUICKSHELL_DIR/hyprland.lua" "$HYPRLAND_LUA"
+    else
+        echo -e "    ${GRAY}➔${RESET} Initialization target created at: $HYPRLAND_LUA"
+        touch "$HYPRLAND_LUA"
+    fi
+else
+    echo -e "    ${GRAY}➔${RESET} Existing hyprland.lua detected. Preserving file layout..."
+fi
 
 # Utility wrapper to append properties safely to script engines
 safe_append() {
@@ -205,6 +220,11 @@ if command -v awww-daemon &>/dev/null; then
     pkill awww-daemon || true
     awww-daemon & disown
 fi
+
+echo -e "${BLUE}[*]${RESET} Launching local Apertura desktop shell interface..."
+# Clean out any conflicting quickshell threads and launch the layout disowned
+pkill quickshell || true
+qs -c Apertura & disown
 
 echo ""
 echo -e "${GREEN}[✓] Deployment finished successfully!${RESET}"
