@@ -122,8 +122,8 @@ Item {
     Rectangle {
         id: triggerButton
         anchors.fill: parent
-        color: launcherMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") : "transparent"
         radius: 0 
+        color: "transparent"
 
         Image {
             id: launcherLogo
@@ -139,6 +139,15 @@ Item {
             anchors.fill: launcherLogo
             source: launcherLogo
             color: rootScope.theme ? rootScope.theme.theme_primary : "#ffffff"
+        }
+
+        Rectangle {
+            id: hoverOverlay
+            anchors.fill: parent
+            radius: 0
+            color: rootScope.theme ? rootScope.theme.theme_primary : "#89b4fa"
+            opacity: launcherMouseArea.containsMouse ? 0.3 : 0.0
+            z: 1 // Sits above base, below icon
         }
 
         MouseArea {
