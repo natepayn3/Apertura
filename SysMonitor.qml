@@ -300,14 +300,16 @@ Item {
                 ColumnLayout {
                     id: gpuLayoutGroup
                     Layout.fillWidth: true
-                    spacing: 3
+                    spacing: monitorRoot.hasGpu ? 3 : 0
                     
-                    // Manage allocation footprint visibility dynamically
+                    // Collapse height properties down to zero cleanly to free space when inactive
                     visible: monitorRoot.hasGpu
-                    Layout.managed: monitorRoot.hasGpu
+                    Layout.preferredWidth: monitorRoot.hasGpu ? -1 : 0
+                    Layout.preferredHeight: monitorRoot.hasGpu ? -1 : 0
 
                     RowLayout {
                         Layout.fillWidth: true
+                        visible: monitorRoot.hasGpu
                         Text { text: "GPU"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Medium; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
                         Item { Layout.fillWidth: true }
                         Text { text: monitorRoot.gpuTemp + "°C  |  " + monitorRoot.gpuPercent + "%"; font.family: "Rubik"; font.pixelSize: 12; font.weight: Font.Bold; color: monitorRoot.theme ? monitorRoot.theme.theme_fg : "#ffffff" }
@@ -315,7 +317,8 @@ Item {
 
                     Item {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 4
+                        Layout.preferredHeight: monitorRoot.hasGpu ? 4 : 0
+                        visible: monitorRoot.hasGpu
 
                         Rectangle {
                             anchors.fill: parent
