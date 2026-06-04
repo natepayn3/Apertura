@@ -169,27 +169,29 @@ if ! grep -q 'hl.exec_cmd("qs -c Apertura")' "$HYPRLAND_LUA"; then
     echo -e "\nhl.on(\"hyprland.start\", function ()\n  hl.exec_cmd(\"qs -c Apertura\")\n  hl.exec_cmd(\"awww-daemon\")\nend)" | safe_append "$HYPRLAND_LUA"
 fi
 
+echo -e "${BLUE}[*]${RESET} Deploying color token architectures..."
+mkdir -p "$QUICKSHELL_DIR/Colors"
+
+# Initialize an empty JSON fallback object to stop FileView read warnings cold
+echo "{}" > "$QUICKSHELL_DIR/Colors/colors.json"
+
+# Process live color extraction prior to starting desktop background daemons
+ACTIVE_WALLPAPER=$(ls -d "$WALLPAPER_DIR"/* 2>/dev/null | head -n 1 || echo "")
+if [ -n "$ACTIVE_WALLPAPER" ] && command -v matugen &>/dev/null; then
+    echo -e "    ${GRAY}➔${RESET} Compiling dynamic JSON colorscheme via Matugen..."
+    matugen image "$ACTIVE_WALLPAPER" -m dark --source-color-index 0 --dry-run --json hex > "$QUICKSHELL_DIR/Colors/colors.json"
+fi
+
 echo -e "${BLUE}[*]${RESET} Booting underlying hardware service engines..."
 sudo systemctl enable --now bluetooth.service
 sudo systemctl enable --now NetworkManager.service
 
 echo -e "${BLUE}[*]${RESET} Activating user space daemons..."
-# Ensure awww's local cache tree exists to prevent initialization warnings
 mkdir -p "$HOME/.cache/awww"
 
 if command -v awww-daemon &>/dev/null; then
     pkill awww-daemon || true
     awww-daemon & disown
-fi
-
-echo -e "${BLUE}[*]${RESET} Deploying color token architectures..."
-mkdir -p "$QUICKSHELL_DIR/Colors"
-
-# Handle fallback color palette extraction models via Matugen
-ACTIVE_WALLPAPER=$(ls -d "$WALLPAPER_DIR"/* 2>/dev/null | head -n 1 || echo "")
-if [ -n "$ACTIVE_WALLPAPER" ] && command -v matugen &>/dev/null; then
-    echo -e "${BLUE}[*]${RESET} Compiling dynamic JSON colorscheme via Matugen..."
-    matugen image "$ACTIVE_WALLPAPER" -m dark --source-color-index 0 --dry-run --json hex > "$QUICKSHELL_DIR/Colors/colors.json"
 fi
 
 echo ""
