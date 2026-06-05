@@ -107,7 +107,7 @@ Scope {
                             name: "visible"; when: previewEngine.active
                             PropertyChanges { 
                                 target: popupCard; 
-                                width: previewEngine.renderReady ? Math.min(1000, layoutFocusWrapper.width) : Math.min(1000, layoutFocusWrapper.width)
+                                width: previewEngine.renderReady ? Math.min(1000, layoutFocusWrapper.width) : (checkIsVertical(globalWorkspacePreview.targetWorkspace) ? 386 : 432)
                                 height: previewEngine.height
                                 opacity: 1.0 
                             }
@@ -172,13 +172,11 @@ Scope {
                             }
                         }
 
-                        // Fixed: Global transparent tracker overlay sits cleanly on top of the scrolling canvas tracking block
-                        // to handle exit events seamlessly across window controls and background assets alike
                         MouseArea {
                             anchors.fill: parent
                             hoverEnabled: true
-                            z: 100 // Places tracker stack layer over child rendering targets
-                            acceptedButtons: Qt.NoButton // Passes clicks straight through down to underlying buttons/elements
+                            z: 100
+                            acceptedButtons: Qt.NoButton
                             
                             onEntered: globalWorkspacePreview.cancelDismiss()
                             onExited: globalWorkspacePreview.requestDismiss()
