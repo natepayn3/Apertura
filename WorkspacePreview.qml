@@ -13,16 +13,26 @@ Item {
     property var theme
 
     property var liveClientJson: []
+    property var stagedClientJson: []
 
     readonly property int neededWidth: viewportFrame.width + 32
+
+    property int delayedWorkspace: -1
+    property bool renderReady: false
+    property bool manualIsVertical: false
 
     onTargetWorkspaceChanged: {
         if (targetWorkspace !== -1) {
             previewRoot.active = false;
+            previewRoot.renderReady = false;
+            
+            blankingTimer.restart();
             updateGeometryMap();
             retriggerTimer.restart();
         } else {
             previewRoot.active = false;
+            previewRoot.delayedWorkspace = -1;
+            previewRoot.renderReady = false;
         }
     }
 
@@ -33,6 +43,23 @@ Item {
             previewRoot.updateGeometryMap();
         }
     }
+
+    Timer {
+    id: blankingTimer
+    interval: 250 
+    running: false
+    repeat: false
+    onTriggered: {
+        previewRoot.liveClientJson = previewRoot.stagedClientJson;
+        previewRoot.delayedWorkspace = previewRoot.targetWorkspace;
+        
+        previewRoot.manualIsVertical = viewportFrame.calculatedBounds.isVertical;
+        
+        Qt.callLater(function() {
+            previewRoot.renderReady = true;
+        });
+    }
+}
 
     Timer {
         id: hoverRefreshTimer
@@ -92,7 +119,10 @@ Item {
                 let cleanText = text.trim();
                 if (!cleanText || cleanText === "[]") return;
                 try {
-                    previewRoot.liveClientJson = JSON.parse(cleanText);
+                    previewRoot.stagedClientJson = JSON.parse(cleanText);
+                    if (previewRoot.renderReady) {
+                        previewRoot.liveClientJson = previewRoot.stagedClientJson;
+                    }
                 } catch(e) {}
             }
         }
@@ -103,7 +133,21 @@ Item {
         running: false
     }
 
-    height: viewportFrame.isVertical ? 560 : 300
+    function getCleanIconName(className) {
+        if (!className) return "application-x-executable";
+        let lowerClass = className.toLowerCase().trim();
+        
+        if (lowerClass.includes("chrome")) return "google-chrome";
+        if (lowerClass.includes("kitty")) return "kitty";
+        if (lowerClass.includes("terminal")) return "utilities-terminal";
+        if (lowerClass.includes("codium")) return "vscodium";
+        if (lowerClass.includes("code")) return "vscode";
+        if (lowerClass.includes("signal")) return "signal-desktop";
+        
+        return lowerClass;
+    }
+
+    height: manualIsVertical ? 700 : 300
     width: neededWidth
 
     Text {
@@ -115,6 +159,30 @@ Item {
         color: previewRoot.theme ? previewRoot.theme.theme_fg : "#89b4fa" 
         x: 16
         y: 14
+        visible: previewRoot.renderReady
+    }
+
+    RowLayout {
+        x: titleLabel.x + titleLabel.implicitWidth + 24
+        y: 14
+        height: titleLabel.implicitHeight
+        spacing: 8
+        
+        Repeater {
+            model: previewRoot.renderReady ? viewportFrame.workspaceWindows : []
+            delegate: Image {
+                property string appClass: modelData.class || ""
+                
+                visible: appClass !== "" && modelData.mapped
+                source: Quickshell.iconPath(getCleanIconName(appClass))
+                
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+            }
+        }
     }
 
     Rectangle {
@@ -124,6 +192,7 @@ Item {
         color: previewRoot.theme ? previewRoot.theme.theme_outline : "#313244"
         x: 16
         y: 38
+        visible: previewRoot.renderReady
     }
 
     Rectangle {
@@ -131,14 +200,15 @@ Item {
         height: parent.height - 70
         x: 16
         y: 50
-        color: Qt.rgba(0, 0, 0, 0.4)
+        color: "transparent"
         border.width: 0
         radius: 0
         clip: true
+        visible: previewRoot.renderReady
 
-        property var workspaceWindows: previewRoot.liveClientJson.filter(w => w.workspace.id === previewRoot.targetWorkspace)
+        property var workspaceWindows: previewRoot.liveClientJson.filter(w => w.workspace.id === previewRoot.delayedWorkspace)
 
-        property var activeWsObj: Hyprland.workspaces.values.find(ws => ws.id === previewRoot.targetWorkspace) || null
+        property var activeWsObj: Hyprland.workspaces.values.find(ws => ws.id === previewRoot.delayedWorkspace) || null
         property var wsMonitor: activeWsObj ? activeWsObj.monitor : (Hyprland.activeMonitor || null)
 
         property var calculatedBounds: {
@@ -184,7 +254,7 @@ Item {
 
         property real monitorW: calculatedBounds.w
         property real monitorH: calculatedBounds.h
-        property bool isVertical: calculatedBounds.isVertical
+        property bool isVertical: previewRoot.manualIsVertical
 
         property real monitorX: calculatedBounds.originX
         property real monitorY: calculatedBounds.originY
@@ -203,7 +273,7 @@ Item {
         }
 
         Repeater {
-            model: viewportFrame.workspaceWindows
+            model: previewRoot.renderReady ? viewportFrame.workspaceWindows : []
 
             delegate: Rectangle {
                 id: windowDelegate
@@ -212,17 +282,16 @@ Item {
                 property real winW: modelData.size ? modelData.size[0] : 0
                 property real winH: modelData.size ? modelData.size[1] : 0
 
-                x: (winX - viewportFrame.monitorX) * viewportFrame.scaleX
-                y: (winY - viewportFrame.monitorY) * viewportFrame.scaleY
+                x: ((winX - viewportFrame.monitorX) * viewportFrame.scaleX) + 2
+                y: ((winY - viewportFrame.monitorY) * viewportFrame.scaleY) + 2
                 
-                width: Math.max(4, winW * viewportFrame.scaleX)
-                height: Math.max(4, winH * viewportFrame.scaleY)
+                width: Math.max(4, (winW * viewportFrame.scaleX) - 4)
+                height: Math.max(4, (winH * viewportFrame.scaleY) - 4)
 
                 visible: modelData.mapped
 
-                color: previewRoot.theme ? Qt.alpha(previewRoot.theme.theme_bg, 0.8) : "#cc11111b"
-                border.color: previewRoot.theme ? previewRoot.theme.theme_primary : "#89b4fa"
-                border.width: 1
+                color: Qt.rgba(0, 0, 0, 0.4)
+                border.width: 0
                 radius: 0
                 clip: true
 
