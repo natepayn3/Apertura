@@ -138,6 +138,26 @@ Item {
             Behavior on targetWidth { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
             Behavior on targetHeight { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
 
+            onEntered: {
+                if (typeof mainBarWindow !== "undefined" && mainBarWindow.previewPopup && isOccupied) {
+                    let globalCoords = workspaceButton.mapToItem(null, 0, 0);
+                    let popup = mainBarWindow.previewPopup;
+                    if (popup) {
+                        popup.cancelDismiss();
+                        popup.screen = mainBarWindow.screen;
+                        popup.marginLeft = mainBarWindow.x + mainBarWindow.width + 13;
+                        popup.marginTop = globalCoords.y - (200 / 2) + (workspaceButton.height / 2);
+                        popup.targetWorkspace = wsId;
+                    }
+                }
+            }
+
+            onExited: {
+                if (typeof mainBarWindow !== "undefined" && mainBarWindow.previewPopup) {
+                    mainBarWindow.previewPopup.requestDismiss();
+                }
+            }
+
             onClicked: {
                 workspaceContainer.activeWorkspace = wsId;
                 switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + wsId + "\" })"];
