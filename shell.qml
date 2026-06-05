@@ -17,7 +17,6 @@ Scope {
 
     Theme { id: theme }
 
-    // --- GLOBAL VARIABLE LAYERS ---
     property var activeModal: null
     property bool audioSliderActive: false
     property var instantiatedBars: ({})
@@ -26,7 +25,16 @@ Scope {
     function requestOpen(modalName) { activeModal = modalName; }
     function dismissAll() { activeModal = null; }
 
-    // --- GLOBAL LIVE PREVIEW OVERLAY LAYER ---
+    function checkIsVertical(wsId) {
+        let targetWsObj = Hyprland.workspaces.values.find(ws => ws.id === wsId);
+        let monitorObj = targetWsObj ? targetWsObj.monitor : (Hyprland.activeMonitor || null);
+        
+        if (monitorObj) {
+            return monitorObj.height > monitorObj.width;
+        }
+        return wsId >= 10;
+    }
+
     PanelWindow {
         id: globalWorkspacePreview
         
@@ -61,10 +69,8 @@ Scope {
 
         visible: targetWorkspace !== -1 || popupCard.state === "visible"
 
-        // --- FIXED: PIPELINE BOUNDARY EXPANSION ---
-        // Dynamically pull constraints from the encapsulated preview engine height loops
-        implicitWidth: popupCard.width
-        implicitHeight: previewEngine.height
+        implicitWidth: 560
+        implicitHeight: 700
         color: "transparent"
 
         Item {
@@ -80,7 +86,7 @@ Scope {
 
                 Rectangle {
                     id: popupCard
-                    height: parent.height
+                    height: previewEngine.height
                     anchors.left: parent.left
                     
                     color: "#9911111b"
@@ -88,14 +94,33 @@ Scope {
                     radius: 0
                     clip: true
 
+                    Behavior on height {
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+
                     states: [
                         State {
                             name: "visible"; when: previewEngine.active
-                            PropertyChanges { target: popupCard; width: layoutFocusWrapper.width; opacity: 1.0 }
+                            PropertyChanges { 
+                                target: popupCard; 
+                                width: previewEngine.renderReady 
+                                    ? layoutFocusWrapper.width 
+                                    : (previewEngine.height > 500 ? 354 : 432)
+                                height: previewEngine.height
+                                opacity: 1.0 
+                            }
                         },
                         State {
                             name: "hidden"; when: !previewEngine.active
-                            PropertyChanges { target: popupCard; width: 0; opacity: 0.0 }
+                            PropertyChanges { 
+                                target: popupCard; 
+                                width: 0; 
+                                height: previewEngine.height; 
+                                opacity: 0.0 
+                            }
                         }
                     ]
 
@@ -103,7 +128,13 @@ Scope {
                         Transition {
                             from: "hidden"; to: "visible"
                             ParallelAnimation {
-                                NumberAnimation { target: popupCard; property: "width"; duration: Config.entryDuration; easing.type: Config.entryEasing }
+                                NumberAnimation { 
+                                    target: popupCard; 
+                                    property: "width"; 
+                                    duration: Config.entryDuration; 
+                                    easing.type: Config.entryEasing 
+                                }
+                                NumberAnimation { target: popupCard; property: "height"; duration: 200; easing.type: Easing.OutCubic }
                                 NumberAnimation { target: popupCard; property: "opacity"; duration: 150; easing.type: Easing.OutQuad }
                             }
                         },
@@ -111,12 +142,12 @@ Scope {
                             from: "visible"; to: "hidden"
                             ParallelAnimation {
                                 NumberAnimation { target: popupCard; property: "width"; duration: Config.exitDuration; easing.type: Config.exitEasing }
+                                NumberAnimation { target: popupCard; property: "height"; duration: Config.exitDuration; easing.type: Config.exitEasing }
                                 NumberAnimation { target: popupCard; property: "opacity"; duration: Config.exitDuration; easing.type: Config.exitEasing }
                             }
                         }
                     ]
 
-                    // Encapsulated Custom Previews Module Node
                     WorkspacePreview {
                         id: previewEngine
                         targetWorkspace: globalWorkspacePreview.targetWorkspace
@@ -129,7 +160,6 @@ Scope {
         }
     }
 
-    // --- IPC HANDLING MATRIX ---
     IpcHandler {
         target: "launcher"
         function toggle(): void {
@@ -175,7 +205,6 @@ Scope {
         }
     }
 
-    // --- SCREEN INITIALIZATION LOOP ---
     Instantiator {
         id: barWindows
         model: Quickshell.screens
