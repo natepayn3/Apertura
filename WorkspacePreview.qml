@@ -98,6 +98,11 @@ Item {
         }
     }
 
+    Process {
+        id: switchWorkspace
+        running: false
+    }
+
     height: viewportFrame.isVertical ? 560 : 300
     width: neededWidth
 
@@ -282,6 +287,27 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                     }
                 }
+            }
+        }
+    }
+
+    MouseArea {
+        id: clickSurface
+        anchors.fill: viewportFrame
+        cursorShape: Qt.PointingHandCursor
+        z: 20
+        
+        propagateComposedEvents: true
+        
+        onPressed: (mouse) => mouse.accepted = true
+        onReleased: (mouse) => mouse.accepted = true
+        
+        onPositionChanged: (mouse) => mouse.accepted = false
+
+        onClicked: {
+            if (previewRoot.targetWorkspace !== -1) {
+                switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + previewRoot.targetWorkspace + "\" })"];
+                switchWorkspace.running = true;
             }
         }
     }
