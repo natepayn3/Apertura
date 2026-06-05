@@ -13,6 +13,29 @@ Scope {
 
     property var configurationAsset: Config
 
+    property var sharedPinnedApps: []
+
+    Process {
+        id: bootPinReader
+        command: ["cat", Quickshell.env("HOME") + "/.cache/quickshell_launcher_pins.json"]
+        running: true
+
+        stdout: StdioCollector {
+            onTextChanged: {
+                let cleanText = text.trim();
+                if (!cleanText) return;
+                try {
+                    let parsed = JSON.parse(cleanText);
+                    if (parsed && parsed.pins) {
+                        sharedPinnedApps = parsed.pins;
+                    }
+                } catch(e) {
+                    sharedPinnedApps = [];
+                }
+            }
+        }
+    }
+
     property alias theme: theme 
 
     Theme { id: theme }
