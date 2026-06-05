@@ -26,6 +26,8 @@
 
 <img width="1920" height="1080" alt="02" src="https://github.com/user-attachments/assets/d2733138-4d1a-4b11-8626-56b320d3902d" />
 
+https://github.com/user-attachments/assets/6f9f19bd-ed06-46ab-9ac2-4ca3b59c20eb
+
 A sleek and responsive shell built for Quickshell on Hyprland.
 
 Why "Apertura"? Because like a camera lens or "aperture" opening up to the light, this bar uses Hyprland's xray mechanics to slice through the desktop and expose the beautiful, hidden blur layers underneath. It's built for speed, clean aesthetics, and zero-compromise desktop configuration.
