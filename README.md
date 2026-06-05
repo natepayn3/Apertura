@@ -26,7 +26,7 @@
 
 <img width="1920" height="1080" alt="02" src="https://github.com/user-attachments/assets/d2733138-4d1a-4b11-8626-56b320d3902d" />
 
-https://github.com/user-attachments/assets/6f9f19bd-ed06-46ab-9ac2-4ca3b59c20eb
+https://github.com/user-attachments/assets/54a6717b-5b7b-4865-8464-a3b57706cca2
 
 A sleek and responsive shell built for Quickshell on Hyprland.
 
