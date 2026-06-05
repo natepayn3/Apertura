@@ -21,6 +21,10 @@ Item {
     property bool renderReady: false
     property bool manualIsVertical: false
 
+    // Added: Signals to cleanly bubble hover events past the Wayland surface input trap
+    signal mouseEntered()
+    signal mouseExited()
+
     onTargetWorkspaceChanged: {
         if (targetWorkspace !== -1) {
             previewRoot.active = false;
@@ -45,21 +49,21 @@ Item {
     }
 
     Timer {
-    id: blankingTimer
-    interval: 250 
-    running: false
-    repeat: false
-    onTriggered: {
-        previewRoot.liveClientJson = previewRoot.stagedClientJson;
-        previewRoot.delayedWorkspace = previewRoot.targetWorkspace;
-        
-        previewRoot.manualIsVertical = viewportFrame.calculatedBounds.isVertical;
-        
-        Qt.callLater(function() {
-            previewRoot.renderReady = true;
-        });
+        id: blankingTimer
+        interval: 250 
+        running: false
+        repeat: false
+        onTriggered: {
+            previewRoot.liveClientJson = previewRoot.stagedClientJson;
+            previewRoot.delayedWorkspace = previewRoot.targetWorkspace;
+            
+            previewRoot.manualIsVertical = viewportFrame.calculatedBounds.isVertical;
+            
+            Qt.callLater(function() {
+                previewRoot.renderReady = true;
+            });
+        }
     }
-}
 
     Timer {
         id: hoverRefreshTimer
@@ -365,6 +369,11 @@ Item {
         anchors.fill: viewportFrame
         cursorShape: Qt.PointingHandCursor
         z: 20
+        
+        // Fixed: Enabled tracking flags and bound handlers to pass hover events upstream
+        hoverEnabled: true
+        onEntered: previewRoot.mouseEntered()
+        onExited: previewRoot.mouseExited()
         
         propagateComposedEvents: true
         
