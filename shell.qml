@@ -69,14 +69,14 @@ Scope {
 
         visible: targetWorkspace !== -1 || popupCard.state === "visible"
 
-        implicitWidth: 560
+        implicitWidth: 700
         implicitHeight: 700
         color: "transparent"
 
         Item {
-            id: layoutFocusWrapper
-            width: previewEngine.neededWidth
-            height: previewEngine.height
+            id: globalLayoutWrapper
+            width: 1000
+            height: 700
 
             MouseArea {
                 anchors.fill: parent
@@ -106,9 +106,7 @@ Scope {
                             name: "visible"; when: previewEngine.active
                             PropertyChanges { 
                                 target: popupCard; 
-                                width: previewEngine.renderReady 
-                                    ? layoutFocusWrapper.width 
-                                    : (previewEngine.height > 500 ? 354 : 432)
+                                width: previewEngine.renderReady ? Math.min(1000, layoutFocusWrapper.width) : Math.min(1000, layoutFocusWrapper.width)
                                 height: previewEngine.height
                                 opacity: 1.0 
                             }
@@ -148,12 +146,30 @@ Scope {
                         }
                     ]
 
-                    WorkspacePreview {
-                        id: previewEngine
-                        targetWorkspace: globalWorkspacePreview.targetWorkspace
-                        theme: rootScope.theme
-                        opacity: popupCard.width > (layoutFocusWrapper.width - 50) ? 1.0 : 0.0
-                        Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                    Flickable {
+                        id: scrollViewport
+                        anchors.fill: parent
+                        
+                        contentWidth: layoutFocusWrapper.width
+                        contentHeight: layoutFocusWrapper.height
+                        
+                        flickableDirection: Flickable.HorizontalFlick
+                        boundsBehavior: Flickable.StopAtBounds
+                        clip: true
+
+                        Item {
+                            id: layoutFocusWrapper
+                            width: previewEngine.neededWidth
+                            height: previewEngine.height
+
+                            WorkspacePreview {
+                                id: previewEngine
+                                targetWorkspace: globalWorkspacePreview.targetWorkspace
+                                theme: rootScope.theme
+                                opacity: popupCard.width > 200 ? 1.0 : 0.0
+                                Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                            }
+                        }
                     }
                 }
             }
