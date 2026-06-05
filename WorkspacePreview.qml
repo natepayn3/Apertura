@@ -276,7 +276,7 @@ Item {
                     z: 10 
 
                     Text {
-                        text: (modelData.title !== undefined && modelData.title !== null) ? modelData.title : (modelData.class || "")
+                        text: (modelData.title && modelData.title.trim() !== "" && modelData.title !== "~") ? modelData.title : (modelData.class || "")
                         font.family: "Rubik"
                         font.pixelSize: 8
                         font.weight: Font.Bold
