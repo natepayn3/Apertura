@@ -26,6 +26,36 @@ Item {
         }
     }
 
+    onActiveChanged: {
+        if (active) {
+            // Force quickshell to scrape current wayland compositor handles immediately on hover
+            Hyprland.refreshToplevels();
+            Hyprland.refreshWorkspaces();
+            previewRoot.updateGeometryMap();
+        }
+    }
+
+    Timer {
+        id: hoverRefreshTimer
+        interval: 50
+        running: previewRoot.active // Automatically runs whenever the preview becomes active
+        repeat: true
+        property int ticks: 0
+
+        onRunningChanged: {
+            if (running) ticks = 0;
+        }
+
+        onTriggered: {
+            previewRoot.updateGeometryMap();
+            ticks++;
+            // Stop polling after 300ms (6 ticks) to keep resource usage zero
+            if (ticks >= 6) {
+                running = false;
+            }
+        }
+    }
+
     Timer {
         id: retriggerTimer
         interval: 0
@@ -196,25 +226,41 @@ Item {
                 property var wlToplevel: {
                     if (!modelData || !modelData.address) return null;
                     
-                    let cacheBuster = Hyprland.toplevels.count;
-                    
-                    let match = Hyprland.toplevels.values.find(t => t.lastIpcObject && t.lastIpcObject.address === modelData.address);
+                    // Re-bind tracking evaluation context to process runs to force recalculation post-refresh
+                    let tracker = clientQueryProcess.running;
+                    let targetAddr = modelData.address.trim().toLowerCase();
+
+                    let match = Hyprland.toplevels.values.find(t => {
+                        if (!t.lastIpcObject || !t.lastIpcObject.address) return false;
+                        return t.lastIpcObject.address.trim().toLowerCase() === targetAddr;
+                    });
                     if (match && match.wayland) return match.wayland;
                     
                     if (viewportFrame.activeWsObj) {
-                        let localMatch = viewportFrame.activeWsObj.toplevels.values.find(t => t.lastIpcObject && t.lastIpcObject.address === modelData.address);
+                        let localMatch = viewportFrame.activeWsObj.toplevels.values.find(t => {
+                            if (!t.lastIpcObject || !t.lastIpcObject.address) return false;
+                            return t.lastIpcObject.address.trim().toLowerCase() === targetAddr;
+                        });
                         if (localMatch && localMatch.wayland) return localMatch.wayland;
                     }
                     return null;
                 }
 
-                // --- FIXED DIRECT CLEAN BINDING LAYOUT ---
-                ScreencopyView {
+                Loader {
                     anchors.fill: parent
-                    captureSource: windowDelegate.wlToplevel || null
-                    live: true
-                    paintCursor: true
-                    constraintSize: Qt.size(parent.width, parent.height)
+                    active: windowDelegate.wlToplevel !== null
+                    
+                    opacity: active ? 1.0 : 0.0
+                    Behavior on opacity { NumberAnimation { duration: 200 } }
+
+                    sourceComponent: ScreencopyView {
+                        width: parent.width
+                        height: parent.height
+                        captureSource: windowDelegate.wlToplevel
+                        live: true
+                        paintCursor: true
+                        constraintSize: Qt.size(width, height)
+                    }
                 }
 
                 Rectangle {
@@ -224,9 +270,10 @@ Item {
                     height: Math.min(14, parent.height * 0.25)
                     color: "#cc11111b"
                     visible: parent.height > 20 && parent.width > 35
+                    z: 10 
 
                     Text {
-                        text: modelData.title || "App"
+                        text: (modelData.title && modelData.title.trim() !== "") ? modelData.title : (modelData.class || "Terminal")
                         font.family: "Rubik"
                         font.pixelSize: 8
                         font.weight: Font.Bold
