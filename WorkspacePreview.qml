@@ -28,7 +28,6 @@ Item {
 
     onActiveChanged: {
         if (active) {
-            // Force quickshell to scrape current wayland compositor handles immediately on hover
             Hyprland.refreshToplevels();
             Hyprland.refreshWorkspaces();
             previewRoot.updateGeometryMap();
@@ -38,7 +37,7 @@ Item {
     Timer {
         id: hoverRefreshTimer
         interval: 50
-        running: previewRoot.active // Automatically runs whenever the preview becomes active
+        running: previewRoot.active
         repeat: true
         property int ticks: 0
 
@@ -49,7 +48,6 @@ Item {
         onTriggered: {
             previewRoot.updateGeometryMap();
             ticks++;
-            // Stop polling after 300ms (6 ticks) to keep resource usage zero
             if (ticks >= 6) {
                 running = false;
             }
@@ -58,7 +56,7 @@ Item {
 
     Timer {
         id: retriggerTimer
-        interval: 0
+        interval: 50
         running: false
         repeat: false
         onTriggered: previewRoot.active = true;
@@ -100,7 +98,7 @@ Item {
         }
     }
 
-    height: viewportFrame.isVertical ? 420 : 300
+    height: viewportFrame.isVertical ? 560 : 300
     width: neededWidth
 
     Text {
@@ -226,7 +224,6 @@ Item {
                 property var wlToplevel: {
                     if (!modelData || !modelData.address) return null;
                     
-                    // Re-bind tracking evaluation context to process runs to force recalculation post-refresh
                     let tracker = clientQueryProcess.running;
                     let targetAddr = modelData.address.trim().toLowerCase();
 
@@ -249,17 +246,18 @@ Item {
                 Loader {
                     anchors.fill: parent
                     active: windowDelegate.wlToplevel !== null
+                    asynchronous: true
                     
-                    opacity: active ? 1.0 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: 200 } }
+                    opacity: status === Loader.Ready ? 1.0 : 0.0
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
 
                     sourceComponent: ScreencopyView {
                         width: parent.width
                         height: parent.height
                         captureSource: windowDelegate.wlToplevel
                         live: true
-                        paintCursor: true
-                        constraintSize: Qt.size(width, height)
+                        paintCursor: false
+                        constraintSize: Qt.size(parent.width, parent.height)
                     }
                 }
 
@@ -273,7 +271,7 @@ Item {
                     z: 10 
 
                     Text {
-                        text: (modelData.title && modelData.title.trim() !== "") ? modelData.title : (modelData.class || "Terminal")
+                        text: (modelData.title && modelData.title.trim() !== "" && modelData.title !== "~") ? modelData.title : (modelData.class || "Terminal")
                         font.family: "Rubik"
                         font.pixelSize: 8
                         font.weight: Font.Bold
