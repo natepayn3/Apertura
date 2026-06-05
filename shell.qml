@@ -69,7 +69,7 @@ Scope {
 
         visible: targetWorkspace !== -1 || popupCard.state === "visible"
 
-        implicitWidth: 700
+        implicitWidth: 1050
         implicitHeight: 700
         color: "transparent"
 
@@ -79,6 +79,7 @@ Scope {
             height: 700
 
             MouseArea {
+                id: masterContainerTracker
                 anchors.fill: parent
                 hoverEnabled: true
                 onEntered: globalWorkspacePreview.cancelDismiss()
@@ -150,7 +151,7 @@ Scope {
                         id: scrollViewport
                         anchors.fill: parent
                         
-                        contentWidth: layoutFocusWrapper.width
+                        contentWidth: layoutFocusWrapper.width + 16
                         contentHeight: layoutFocusWrapper.height
                         
                         flickableDirection: Flickable.HorizontalFlick
@@ -169,6 +170,18 @@ Scope {
                                 opacity: popupCard.width > 200 ? 1.0 : 0.0
                                 Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
                             }
+                        }
+
+                        // Fixed: Global transparent tracker overlay sits cleanly on top of the scrolling canvas tracking block
+                        // to handle exit events seamlessly across window controls and background assets alike
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            z: 100 // Places tracker stack layer over child rendering targets
+                            acceptedButtons: Qt.NoButton // Passes clicks straight through down to underlying buttons/elements
+                            
+                            onEntered: globalWorkspacePreview.cancelDismiss()
+                            onExited: globalWorkspacePreview.requestDismiss()
                         }
                     }
                 }
