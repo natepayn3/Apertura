@@ -4,16 +4,20 @@ import QtQuick.Controls
 import QtQml.Models
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import Quickshell.Io
 import "."
 
 Scope {
     id: rootScope
 
+    property var configurationAsset: Config
+
     property alias theme: theme 
 
     Theme { id: theme }
 
+    // --- GLOBAL VARIABLE LAYERS ---
     property var activeModal: null
     property bool audioSliderActive: false
     property var instantiatedBars: ({})
@@ -22,6 +26,110 @@ Scope {
     function requestOpen(modalName) { activeModal = modalName; }
     function dismissAll() { activeModal = null; }
 
+    // --- GLOBAL LIVE PREVIEW OVERLAY LAYER ---
+    PanelWindow {
+        id: globalWorkspacePreview
+        
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "quickshell-workspace-preview"
+        WlrLayershell.keyboardFocus: WlrLayershell.None
+
+        anchors { left: true; top: true }
+
+        property int targetWorkspace: -1
+        property int marginLeft: 0
+        property int marginTop: 0
+
+        function requestDismiss() {
+            dismissTimer.restart();
+        }
+
+        function cancelDismiss() {
+            dismissTimer.stop();
+        }
+
+        Timer {
+            id: dismissTimer
+            interval: 1000
+            running: false
+            repeat: false
+            onTriggered: globalWorkspacePreview.targetWorkspace = -1
+        }
+
+        onMarginLeftChanged: globalWorkspacePreview.WlrLayershell.margins.left = marginLeft
+        onMarginTopChanged: globalWorkspacePreview.WlrLayershell.margins.top = marginTop
+
+        visible: targetWorkspace !== -1 || popupCard.state === "visible"
+
+        // --- FIXED: PIPELINE BOUNDARY EXPANSION ---
+        // Dynamically pull constraints from the encapsulated preview engine height loops
+        implicitWidth: popupCard.width
+        implicitHeight: previewEngine.height
+        color: "transparent"
+
+        Item {
+            id: layoutFocusWrapper
+            width: previewEngine.neededWidth
+            height: previewEngine.height
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: globalWorkspacePreview.cancelDismiss()
+                onExited: globalWorkspacePreview.requestDismiss()
+
+                Rectangle {
+                    id: popupCard
+                    height: parent.height
+                    anchors.left: parent.left
+                    
+                    color: "#9911111b"
+                    border.width: 0
+                    radius: 0
+                    clip: true
+
+                    states: [
+                        State {
+                            name: "visible"; when: previewEngine.active
+                            PropertyChanges { target: popupCard; width: layoutFocusWrapper.width; opacity: 1.0 }
+                        },
+                        State {
+                            name: "hidden"; when: !previewEngine.active
+                            PropertyChanges { target: popupCard; width: 0; opacity: 0.0 }
+                        }
+                    ]
+
+                    transitions: [
+                        Transition {
+                            from: "hidden"; to: "visible"
+                            ParallelAnimation {
+                                NumberAnimation { target: popupCard; property: "width"; duration: Config.entryDuration; easing.type: Config.entryEasing }
+                                NumberAnimation { target: popupCard; property: "opacity"; duration: 150; easing.type: Easing.OutQuad }
+                            }
+                        },
+                        Transition {
+                            from: "visible"; to: "hidden"
+                            ParallelAnimation {
+                                NumberAnimation { target: popupCard; property: "width"; duration: Config.exitDuration; easing.type: Config.exitEasing }
+                                NumberAnimation { target: popupCard; property: "opacity"; duration: Config.exitDuration; easing.type: Config.exitEasing }
+                            }
+                        }
+                    ]
+
+                    // Encapsulated Custom Previews Module Node
+                    WorkspacePreview {
+                        id: previewEngine
+                        targetWorkspace: globalWorkspacePreview.targetWorkspace
+                        theme: rootScope.theme
+                        opacity: popupCard.width > (layoutFocusWrapper.width - 50) ? 1.0 : 0.0
+                        Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- IPC HANDLING MATRIX ---
     IpcHandler {
         target: "launcher"
         function toggle(): void {
@@ -67,6 +175,7 @@ Scope {
         }
     }
 
+    // --- SCREEN INITIALIZATION LOOP ---
     Instantiator {
         id: barWindows
         model: Quickshell.screens
@@ -91,6 +200,8 @@ Scope {
                 property alias notesModule: notesItem
                 property alias sysMonitorModule: sysMonitorItem
                 property alias netMonitorModule: netMonitorItem
+                
+                readonly property var previewPopup: globalWorkspacePreview
 
                 screen: modelData
                 anchors { left: true; top: true; bottom: true }
@@ -216,7 +327,7 @@ Scope {
 
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: 0 // Changed from 6 to remove rounding on the pin border
+                                    radius: 0
                                     color: "transparent"
                                     border.width: isPinned && bottomGroupControls.isExpanded ? 1 : 0
                                     border.color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
