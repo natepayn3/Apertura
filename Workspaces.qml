@@ -147,7 +147,10 @@ Item {
                         popup.screen = mainBarWindow.screen;
                         popup.marginLeft = mainBarWindow.x + mainBarWindow.width + 13;
                         popup.marginTop = globalCoords.y - (200 / 2) + (workspaceButton.height / 2);
-                        popup.targetWorkspace = wsId;
+                        
+                        Qt.callLater(function() {
+                            if (popup) popup.targetWorkspace = wsId;
+                        });
                     }
                 }
             }
