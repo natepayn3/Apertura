@@ -13,29 +13,6 @@ Scope {
 
     property var configurationAsset: Config
 
-    property var sharedPinnedApps: []
-
-    Process {
-        id: bootPinReader
-        command: ["cat", Quickshell.env("HOME") + "/.cache/quickshell_launcher_pins.json"]
-        running: true
-
-        stdout: StdioCollector {
-            onTextChanged: {
-                let cleanText = text.trim();
-                if (!cleanText) return;
-                try {
-                    let parsed = JSON.parse(cleanText);
-                    if (parsed && parsed.pins) {
-                        sharedPinnedApps = parsed.pins;
-                    }
-                } catch(e) {
-                    sharedPinnedApps = [];
-                }
-            }
-        }
-    }
-
     property alias theme: theme 
 
     Theme { id: theme }
@@ -193,16 +170,6 @@ Scope {
                                 opacity: popupCard.width > 200 ? 1.0 : 0.0
                                 Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
                             }
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            z: 100
-                            acceptedButtons: Qt.NoButton
-                            
-                            onEntered: globalWorkspacePreview.cancelDismiss()
-                            onExited: globalWorkspacePreview.requestDismiss()
                         }
                     }
                 }
