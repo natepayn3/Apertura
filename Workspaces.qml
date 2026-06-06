@@ -292,7 +292,7 @@ Item {
                 text: "star"
                 
                 font.family: "Material Symbols Outlined"
-                font.pixelSize: 16
+                font.pixelSize: 18
                 font.bold: true
                 z: 2
                 
