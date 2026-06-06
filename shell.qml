@@ -80,7 +80,7 @@ Scope {
 
         Timer {
             id: dismissTimer
-            interval: 1000
+            interval: 150
             running: false
             repeat: false
             onTriggered: globalWorkspacePreview.targetWorkspace = -1
@@ -91,109 +91,94 @@ Scope {
 
         visible: targetWorkspace !== -1 || popupCard.state === "visible"
 
-        implicitWidth: 1050
-        implicitHeight: 700
+        implicitWidth: previewEngine.implicitWidth
+        implicitHeight: previewEngine.implicitHeight
+
         color: "transparent"
 
-        Item {
-            id: globalLayoutWrapper
-            width: 1000
-            height: 700
+        MouseArea {
+            id: globalSurfaceTracker
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            
+            onEntered: globalWorkspacePreview.cancelDismiss()
+            onExited: globalWorkspacePreview.requestDismiss()
 
-            MouseArea {
-                id: masterContainerTracker
-                anchors.fill: parent
-                hoverEnabled: true
-                onEntered: globalWorkspacePreview.cancelDismiss()
-                onExited: globalWorkspacePreview.requestDismiss()
+            Rectangle {
+                id: popupCard
+                width: parent.width
+                height: parent.height
+                color: "#9911111b"
+                clip: true
 
-                Rectangle {
-                    id: popupCard
-                    height: previewEngine.height
-                    anchors.left: parent.left
+                states: [
+                    State {
+                        name: "visible"; when: previewEngine.active
+                        PropertyChanges { 
+                            target: popupCard; 
+                            opacity: 1.0 
+                        }
+                    },
+                    State {
+                        name: "hidden"; when: !previewEngine.active
+                        PropertyChanges { 
+                            target: popupCard; 
+                            opacity: 0.0 
+                        }
+                    }
+                ]
+
+                transitions: [
+                    Transition {
+                        from: "hidden"; to: "visible"
+                        NumberAnimation { target: popupCard; property: "opacity"; duration: 150 }
+                    },
+                    Transition {
+                        from: "visible"; to: "hidden"
+                        NumberAnimation { target: popupCard; property: "opacity"; duration: 150 }
+                    }
+                ]
+
+                Flickable {
+                    id: scrollViewport
+                    anchors.fill: parent
                     
-                    color: "#9911111b"
-                    border.width: 0
-                    radius: 0
+                    contentWidth: previewEngine.implicitWidth
+                    contentHeight: previewEngine.implicitHeight
+                    
+                    flickableDirection: Flickable.HorizontalFlick
+                    boundsBehavior: Flickable.StopAtBounds
                     clip: true
 
-                    Behavior on height {
-                        NumberAnimation {
-                            duration: 200
-                            easing.type: Easing.OutCubic
-                        }
+                    WorkspacePreview {
+                        id: previewEngine
+                        targetWorkspace: globalWorkspacePreview.targetWorkspace
+                        theme: rootScope.theme
+                        opacity: globalWorkspacePreview.implicitWidth > 50 ? 1.0 : 0.0
                     }
+                }
+            }
+        }
+    }
 
-                    states: [
-                        State {
-                            name: "visible"; when: previewEngine.active
-                            PropertyChanges { 
-                                target: popupCard; 
-                                width: previewEngine.renderReady ? Math.min(1000, layoutFocusWrapper.width) : (checkIsVertical(globalWorkspacePreview.targetWorkspace) ? 386 : 432)
-                                height: previewEngine.height
-                                opacity: 1.0 
-                            }
-                        },
-                        State {
-                            name: "hidden"; when: !previewEngine.active
-                            PropertyChanges { 
-                                target: popupCard; 
-                                width: 0; 
-                                height: previewEngine.height; 
-                                opacity: 0.0 
-                            }
-                        }
-                    ]
+    Connections {
+        target: Hyprland
+        ignoreUnknownSignals: true
 
-                    transitions: [
-                        Transition {
-                            from: "hidden"; to: "visible"
-                            ParallelAnimation {
-                                NumberAnimation { 
-                                    target: popupCard; 
-                                    property: "width"; 
-                                    duration: Config.entryDuration; 
-                                    easing.type: Config.entryEasing 
-                                }
-                                NumberAnimation { target: popupCard; property: "height"; duration: 200; easing.type: Easing.OutCubic }
-                                NumberAnimation { target: popupCard; property: "opacity"; duration: 150; easing.type: Easing.OutQuad }
-                            }
-                        },
-                        Transition {
-                            from: "visible"; to: "hidden"
-                            ParallelAnimation {
-                                NumberAnimation { target: popupCard; property: "width"; duration: Config.exitDuration; easing.type: Config.exitEasing }
-                                NumberAnimation { target: popupCard; property: "height"; duration: Config.exitDuration; easing.type: Config.exitEasing }
-                                NumberAnimation { target: popupCard; property: "opacity"; duration: Config.exitDuration; easing.type: Config.exitEasing }
-                            }
-                        }
-                    ]
-
-                    Flickable {
-                        id: scrollViewport
-                        anchors.fill: parent
-                        
-                        contentWidth: layoutFocusWrapper.width + 16
-                        contentHeight: layoutFocusWrapper.height
-                        
-                        flickableDirection: Flickable.HorizontalFlick
-                        boundsBehavior: Flickable.StopAtBounds
-                        clip: true
-
-                        Item {
-                            id: layoutFocusWrapper
-                            width: previewEngine.neededWidth
-                            height: previewEngine.height
-
-                            WorkspacePreview {
-                                id: previewEngine
-                                targetWorkspace: globalWorkspacePreview.targetWorkspace
-                                theme: rootScope.theme
-                                opacity: popupCard.width > 200 ? 1.0 : 0.0
-                                Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
-                            }
-                        }
+        function onWorkspaceChanged() {
+            if (Hyprland.activeWorkspace) {
+                let currentWsId = Hyprland.activeWorkspace.id;
+                if (globalWorkspacePreview.targetWorkspace !== currentWsId) {
+                    globalWorkspacePreview.targetWorkspace = currentWsId;
+                    globalWorkspacePreview.cancelDismiss();
+                    
+                    let activeMonitorObj = Hyprland.activeMonitor;
+                    if (activeMonitorObj) {
+                        globalWorkspacePreview.marginLeft = 54 + 12;
+                        globalWorkspacePreview.marginTop = Math.round((activeMonitorObj.height - (checkIsVertical(currentWsId) ? 700 : 300)) / 2);
                     }
+                    globalWorkspacePreview.requestDismiss();
                 }
             }
         }
