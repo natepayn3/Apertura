@@ -24,7 +24,6 @@ Item {
     property string diskTotal: "0"
     property int diskPercent: 0
 
-    // Vendor-agnostic GPU properties and presence validation flag
     property bool hasGpu: false
     property int gpuPercent: 0
     property int gpuTemp: 0
@@ -108,7 +107,6 @@ Item {
                 monitorRoot.diskTotal = parts[6];
                 monitorRoot.diskPercent = parseInt(parts[7].replace("%", ""));
 
-                // Evaluate if a functional hardware controller layer was detected
                 if (parts[8] === "none") {
                     monitorRoot.hasGpu = false;
                     monitorRoot.gpuPercent = 0;
@@ -207,7 +205,7 @@ Item {
     PanelDrawer {
         id: drawerTemplate
         isOpen: false
-        drawerHeight: monitorRoot.hasGpu ? 375 : 330 // Dynamically shrink card baseline height if GPU layout drops
+        drawerHeight: monitorRoot.hasGpu ? 375 : 330 
         modalToken: "sysmonitor"
         anchorTop: false
 
@@ -298,9 +296,9 @@ Item {
                             width: parent.width * (monitorRoot.cpuPercent / 100.0)
                             color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
-                            
+
                             Behavior on width { 
-                                NumberAnimation { duration: 180; easing.type: Easing.OutCubic } 
+                                NumberAnimation { duration: 250; easing.type: Easing.OutCubic } 
                             }
                         }
                     }
@@ -311,7 +309,6 @@ Item {
                     Layout.fillWidth: true
                     spacing: monitorRoot.hasGpu ? 3 : 0
                     
-                    // Collapse height properties down to zero cleanly to free space when inactive
                     visible: monitorRoot.hasGpu
                     Layout.preferredWidth: monitorRoot.hasGpu ? -1 : 0
                     Layout.preferredHeight: monitorRoot.hasGpu ? -1 : 0
@@ -342,9 +339,9 @@ Item {
                             width: parent.width * (monitorRoot.gpuPercent / 100.0)
                             color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
-                            
+
                             Behavior on width { 
-                                NumberAnimation { duration: 180; easing.type: Easing.OutCubic } 
+                                NumberAnimation { duration: 250; easing.type: Easing.OutCubic } 
                             }
                         }
                     }
@@ -378,9 +375,9 @@ Item {
                             width: parent.width * (monitorRoot.ramPercent / 100.0)
                             color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
-                            
+
                             Behavior on width { 
-                                NumberAnimation { duration: 180; easing.type: Easing.OutCubic } 
+                                NumberAnimation { duration: 250; easing.type: Easing.OutCubic } 
                             }
                         }
                     }
@@ -414,9 +411,9 @@ Item {
                             width: parent.width * (monitorRoot.diskPercent / 100.0)
                             color: monitorRoot.theme ? monitorRoot.theme.theme_primary : "#ffffff"
                             radius: 0
-                            
+
                             Behavior on width { 
-                                NumberAnimation { duration: 180; easing.type: Easing.OutCubic } 
+                                NumberAnimation { duration: 250; easing.type: Easing.OutCubic } 
                             }
                         }
                     }
