@@ -20,7 +20,7 @@
 -- })
 -- hl.layer_rule({
 --     name         = "quickshell-components-blur",
---     match        = { namespace = "^(quickshell-(overlay|wallpapers|launcher)|desktop-clock-widget)$" },
+--     match        = { namespace = "^(quickshell-(overlay|wallpapers|launcher|workspace-preview)|desktop-clock-widget)$" },
 --     blur         = true,
 --     xray         = true,
 --     ignore_alpha = 0.5,
@@ -330,13 +330,13 @@ hl.layer_rule({
     name  = "quickshell-bar-blur",
     match = { namespace = "quickshell-bar" },
     blur  = true,
-    xray  = false,
+    xray  = true,
 })
 
 -- Combined rule for all components (now including the desktop clock widget)
 hl.layer_rule({
     name         = "quickshell-components-blur",
-    match        = { namespace = "^(quickshell-(overlay|wallpapers|launcher)|desktop-clock-widget)$" },
+    match        = { namespace = "^(quickshell-(overlay|wallpapers|launcher|workspace-preview)|desktop-clock-widget)$" },
     blur         = true,
     xray         = true,
     ignore_alpha = 0.5,
