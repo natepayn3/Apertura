@@ -82,8 +82,14 @@ Once deployed, you can interact with or toggle the shell layout elements cleanly
 - Toggle Main Menu: qs -c Apertura ipc call launcher toggle
 - Toggle Wallpapers: qs -c Apertura ipc call wallpaper toggle
 
-- <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=natepayn3/Apertura&type=Date&theme=dark" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=natepayn3/Apertura&type=Date" />
-  <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=natepayn3/Apertura&type=Date" />
-</picture>
+## Star History
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=natepayn3%2FApertura&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=natepayn3/Apertura&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=natepayn3/Apertura&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=natepayn3/Apertura&type=date&legend=top-left" />
+ </picture>
+</a>
