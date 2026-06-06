@@ -15,6 +15,9 @@ Item {
     property var activeWorkspaceList: [1, 2]
     property var occupiedMap: ({})
 
+    property bool isSpecialOccupied: false
+    property bool isSpecialActive: false
+
     Process {
         id: queryWorkspaceList
         command: ["hyprctl", "workspaces", "-j"]
@@ -28,8 +31,20 @@ Item {
                     if (Array.isArray(json)) {
                         let ids = json.map(ws => ws.id).filter(id => id > 0);
                         let occupied = {};
-                        json.forEach(ws => { if (ws.windows > 0) occupied[ws.id] = true; });
+                        let specialHasWindows = false;
+
+                        json.forEach(ws => { 
+                            if (ws.windows > 0) {
+                                if (ws.id > 0) {
+                                    occupied[ws.id] = true;
+                                } else if (ws.name.startsWith("special") || ws.id < 0) {
+                                    specialHasWindows = true;
+                                }
+                            }
+                        });
+                        
                         workspaceContainer.occupiedMap = occupied;
+                        workspaceContainer.isSpecialOccupied = specialHasWindows;
 
                         if (!ids.includes(1)) ids.push(1);
                         if (!ids.includes(workspaceContainer.activeWorkspace)) ids.push(workspaceContainer.activeWorkspace);
@@ -42,6 +57,11 @@ Item {
                         }
 
                         ids.sort((a, b) => a - b);
+                        
+                        if (workspaceContainer.isSpecialOccupied || workspaceContainer.isSpecialActive) {
+                            if (!ids.includes(-99)) ids.push(-99);
+                        }
+                        
                         workspaceContainer.activeWorkspaceList = ids;
                     }
                 } catch (e) {}
@@ -69,13 +89,42 @@ Item {
         }
     }
 
+    Process {
+        id: querySpecialMonitorState
+        command: ["hyprctl", "monitors", "-j"]
+        running: true
+        stdout: StdioCollector {
+            onTextChanged: {
+                try {
+                    const cleaned = text.trim();
+                    if (!cleaned) return;
+                    const json = JSON.parse(cleaned);
+                    if (Array.isArray(json)) {
+                        let foundActive = false;
+                        for (let i = 0; i < json.length; i++) {
+                            if (json[i].focused === true) {
+                                if (json[i].specialWorkspace && json[i].specialWorkspace.id !== 0) {
+                                    foundActive = true;
+                                }
+                                break;
+                            }
+                        }
+                        workspaceContainer.isSpecialActive = foundActive;
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
     Timer {
         interval: 100
         running: true
         repeat: true
         onTriggered: {
-            queryActiveWorkspace.running = false
-            queryActiveWorkspace.running = true
+            queryActiveWorkspace.running = false;
+            queryActiveWorkspace.running = true;
+            querySpecialMonitorState.running = false;
+            querySpecialMonitorState.running = true;
         }
     }
 
@@ -123,12 +172,13 @@ Item {
         MouseArea {
             id: workspaceButton
             property int wsId: modelData
-            property bool isActive: workspaceContainer.activeWorkspace === wsId
-            property bool isOccupied: workspaceContainer.occupiedMap[wsId] === true
+            property bool isSpecialNode: wsId === -99
+            property bool isActive: isSpecialNode ? workspaceContainer.isSpecialActive : (workspaceContainer.activeWorkspace === wsId && !workspaceContainer.isSpecialActive)
+            property bool isOccupied: isSpecialNode ? workspaceContainer.isSpecialOccupied : workspaceContainer.occupiedMap[wsId] === true
             property bool isNewIndicatorSlot: index === (workspaceContainer.activeWorkspaceList.length - 1)
 
-            property int targetWidth: workspaceContainer.isVertical ? 28 : (isActive ? 58 : 28)
-            property int targetHeight: workspaceContainer.isVertical ? (isActive ? 58 : 28) : 28
+            property int targetWidth: isSpecialNode ? 28 : (workspaceContainer.isVertical ? 28 : (isActive ? 58 : 28))
+            property int targetHeight: isSpecialNode ? 28 : (workspaceContainer.isVertical ? (isActive ? 58 : 28) : 28)
 
             implicitWidth: targetWidth
             implicitHeight: targetHeight
@@ -139,6 +189,7 @@ Item {
             Behavior on targetHeight { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
 
             onEntered: {
+                if (isSpecialNode) return;
                 if (typeof mainBarWindow !== "undefined" && mainBarWindow.previewPopup && isOccupied) {
                     let globalCoords = workspaceButton.mapToItem(null, 0, 0);
                     let popup = mainBarWindow.previewPopup;
@@ -162,8 +213,11 @@ Item {
             }
 
             onClicked: {
-                workspaceContainer.activeWorkspace = wsId;
-                switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + wsId + "\" })"];
+                if (isSpecialNode) {
+                    switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.workspace.toggle_special(\"magic\")"];
+                } else {
+                    switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + wsId + "\" })"];
+                }
                 switchWorkspace.running = true;
             }
 
@@ -183,6 +237,7 @@ Item {
             Rectangle {
                 id: indicatorShape
                 anchors.centerIn: parent
+                visible: !isSpecialNode
                 
                 property int shapeWidth: workspaceContainer.isVertical ? (workspaceButton.isActive ? 14 : 12) : (workspaceButton.isActive ? 44 : 12)
                 property int shapeHeight: workspaceContainer.isVertical ? (workspaceButton.isActive ? 44 : 12) : (workspaceButton.isActive ? 14 : 12)
@@ -203,7 +258,6 @@ Item {
                 }
 
                 border.width: (!workspaceButton.isActive && !workspaceButton.isOccupied) ? 1.5 : 0
-                
                 border.color: {
                     if (!workspaceContainer.theme) return "transparent";
                     return (!workspaceButton.isActive && !workspaceButton.isOccupied)
@@ -226,9 +280,29 @@ Item {
                             ? workspaceContainer.theme.theme_onPrimary
                             : workspaceContainer.theme.theme_fg;
                     }
-                    
                     opacity: workspaceButton.isActive ? 1.0 : 0.0
                     Behavior on opacity { NumberAnimation { duration: 150 } }
+                }
+            }
+
+            Text {
+                id: specialIconLayer
+                visible: isSpecialNode
+                anchors.centerIn: parent
+                text: "star"
+                
+                font.family: "Material Symbols Outlined"
+                font.pixelSize: 16
+                font.bold: true
+                z: 2
+                
+                font.letterSpacing: workspaceButton.isActive ? 0.01 : 0.0
+                
+                color: {
+                    if (!workspaceContainer.theme) return workspaceButton.isActive ? "#f5c2e7" : "#ffffff";
+                    return workspaceButton.isActive 
+                        ? workspaceContainer.theme.theme_primary 
+                        : workspaceContainer.theme.theme_fg;
                 }
             }
         }
