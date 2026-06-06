@@ -15,13 +15,14 @@ Item {
     property var liveClientJson: []
     property var stagedClientJson: []
 
-    readonly property int neededWidth: viewportFrame.width + 32
-
     property int delayedWorkspace: -1
     property bool renderReady: false
     property bool manualIsVertical: false
 
     property bool containsMouseGlobal: rootHoverTracker.containsMouse || clickSurface.containsMouse
+
+    implicitWidth: active ? (renderReady ? (viewportFrame.width + 32) : (manualIsVertical ? 386 : 432)) : 0
+    implicitHeight: active ? (manualIsVertical ? 700 : 300) : 0
 
     onContainsMouseGlobalChanged: {
         if (!active) return;
@@ -127,6 +128,7 @@ Item {
         running: false
         stdout: StdioCollector {
             onTextChanged: {
+                if (!previewRoot.active) return;
                 let cleanText = text.trim();
                 if (!cleanText || cleanText === "[]") return;
                 try {
@@ -157,9 +159,6 @@ Item {
         
         return lowerClass;
     }
-
-    height: manualIsVertical ? 700 : 300
-    width: neededWidth
 
     MouseArea {
         id: rootHoverTracker
@@ -215,9 +214,11 @@ Item {
 
     Rectangle {
         id: viewportFrame
-        height: parent.height - 70
         x: 16
-        y: 50
+        anchors.top: headerDivider.bottom
+        anchors.topMargin: 12
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 16
         color: "transparent"
         border.width: 0
         radius: 0
