@@ -21,9 +21,16 @@ Item {
     property bool renderReady: false
     property bool manualIsVertical: false
 
-    // Added: Signals to cleanly bubble hover events past the Wayland surface input trap
-    signal mouseEntered()
-    signal mouseExited()
+    property bool containsMouseGlobal: rootHoverTracker.containsMouse || clickSurface.containsMouse
+
+    onContainsMouseGlobalChanged: {
+        if (!active) return;
+        if (containsMouseGlobal) {
+            globalWorkspacePreview.cancelDismiss();
+        } else {
+            globalWorkspacePreview.requestDismiss();
+        }
+    }
 
     onTargetWorkspaceChanged: {
         if (targetWorkspace !== -1) {
@@ -153,6 +160,13 @@ Item {
 
     height: manualIsVertical ? 700 : 300
     width: neededWidth
+
+    MouseArea {
+        id: rootHoverTracker
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton
+    }
 
     Text {
         id: titleLabel
@@ -369,11 +383,7 @@ Item {
         anchors.fill: viewportFrame
         cursorShape: Qt.PointingHandCursor
         z: 20
-        
-        // Fixed: Enabled tracking flags and bound handlers to pass hover events upstream
         hoverEnabled: true
-        onEntered: previewRoot.mouseEntered()
-        onExited: previewRoot.mouseExited()
         
         propagateComposedEvents: true
         
