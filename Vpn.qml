@@ -10,9 +10,6 @@ Item {
 
     property string detectedConnection: ""
     property bool isVpnActive: false
-    
-    // Internal property to track previous state and prevent notification loops
-    property bool _wasVpnActive: false
 
     Timer {
         id: syncVpnTimer
@@ -25,17 +22,6 @@ Item {
         }
     }
 
-    // Process to handle firing notifications via notify-send
-    Process {
-        id: notifier
-        running: false
-    }
-
-    function sendNotification(title, message, icon) {
-        notifier.command = ["notify-send", "-a", "VPN Manager", "-i", icon, title, message];
-        notifier.running = true;
-    }
-
     Process {
         id: vpnScanner
         command: ["nmcli", "-g", "TYPE,NAME,STATE", "connection", "show", "--active"]
@@ -44,45 +30,34 @@ Item {
             onTextChanged: {
                 try {
                     let cleanText = text.trim();
+                    if (!cleanText) {
+                        vpnRoot.detectedConnection = "";
+                        vpnRoot.isVpnActive = false;
+                        return;
+                    }
+
                     let lines = cleanText.split("\n");
-                    
                     let foundActive = false;
+                    let parsedConnection = "";
 
                     for (let i = 0; i < lines.length; i++) {
                         let line = lines[i].trim();
                         if (line.startsWith("wireguard:") || line.startsWith("vpn:") || line.startsWith("tun:")) {
                             let parts = line.split(":");
                             if (parts.length >= 3 && parts[2] === "activated") {
-                                vpnRoot.detectedConnection = parts[1];
-                                vpnRoot.isVpnActive = true;
+                                parsedConnection = parts[1];
                                 foundActive = true;
                                 break;
                             }
                         }
                     }
 
-                    if (!foundActive) {
+                    if (foundActive) {
+                        vpnRoot.detectedConnection = parsedConnection;
+                        vpnRoot.isVpnActive = true;
+                    } else {
                         vpnRoot.detectedConnection = "";
                         vpnRoot.isVpnActive = false;
-                    }
-
-                    // Check for state mutations to fire notifications
-                    if (vpnRoot.isVpnActive !== vpnRoot._wasVpnActive) {
-                        if (vpnRoot.isVpnActive) {
-                            vpnRoot.sendNotification(
-                                "VPN Connected", 
-                                "Secure tunnel established to " + vpnRoot.detectedConnection, 
-                                "network-vpn"
-                            );
-                        } else {
-                            vpnRoot.sendNotification(
-                                "VPN Disconnected", 
-                                "The secure tunnel connection has been closed.", 
-                                "network-vpn-disabled"
-                            );
-                        }
-                        // Update the sync checkpoint state
-                        vpnRoot._wasVpnActive = vpnRoot.isVpnActive;
                     }
 
                 } catch(e) {
