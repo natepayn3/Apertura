@@ -235,7 +235,7 @@ Item {
     PanelDrawer {
         id: drawerTemplate
         isOpen: false
-        drawerHeight: 300
+        drawerHeight: 375
         modalToken: "launcher"
         anchorTop: true
 
