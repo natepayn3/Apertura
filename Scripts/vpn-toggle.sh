@@ -10,13 +10,15 @@ TARGET_PROFILE=$(echo "$TARGET_PROFILE" | tr -d '\r' | xargs)
 # 1. Handle Disconnection Sequence
 if [ "$STATE" = "true" ]; then
     if [ -n "$TARGET_PROFILE" ]; then
-        # Matches your successful terminal deactivation command
-        nmcli connection down id "$TARGET_PROFILE"
+        if nmcli connection down id "$TARGET_PROFILE"; then
+            notify-send -a "VPN Manager" -i "network-vpn-disabled" "VPN Disconnected" "The secure tunnel connection has been closed."
+        fi
     else
-        # Dynamic fallback: find ANY running wireguard/vpn profile and bring it down
         ACTIVE_PROFILE=$(nmcli -t -f TYPE,NAME connection show --active | grep -E '^(wireguard|vpn|tun):' | head -n 1 | cut -d: -f2)
         if [ -n "$ACTIVE_PROFILE" ]; then
-            nmcli connection down id "$ACTIVE_PROFILE"
+            if nmcli connection down id "$ACTIVE_PROFILE"; then
+                notify-send -a "VPN Manager" -i "network-vpn-disabled" "VPN Disconnected" "The secure tunnel connection has been closed."
+            fi
         fi
     fi
     exit 0
@@ -24,13 +26,15 @@ fi
 
 # 2. Handle Connection Sequence (Only runs if STATE is "false")
 if [ -n "$TARGET_PROFILE" ]; then
-    # Matches your successful terminal activation command
-    nmcli connection up id "$TARGET_PROFILE"
+    if nmcli connection up id "$TARGET_PROFILE"; then
+        notify-send -a "VPN Manager" -i "network-vpn" "VPN Connected" "Secure tunnel established successfully."
+    fi
 else
-    # Dynamic fallback: grab the first available wireguard configuration profile name on the system
     NM_PROFILE=$(nmcli -t -f TYPE,NAME connection show | grep -E '^(wireguard|vpn|tun):' | head -n 1 | cut -d: -f2)
     if [ -n "$NM_PROFILE" ]; then
-        nmcli connection up id "$NM_PROFILE"
+        if nmcli connection up id "$NM_PROFILE"; then
+            notify-send -a "VPN Manager" -i "network-vpn" "VPN Connected" "Secure tunnel established successfully."
+        fi
     else
         echo "Error: No configured NetworkManager VPN or WireGuard profiles found." >&2
         exit 1
