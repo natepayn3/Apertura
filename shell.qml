@@ -479,6 +479,10 @@ Scope {
                             DrawerModule { id: wrapAudio; Audio { anchors.centerIn: parent } }
                             DrawerModule { id: wrapSys; SysMonitor { id: sysMonitorItem; theme: rootScope.theme; anchors.centerIn: parent } }
                             DrawerModule { id: wrapNet; NetMonitor { id: netMonitorItem; anchors.centerIn: parent } }
+                            DrawerModule { 
+                                id: wrapVpn
+                                Vpn { anchors.centerIn: parent } 
+                            }
                             DrawerModule { id: wrapPower; Power { anchors.centerIn: parent } }
                         }
                     }
