@@ -203,6 +203,15 @@ Scope {
     }
 
     IpcHandler {
+        target: "media"
+        function toggle(): void {
+            for (let s in rootScope.instantiatedBars)
+                if (rootScope.instantiatedBars[s].mediaModule)
+                    rootScope.instantiatedBars[s].mediaModule.togglePlayback();
+        }
+    }
+
+    IpcHandler {
         target: "notes"
         function toggle(): void {
             for (let s in rootScope.instantiatedBars)
@@ -250,6 +259,7 @@ Scope {
                 property alias appLauncherModule: appLauncherItem
                 property alias wallpaperModule: wallpaperItem
                 property alias calendarModule: calendarItem
+                property alias mediaModule: mediaItem
                 property alias notesModule: notesItem
                 property alias sysMonitorModule: sysMonitorItem
                 property alias netMonitorModule: netMonitorItem
@@ -459,6 +469,10 @@ Scope {
                                 }
                             }
 
+                            DrawerModule { 
+                                id: wrapMedia
+                                Media { id: mediaItem; anchors.centerIn: parent } 
+                            }
                             DrawerModule { id: wrapNotes; Notes { id: notesItem; anchors.centerIn: parent } }
                             DrawerModule { id: wrapNotif; Notification { anchors.centerIn: parent } }
                             DrawerModule { id: wrapBlue; Bluetooth { anchors.centerIn: parent } }
