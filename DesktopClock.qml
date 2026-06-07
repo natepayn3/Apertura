@@ -85,40 +85,61 @@ PanelWindow {
             }
         }
 
-        Rectangle {
-            id: toggleButton
+        // 🎛️ Unified Pin Icon + Toggle Switch Matrix Row Container
+        RowLayout {
+            id: toggleContainer
             anchors.top: parent.top
             anchors.right: parent.right
             anchors.topMargin: 8
-            anchors.rightMargin: 8
-            width: 110
-            height: 26
-            radius: 0 
+            anchors.rightMargin: 12
+            spacing: 8
             
+            // Only reveal control interface elements on active hover context boundaries
             visible: dragArea.containsMouse || btnMouseArea.containsMouse
-            
-            color: desktopClockWindow.isAlwaysVisible ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : "transparent"
-            border.width: desktopClockWindow.isAlwaysVisible ? 0 : 1
-            border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
 
             Text {
-                anchors.centerIn: parent
-                text: "Always Visible"
-                font.family: "Rubik"
-                font.pixelSize: 11
-                font.weight: Font.Medium
-                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                text: desktopClockWindow.isAlwaysVisible ? "keep" : "keep_off"
+                font.family: "Material Symbols Outlined"
+                font.pixelSize: 18
+                Layout.alignment: Qt.AlignVCenter
+                color: desktopClockWindow.isAlwaysVisible 
+                    ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
+                    : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
             }
 
-            MouseArea {
-                id: btnMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                preventStealing: true 
+            Rectangle {
+                id: toggleTrack
+                width: 50
+                height: 24
+                radius: 12
+                Layout.alignment: Qt.AlignVCenter
+                color: desktopClockWindow.isAlwaysVisible 
+                    ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") 
+                    : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff")
                 
-                onClicked: {
-                    desktopClockWindow.isAlwaysVisible = !desktopClockWindow.isAlwaysVisible
+                Rectangle {
+                    width: 18
+                    height: 18
+                    radius: 9
+                    color: rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"
+                    anchors.verticalCenter: parent.verticalCenter
+                    x: desktopClockWindow.isAlwaysVisible ? 28 : 4
+                    
+                    Behavior on x { 
+                        NumberAnimation { duration: 120; easing.type: Easing.OutQuad } 
+                    }
+                }
+                
+                MouseArea {
+                    id: btnMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    preventStealing: true 
+                    
+                    onClicked: {
+                        desktopClockWindow.isAlwaysVisible = !desktopClockWindow.isAlwaysVisible
+                    }
                 }
             }
         }
