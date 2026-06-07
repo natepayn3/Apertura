@@ -22,8 +22,16 @@ Item {
     }
     
     function togglePlayback() {
-        if (activePlayer) {
-            activePlayer.togglePlaying();
+        if (!activePlayer) return;
+        
+        if (activePlayer.playbackState === MprisPlaybackState.Playing) {
+            if (activePlayer.canPause) {
+                activePlayer.pause();
+            }
+        } else {
+            if (activePlayer.canPlay) {
+                activePlayer.play();
+            }
         }
     }
 
