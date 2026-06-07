@@ -22,11 +22,18 @@ Item {
 
     function toggleMenu(): void {
         if (isDetachedElsewhere) return;
+        
         if (isAlwaysVisible) {
-            isAlwaysVisible = false;
-            openMenu();
+            if (menuOpen) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
         } else if (menuOpen) {
             closeMenu();
+            if (rootScope.activeModal === "notes") {
+                rootScope.dismissAll();
+            }
         } else {
             openMenu();
         }
@@ -48,9 +55,13 @@ Item {
     function detachModule(): void {
         isDetachedElsewhere = true;
         closeMenu();
+        if (rootScope.activeModal === "notes") {
+            rootScope.dismissAll();
+        }
         
         let primaryScreen = Quickshell.screens.length > 0 ? Quickshell.screens[0] : null;
         let initialX = 10; 
+        let initialY = primaryScreen ? Math.round((primaryScreen.height - 300) / 2) : 250; 
         
         detachedWindowWrapper.createObject(rootScope, {
             "passedNotesList": notesRoot.notesList,
@@ -67,6 +78,20 @@ Item {
         repeat: false
         onTriggered: {
             if (!notesRoot.isAlwaysVisible && !notesRoot.isDetachedElsewhere) {
+                notesRoot.closeMenu();
+                if (rootScope.activeModal === "notes") {
+                    rootScope.dismissAll();
+                }
+            }
+        }
+    }
+
+    Connections {
+        target: rootScope
+        ignoreUnknownSignals: true
+
+        function onActiveModalChanged() {
+            if (rootScope.activeModal !== "notes" && notesRoot.menuOpen && !notesRoot.isAlwaysVisible) {
                 notesRoot.closeMenu();
             }
         }
@@ -134,7 +159,6 @@ Item {
                         }
                     }
 
-                    // 🎛️ Option 2 Layout: Inline Icon + Toggle Switch Track
                     RowLayout {
                         spacing: 8
                         Layout.alignment: Qt.AlignVCenter
@@ -171,6 +195,7 @@ Item {
                             }
                             
                             MouseArea {
+                                id: btnMouseArea
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
@@ -181,12 +206,11 @@ Item {
                                         if (notesRoot.isAlwaysVisible) {
                                             notesRoot.menuOpen = true;
                                             notesRoot.isAlwaysVisible = false;
+                                            rootScope.requestOpen("notes");
                                         } else {
                                             notesRoot.isAlwaysVisible = true;
                                             notesRoot.menuOpen = false;
-                                            if (rootScope.activeModal === "notes") {
-                                                rootScope.dismissAll();
-                                            }
+                                            rootScope.dismissAll();
                                         }
                                     }
                                 }
@@ -399,7 +423,6 @@ Item {
         PanelWindow {
             id: detachedWin
             
-            // Full-screen structural layout keeps clock clicking functional via masks
             WlrLayershell.layer: isAlwaysVisibleState ? WlrLayer.Overlay : WlrLayer.Bottom
             WlrLayershell.namespace: "quickshell-detached-note"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -432,7 +455,6 @@ Item {
             Rectangle {
                 id: detachedFrame
                 
-                // Hardware-accelerated canvas properties render instantly
                 property int posX: 10
                 property int posY: 100
                 property bool initialized: false 
@@ -447,7 +469,6 @@ Item {
                     isFloating: true
                 }
 
-                // Snap securely to the bottom margin on creation pass
                 Connections {
                     target: detachedWin
                     
@@ -474,7 +495,6 @@ Item {
                         clickOffsetY = mouse.y
                     }
 
-                    // Blazing fast internal client translation loop
                     onPositionChanged: (mouse) => {
                         if (pressed) {
                             detachedFrame.posX = detachedFrame.posX + mouse.x - clickOffsetX
@@ -556,7 +576,12 @@ Item {
         MouseArea {
             anchors.fill: parent
             enabled: !notesRoot.isAlwaysVisible
-            onClicked: closeMenu()
+            onClicked: {
+                closeMenu();
+                if (rootScope.activeModal === "notes") {
+                    rootScope.dismissAll();
+                }
+            }
         }
 
         Rectangle {
@@ -608,6 +633,9 @@ Item {
             Keys.onPressed: (event) => {
                 if (event.key === Qt.Key_Escape && !notesRoot.isAlwaysVisible) {
                     closeMenu();
+                    if (rootScope.activeModal === "notes") {
+                        rootScope.dismissAll();
+                    }
                     event.accepted = true;
                 }
             }
