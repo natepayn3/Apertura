@@ -28,7 +28,7 @@ Item {
         const localUri = Qt.resolvedUrl(".").toString();
         const basePath = localUri.replace("file://", "");
         
-        appScanner.command = ["python3", basePath + "/get_apps.py"];
+        appScanner.command = ["python3", basePath + "/Scripts/get_apps.py"];
         appScanner.running = true;
     }
 
@@ -201,7 +201,7 @@ Item {
         Image {
             id: launcherLogo
             anchors.centerIn: parent
-            source: "file://" + Qt.resolvedUrl(".").toString().replace("file://", "") + "/logo.png"
+            source: "file://" + Qt.resolvedUrl(".").toString().replace("file://", "") + "/Assets/logo.png"
             sourceSize.width: 24
             sourceSize.height: 24
             fillMode: Image.PreserveAspectFit
