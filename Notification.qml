@@ -68,8 +68,12 @@ Item {
             notificationRoot.activeHistoryReferences = [...notificationRoot.activeHistoryReferences, notification];
             notificationRoot.visibleBanners = [...notificationRoot.visibleBanners, notification];
 
-            let toastTimer = Qt.createQmlObject('import QtQuick; Timer { interval: 5000; running: true; repeat: false }', notificationRoot);
+            let toastTimer = Qt.createQmlObject('import QtQuick; Timer { interval: 5000; running: true; repeat: true }', notificationRoot);
             toastTimer.triggered.connect(() => {
+                let idx = notificationRoot.visibleBanners.indexOf(notification);
+                if (idx !== -1 && toastRepeater.itemAt(idx) && toastRepeater.itemAt(idx).isHovered) {
+                    return; 
+                }
                 notificationRoot.visibleBanners = notificationRoot.visibleBanners.filter(item => item !== notification);
                 toastTimer.destroy();
             });
@@ -155,7 +159,6 @@ Item {
         WlrLayershell.namespace: "quickshell-overlay"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-        // Fixed: Map the input bounding layout box down to Wayland context so clicks fall through empty space
         mask: toastInputBounds
 
         Region {
@@ -199,6 +202,7 @@ Item {
             ]
 
             Repeater {
+                id: toastRepeater
                 model: notificationRoot.visibleBanners
                 delegate: Rectangle {
                     Layout.fillWidth: true
@@ -206,6 +210,8 @@ Item {
                     color: "#9911111b" 
                     border.width: 0
                     radius: 0
+
+                    property bool isHovered: toastMouseArea.containsMouse
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -228,7 +234,9 @@ Item {
                     }
 
                     MouseArea {
+                        id: toastMouseArea
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             notificationRoot.visibleBanners = notificationRoot.visibleBanners.filter(item => item !== modelData);
@@ -245,7 +253,7 @@ Item {
         modalToken: "notifications"
         anchorTop: false
 
-        drawerHeight: !notificationRoot.notificationsEnabled ? 92 : (notifListView.count === 0 ? 96 : Math.min(56 + (notifListView.count * 62), 300))
+        drawerHeight: Math.min(mainContainerLayout.implicitHeight + 28, 375)
 
         onIsOpenChanged: {
             if (isOpen) {
@@ -277,6 +285,7 @@ Item {
             focus: true
 
             RowLayout {
+                id: headerLayout
                 Layout.fillWidth: true
                 Text { text: "Notifications"; font.family: "Rubik"; font.pixelSize: 16; font.weight: Font.Bold; color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" } 
                 Item { Layout.fillWidth: true }
@@ -333,7 +342,10 @@ Item {
                             width: 18; height: 18; radius: 9; color: rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"
                             anchors.verticalCenter: parent.verticalCenter
                             x: notificationRoot.notificationsEnabled ? 28 : 4
-                            Behavior on x { NumberAnimation { duration: 120 } }
+                            
+                            Behavior on x { 
+                                NumberAnimation { duration: 120; easing.type: Easing.OutQuad } 
+                            }
                         }
                         
                         MouseArea {
@@ -341,21 +353,6 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 notificationRoot.notificationsEnabled = !notificationRoot.notificationsEnabled;
-                                if (!notificationRoot.notificationsEnabled) {
-                                    try { nativeServer.clear(); } catch(e) {}
-                                    try { nativeServer.dismissAll(); } catch(e) {}
-                                    
-                                    for (let i = 0; i < notificationRoot.activeHistoryReferences.length; i++) {
-                                        let item = notificationRoot.activeHistoryReferences[i];
-                                        if (item) {
-                                            try { item.dismiss(); } catch(e) {}
-                                            try { nativeServer.dismiss(item.id); } catch(e) {}
-                                        }
-                                    }
-                                    
-                                    notificationRoot.visibleBanners = [];
-                                    notificationRoot.activeHistoryReferences = [];
-                                }
                                 notificationRoot.updateCount();
                                 checkUserActivity();
                             }
@@ -366,66 +363,63 @@ Item {
 
             Rectangle { Layout.fillWidth: true; height: 1; color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff" }
 
-            Item {
-                id: listContainer
+            ListView {
+                id: notifListView
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.preferredHeight: count === 0 ? 40 : Math.min(contentHeight, 280)
+                clip: true
+                spacing: 8
+                model: nativeServer.trackedNotifications
                 visible: notificationRoot.notificationsEnabled
 
-                ListView {
-                    id: notifListView
-                    anchors.fill: parent
-                    clip: true; spacing: 8
-                    model: nativeServer.trackedNotifications
+                Text {
+                    anchors.centerIn: parent
+                    text: "No new notifications"
+                    font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" 
+                    visible: notifListView.count === 0 && notificationRoot.notificationsEnabled
+                }
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "No new notifications"
-                        font.family: "Rubik"; font.pixelSize: 13; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff" 
-                        visible: notifListView.count === 0 && notificationRoot.notificationsEnabled
-                    }
+                delegate: Item {
+                    width: notifListView.width
+                    height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
 
-                    delegate: Item {
-                        width: notifListView.width
-                        height: Math.max(50, summaryLabel.implicitHeight + bodyLabel.implicitHeight + 16)
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                        border.color: cellMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") 
+                        border.width: 1
+                        radius: 0 
 
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "transparent"
-                            border.color: cellMouseArea.containsMouse ? (rootScope.theme ? rootScope.theme.theme_primary : "#ffffff") : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff") 
-                            border.width: 1
-                            radius: 0 
+                        ColumnLayout {
+                            anchors.fill: parent; anchors.margins: 10; spacing: 2
 
-                            ColumnLayout {
-                                anchors.fill: parent; anchors.margins: 10; spacing: 2
-
-                                Text {
-                                    id: summaryLabel
-                                    text: modelData.summary
-                                    font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
-                                    color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
-                                    Layout.fillWidth: true; elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    id: bodyLabel
-                                    text: modelData.body
-                                    font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
-                                    Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight
-                                }
+                            Text {
+                                id: summaryLabel
+                                text: modelData.summary
+                                font.family: "Rubik"; font.pixelSize: 13; font.weight: Font.Bold
+                                color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff" 
+                                Layout.fillWidth: true; elide: Text.ElideRight
                             }
-                            
-                            MouseArea {
-                                id: cellMouseArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    try { nativeServer.dismiss(modelData.id); } catch(e) {}
-                                    try { modelData.dismiss(); } catch(e) {}
-                                    notificationRoot.updateCount();
-                                    checkUserActivity();
-                                }
+
+                            Text {
+                                id: bodyLabel
+                                text: modelData.body
+                                font.family: "Rubik"; font.pixelSize: 12; color: rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff"
+                                Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight
+                            }
+                        }
+                        
+                        MouseArea {
+                            id: cellMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                try { nativeServer.dismiss(modelData.id); } catch(e) {}
+                                try { modelData.dismiss(); } catch(e) {}
+                                notificationRoot.updateCount();
+                                checkUserActivity();
                             }
                         }
                     }
