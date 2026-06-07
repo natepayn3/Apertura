@@ -177,14 +177,15 @@ if ! grep -q 'local menu = "qs -c Apertura ipc call launcher toggle"' "$HYPRLAND
     echo 'local menu = "qs -c Apertura ipc call launcher toggle"' | safe_append "$HYPRLAND_LUA"
 fi
 
-if ! grep -q "quickshell-bar-blur" "$HYPRLAND_LUA"; then
-    echo -e "    ${GRAY}➔${RESET} Adding bar layer rule hooks..."
-    echo -e "\n-- Unique configuration for the bar layer\nhl.layer_rule({\n    name  = \"quickshell-bar-blur\",\n    match = { namespace = \"quickshell-bar\" },\n    blur  = true,\n    xray  = true,\n})\n\n-- Combined rule for all other components using regex matching\nhl.layer_rule({\n    name         = \"quickshell-components-blur\",\n    match        = { namespace = \"^quickshell-(overlay|wallpapers|launcher)$\" },\n    blur         = true,\n    xray         = true,\n    ignore_alpha = 0.5,\n})" | safe_append "$HYPRLAND_LUA"
+# Injected expanded quickshell rule parameters to include the clock widget, note tools, and workspace previews
+if ! grep -q "desktop-clock-widget" "$HYPRLAND_LUA"; then
+    echo -e "    ${GRAY}➔${RESET} Adding bar and extended component layer rule hooks..."
+    echo -e "\n-- Unique configuration for the bar layer\nhl.layer_rule({\n    name  = \"quickshell-bar-blur\",\n    match = { namespace = \"quickshell-bar\" },\n    blur  = true,\n    xray  = true,\n})\n\n-- Combined rule for all components (now including the desktop clock widget)\nhl.layer_rule({\n    name         = \"quickshell-components-blur\",\n    match        = { namespace = \"^(quickshell-(overlay|wallpapers|launcher|workspace-preview|detached-note)|desktop-clock-widget)$\" },\n    blur         = true,\n    xray         = true,\n    ignore_alpha = 0.5,\n})" | safe_append "$HYPRLAND_LUA"
 fi
 
 if ! grep -q "satty-screenshot-floating" "$HYPRLAND_LUA"; then
     echo -e "    ${GRAY}➔${RESET} Adding satty floating window rule..."
-    echo -e "\nhl.window_rule({\n    name  = \"satty-screenshot-floating\",\n    match = { \n        class = \"com.gabm.satty\" \n     },\n    float = true,\n})" | safe_append "$HYPRLAND_LUA"
+    echo -e "\n-- Satty always floats\nhl.window_rule({\n    name  = \"satty-screenshot-floating\",\n    match = { \n        class = \"com.gabm.satty\" \n     },\n    float = true,\n})" | safe_append "$HYPRLAND_LUA"
 fi
 
 if ! grep -q 'hl.exec_cmd("qs -c Apertura")' "$HYPRLAND_LUA"; then
