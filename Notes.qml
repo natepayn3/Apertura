@@ -98,7 +98,7 @@ Item {
     }
 
     component NotesViewContainer : Item {
-        id: viewRoot
+        id: notesViewScope
         property bool isFloating: false
         anchors.fill: parent
 
@@ -128,13 +128,13 @@ Item {
                         width: 54
                         height: 24
                         radius: 0
-                        color: viewRoot.isFloating ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : "transparent"
+                        color: notesViewScope.isFloating ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : "transparent"
                         border.width: 1
                         border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
 
                         Text {
                             anchors.centerIn: parent
-                            text: viewRoot.isFloating ? "Attach" : "Detach"
+                            text: notesViewScope.isFloating ? "Attach" : "Detach"
                             font.family: "Rubik"
                             font.pixelSize: 10
                             font.weight: Font.Medium
@@ -148,7 +148,7 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                             preventStealing: true
                             onClicked: {
-                                if (viewRoot.isFloating) {
+                                if (notesViewScope.isFloating) {
                                     notesRoot.isDetachedElsewhere = false;
                                     detachedWin.destroy();
                                     notesRoot.openMenu(); 
@@ -199,7 +199,7 @@ Item {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    if (viewRoot.isFloating) {
+                                    if (notesViewScope.isFloating) {
                                         detachedWin.isAlwaysVisibleState = !detachedWin.isAlwaysVisibleState;
                                         notesRoot.isAlwaysVisible = detachedWin.isAlwaysVisibleState;
                                     } else {
