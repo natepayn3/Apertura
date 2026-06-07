@@ -25,11 +25,11 @@ Item {
         const localUri = Qt.resolvedUrl(".").toString();
         const basePath = localUri.replace("file://", "");
         
-        bluetoothWatcher.command = [basePath + "/bluetooth_control.sh", "status"];
-        deviceScraper.command = [basePath + "/bluetooth_control.sh", "paired"];
-        scanAction.command = ["timeout", "5s", basePath + "/bluetooth_control.sh", "scan"];
-        discoveryScraper.command = [basePath + "/bluetooth_control.sh", "discover"];
-        bluetoothToggleAction.command = [basePath + "/bluetooth_control.sh", "toggle"];
+        bluetoothWatcher.command = [basePath + "/Scripts/bluetooth_control.sh", "status"];
+        deviceScraper.command = [basePath + "/Scripts/bluetooth_control.sh", "paired"];
+        scanAction.command = ["timeout", "5s", basePath + "/Scripts/bluetooth_control.sh", "scan"];
+        discoveryScraper.command = [basePath + "/Scripts/bluetooth_control.sh", "discover"];
+        bluetoothToggleAction.command = [basePath + "/Scripts/bluetooth_control.sh", "toggle"];
         
         bluetoothWatcher.running = true;
     }
