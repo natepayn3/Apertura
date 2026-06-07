@@ -20,7 +20,7 @@ echo -e "${BLUE}    _   ____  _____ ____ _____ _   _ ____    _   "
 echo -e "   / \  |  _ \| ____|  _ \_  _\| | | |  _ \  / \  "
 echo -e "  / _ \ | |_) |  _| | |_) || | | | | | |_) |/ _ \ "
 echo -e " / ___ \|  __/| |___|  _ < | | | |_| |  _<___  |"
-echo -e "/_/   \_\_|   |_____|_| \_\|_|  \___/|_| \_\  |_| ${RESET}"
+echo -e "/_/   \_\_|  |_____|_| \_\_|_|  \___/|_| \_\  |_| ${RESET}"
 echo -e "${GRAY}────────────────────────────────────────────────────────────${RESET}"
 echo ""
 
@@ -135,9 +135,11 @@ else
     echo -e "    ${GRAY}➔${RESET} No battery interface found. Defaulting core layout configurations."
 fi
 
-if [ -f "$QUICKSHELL_DIR/bluetooth_control.sh" ]; then
-    echo -e "    ${GRAY}➔${RESET} Fixing permissions on bluetooth controller script..."
-    chmod +x "$QUICKSHELL_DIR/bluetooth_control.sh"
+# Flag executable permissions on all script assets within the unified Scripts directory
+if [ -d "$QUICKSHELL_DIR/Scripts" ]; then
+    echo -e "    ${GRAY}➔${RESET} Setting execution permissions for modular runtime scripts..."
+    chmod +x "$QUICKSHELL_DIR/Scripts"/*.sh 2>/dev/null || true
+    chmod +x "$QUICKSHELL_DIR/Scripts"/*.py 2>/dev/null || true
 fi
 
 echo -e "${BLUE}[*]${RESET} Deploying specialized CAVA profile structures..."
@@ -147,7 +149,6 @@ mkdir -p "$HOME/.config/cava"
 printf '[general]\n# Match this to your visualizer bar count (e.g., 5 bars)\nbars = 10\nframerate = 60\n\n[input]\n# Explicitly leverage PipeWire loopback for perfect audio capture\nmethod = pipewire\nsource = auto\nsensitivity = 0.5\n\n[output]\n# Output raw data format: ascii values separated by semicolons\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\ndata_path = /tmp/cava_bar.fifo\n' > "$HOME/.config/cava/quickshell_bar.conf"
 
 echo -e "${BLUE}[*]${RESET} Checking Hyprland configuration structure..."
-# Ensure hyprland.lua exists; fallback to the repo template if missing
 if [ ! -f "$HYPRLAND_LUA" ]; then
     if [ -f "Apertura/hyprland.lua" ]; then
         echo -e "    ${GRAY}➔${RESET} hyprland.lua missing. Copying template from repository root..."
@@ -177,7 +178,6 @@ if ! grep -q 'local menu = "qs -c Apertura ipc call launcher toggle"' "$HYPRLAND
     echo 'local menu = "qs -c Apertura ipc call launcher toggle"' | safe_append "$HYPRLAND_LUA"
 fi
 
-# Injected expanded quickshell rule parameters to include the clock widget, note tools, and workspace previews
 if ! grep -q "desktop-clock-widget" "$HYPRLAND_LUA"; then
     echo -e "    ${GRAY}➔${RESET} Adding bar and extended component layer rule hooks..."
     echo -e "\n-- Unique configuration for the bar layer\nhl.layer_rule({\n    name  = \"quickshell-bar-blur\",\n    match = { namespace = \"quickshell-bar\" },\n    blur  = true,\n    xray  = true,\n})\n\n-- Combined rule for all components (now including the desktop clock widget)\nhl.layer_rule({\n    name         = \"quickshell-components-blur\",\n    match        = { namespace = \"^(quickshell-(overlay|wallpapers|launcher|workspace-preview|detached-note)|desktop-clock-widget)$\" },\n    blur         = true,\n    xray         = true,\n    ignore_alpha = 0.5,\n})" | safe_append "$HYPRLAND_LUA"
@@ -195,11 +195,8 @@ fi
 
 echo -e "${BLUE}[*]${RESET} Deploying color token architectures..."
 mkdir -p "$QUICKSHELL_DIR/Colors"
-
-# Initialize an empty JSON fallback object to stop FileView read warnings cold
 echo "{}" > "$QUICKSHELL_DIR/Colors/colors.json"
 
-# Process live color extraction prior to starting desktop background daemons
 ACTIVE_WALLPAPER=$(ls -d "$WALLPAPER_DIR"/* 2>/dev/null | head -n 1 || echo "")
 if [ -n "$ACTIVE_WALLPAPER" ] && command -v matugen &>/dev/null; then
     echo -e "    ${GRAY}➔${RESET} Compiling dynamic JSON colorscheme via Matugen..."
@@ -210,8 +207,17 @@ echo -e "${BLUE}[*]${RESET} Booting underlying hardware service engines..."
 sudo systemctl enable --now bluetooth.service
 sudo systemctl enable --now NetworkManager.service
 
+# Inject connection permissions on any wireguard/vpn profiles so the bar toggle works instantly rootless
+echo -e "${BLUE}[*]${RESET} Aligning user policies for NetworkManager VPN integrations..."
+# Query all profiles matching VPN or WireGuard typings and map them to the active unprivileged user
+nmcli -t -f TYPE,NAME connection show | grep -E '^(wireguard|vpn|tun):' | cut -d: -f2 | while read -r profile; do
+    if [ -n "$profile" ]; then
+        echo -e "    ${GRAY}➔${RESET} Elevating user control permissions for connection profile: $profile"
+        nmcli connection modify "$profile" connection.permissions "user:$USER" 2>/dev/null || true
+    fi
+done
+
 echo -e "${BLUE}[*]${RESET} Initializing user session sound system modules..."
-# Set up default user session media states completely rootless
 systemctl --user enable --now pipewire.service pipewire-pulse.service wireplumber.service
 
 echo -e "${BLUE}[*]${RESET} Activating user space daemons..."
@@ -223,7 +229,6 @@ if command -v awww-daemon &>/dev/null; then
 fi
 
 echo -e "${BLUE}[*]${RESET} Launching local Apertura desktop shell interface..."
-# Clean out any conflicting quickshell threads and launch the layout disowned
 pkill quickshell || true
 qs -c Apertura & disown
 
