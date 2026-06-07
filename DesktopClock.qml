@@ -1,13 +1,15 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import QtQuick.Controls
 import Quickshell.Wayland
 
 PanelWindow {
     id: desktopClockWindow
 
-    WlrLayershell.layer: isAlwaysVisible ? WlrLayer.Overlay : WlrLayer.Bottom
+    WlrLayershell.layer: isAlwaysVisible ? WlrLayer.Overlay : WlrLayer.Background
     WlrLayershell.namespace: "desktop-clock-widget"
+    
     WlrLayershell.anchors.top: true
     WlrLayershell.anchors.left: true
     WlrLayershell.anchors.bottom: true
@@ -85,7 +87,6 @@ PanelWindow {
             }
         }
 
-        // 🎛️ Unified Pin Icon + Toggle Switch Matrix Row Container
         RowLayout {
             id: toggleContainer
             anchors.top: parent.top
@@ -94,7 +95,6 @@ PanelWindow {
             anchors.rightMargin: 12
             spacing: 8
             
-            // Only reveal control interface elements on active hover context boundaries
             visible: dragArea.containsMouse || btnMouseArea.containsMouse
 
             Text {
