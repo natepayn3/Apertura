@@ -51,7 +51,6 @@ Item {
         
         let primaryScreen = Quickshell.screens.length > 0 ? Quickshell.screens[0] : null;
         let initialX = 10; 
-        let initialY = primaryScreen ? Math.round((primaryScreen.height - 300) / 2) : 250; 
         
         detachedWindowWrapper.createObject(rootScope, {
             "passedNotesList": notesRoot.notesList,
@@ -96,14 +95,14 @@ Item {
                 Item { Layout.fillWidth: true }
 
                 RowLayout {
-                    spacing: 8
+                    spacing: 12
+                    Layout.alignment: Qt.AlignVCenter
 
                     Rectangle {
                         id: detachActionButton
                         width: 54
                         height: 24
                         radius: 0
-                        // Stripped hover validation layout parameters: always visible
                         color: viewRoot.isFloating ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : "transparent"
                         border.width: 1
                         border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
@@ -135,44 +134,59 @@ Item {
                         }
                     }
 
-                    Rectangle {
-                        id: toggleButton
-                        width: 96
-                        height: 24
-                        radius: 0
-                        // Stripped hover validation layout parameters: always visible
-                        color: notesRoot.isAlwaysVisible ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") : "transparent"
-                        border.width: notesRoot.isAlwaysVisible ? 0 : 1
-                        border.color: rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff"
+                    // 🎛️ Option 2 Layout: Inline Icon + Toggle Switch Track
+                    RowLayout {
+                        spacing: 8
+                        Layout.alignment: Qt.AlignVCenter
 
                         Text {
-                            anchors.centerIn: parent
-                            text: "Always Visible"
-                            font.family: "Rubik"
-                            font.pixelSize: 10
-                            font.weight: Font.Medium
-                            color: rootScope.theme ? rootScope.theme.theme_fg : "#ffffff"
+                            text: notesRoot.isAlwaysVisible ? "keep" : "keep_off"
+                            font.family: "Material Symbols Outlined"
+                            font.pixelSize: 18
+                            Layout.alignment: Qt.AlignVCenter
+                            color: notesRoot.isAlwaysVisible 
+                                ? (rootScope.theme ? rootScope.theme.theme_fg : "#ffffff") 
+                                : (rootScope.theme ? rootScope.theme.theme_outline : "#59ffffff")
                         }
 
-                        MouseArea {
-                            id: btnMouseArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            preventStealing: true
-                            onClicked: {
-                                if (viewRoot.isFloating) {
-                                    detachedWin.isAlwaysVisibleState = !detachedWin.isAlwaysVisibleState;
-                                    notesRoot.isAlwaysVisible = detachedWin.isAlwaysVisibleState;
-                                } else {
-                                    if (notesRoot.isAlwaysVisible) {
-                                        notesRoot.menuOpen = true;
-                                        notesRoot.isAlwaysVisible = false;
+                        Rectangle {
+                            width: 50
+                            height: 24
+                            radius: 12
+                            color: notesRoot.isAlwaysVisible 
+                                ? (rootScope.theme ? rootScope.theme.theme_outline : "#45ffffff") 
+                                : (rootScope.theme ? rootScope.theme.theme_outline : "#26ffffff")
+                            
+                            Rectangle {
+                                width: 18
+                                height: 18
+                                radius: 9
+                                color: rootScope.theme ? rootScope.theme.theme_onPrimary : "#11111b"
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: notesRoot.isAlwaysVisible ? 28 : 4
+                                
+                                Behavior on x { 
+                                    NumberAnimation { duration: 120; easing.type: Easing.OutQuad } 
+                                }
+                            }
+                            
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (viewRoot.isFloating) {
+                                        detachedWin.isAlwaysVisibleState = !detachedWin.isAlwaysVisibleState;
+                                        notesRoot.isAlwaysVisible = detachedWin.isAlwaysVisibleState;
                                     } else {
-                                        notesRoot.isAlwaysVisible = true;
-                                        notesRoot.menuOpen = false;
-                                        if (rootScope.activeModal === "notes") {
-                                            rootScope.dismissAll();
+                                        if (notesRoot.isAlwaysVisible) {
+                                            notesRoot.menuOpen = true;
+                                            notesRoot.isAlwaysVisible = false;
+                                        } else {
+                                            notesRoot.isAlwaysVisible = true;
+                                            notesRoot.menuOpen = false;
+                                            if (rootScope.activeModal === "notes") {
+                                                rootScope.dismissAll();
+                                            }
                                         }
                                     }
                                 }
@@ -385,6 +399,7 @@ Item {
         PanelWindow {
             id: detachedWin
             
+            // Full-screen structural layout keeps clock clicking functional via masks
             WlrLayershell.layer: isAlwaysVisibleState ? WlrLayer.Overlay : WlrLayer.Bottom
             WlrLayershell.namespace: "quickshell-detached-note"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -392,7 +407,7 @@ Item {
             anchors { top: true; bottom: true; left: true; right: true }
             color: "transparent"
             
-            mask: isAlwaysVisibleState ? detachedFrameBounds : null
+            mask: detachedFrameBounds
 
             Region {
                 id: detachedFrameBounds
@@ -403,7 +418,7 @@ Item {
             property int passedActiveIndex: 0
             property bool passedAlwaysVisible: false
             
-            property int spawnX: 100
+            property int spawnX: 10
             property bool isAlwaysVisibleState: passedAlwaysVisible
 
             Component.onCompleted: {
@@ -417,6 +432,7 @@ Item {
             Rectangle {
                 id: detachedFrame
                 
+                // Hardware-accelerated canvas properties render instantly
                 property int posX: 10
                 property int posY: 100
                 property bool initialized: false 
@@ -431,6 +447,7 @@ Item {
                     isFloating: true
                 }
 
+                // Snap securely to the bottom margin on creation pass
                 Connections {
                     target: detachedWin
                     
@@ -457,6 +474,7 @@ Item {
                         clickOffsetY = mouse.y
                     }
 
+                    // Blazing fast internal client translation loop
                     onPositionChanged: (mouse) => {
                         if (pressed) {
                             detachedFrame.posX = detachedFrame.posX + mouse.x - clickOffsetX
