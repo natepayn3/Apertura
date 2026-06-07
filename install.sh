@@ -2,12 +2,10 @@
 
 set -e
 
-# Target paths and directory structures
 QUICKSHELL_DIR="$HOME/.config/quickshell/Apertura"
 HYPRLAND_LUA="$HOME/.config/hypr/hyprland.lua"
 WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
 
-# ANSI color escape codes for terminal feedback
 BLUE='\033;0;34m'
 WHITE='\033;0;37m'
 GRAY='\033;1;30m'
@@ -50,16 +48,13 @@ DEPENDENCIES=(
 
 NEW_FONTS_INSTALLED=false
 
-# 1. Custom handling for quickshell to guarantee local AUR build with sysinfo feature
 if ! pacman -Qi quickshell-git &>/dev/null; then
     echo -e "    ${GRAY}➔${RESET} Building quickshell-git locally via AUR..."
     
-    # Clean out binary packages to avoid transaction blocks or dynamic link conflicts
     if pacman -Qi quickshell &>/dev/null; then
         sudo pacman -Rns --noconfirm quickshell
     fi
 
-    # Explicitly pull from the AUR instead of native mirrors to compile features locally
     if command -v paru &>/dev/null; then
         paru -S --aur --noconfirm --needed quickshell-git
     elif command -v yay &>/dev/null; then
@@ -72,7 +67,6 @@ else
     echo -e "    ${GRAY}➔${RESET} quickshell-git is already installed. Skipping..."
 fi
 
-# 2. Package deployment loops handling native cachyos / core repositories prior to AUR fallbacks
 for pkg in "${DEPENDENCIES[@]}"; do
     if [[ "$pkg" == "awww" ]] && command -v awww-daemon &>/dev/null; then
         echo -e "    ${GRAY}➔${RESET} awww daemon is already installed. Skipping..."
@@ -123,9 +117,14 @@ fi
 
 echo -e "${BLUE}[*]${RESET} Syncing Apertura core assets and helper scripts..."
 mkdir -p "$QUICKSHELL_DIR"
+
+if [ -d "Apertura/Assets" ]; then
+    echo -e "    ${GRAY}➔${RESET} Provisioning layout architecture targets for visual assets..."
+    mkdir -p "$QUICKSHELL_DIR/Assets"
+fi
+
 cp -r Apertura/. "$QUICKSHELL_DIR/"
 
-# Dynamically map battery hardware interface identifiers
 DETECTED_BAT=$(ls -d /sys/class/power_supply/BAT* 2>/dev/null | head -n 1) || true
 if [ -n "$DETECTED_BAT" ]; then
     BAT_BASE=$(basename "$DETECTED_BAT")
@@ -135,7 +134,6 @@ else
     echo -e "    ${GRAY}➔${RESET} No battery interface found. Defaulting core layout configurations."
 fi
 
-# Flag executable permissions on all script assets within the unified Scripts directory
 if [ -d "$QUICKSHELL_DIR/Scripts" ]; then
     echo -e "    ${GRAY}➔${RESET} Setting execution permissions for modular runtime scripts..."
     chmod +x "$QUICKSHELL_DIR/Scripts"/*.sh 2>/dev/null || true
@@ -145,8 +143,7 @@ fi
 echo -e "${BLUE}[*]${RESET} Deploying specialized CAVA profile structures..."
 mkdir -p "$HOME/.config/cava"
 
-# Explicit CAVA runtime generation block mapping requirements to SplitParser interface
-printf '[general]\n# Match this to your visualizer bar count (e.g., 5 bars)\nbars = 10\nframerate = 60\n\n[input]\n# Explicitly leverage PipeWire loopback for perfect audio capture\nmethod = pipewire\nsource = auto\nsensitivity = 0.5\n\n[output]\n# Output raw data format: ascii values separated by semicolons\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\ndata_path = /tmp/cava_bar.fifo\n' > "$HOME/.config/cava/quickshell_bar.conf"
+printf '[general]\nbars = 10\nframerate = 60\n\n[input]\nmethod = pipewire\nsource = auto\nsensitivity = 0.5\n\n[output]\nmethod = raw\ndata_format = ascii\nascii_max_range = 100\ndata_path = /tmp/cava_bar.fifo\n' > "$HOME/.config/cava/quickshell_bar.conf"
 
 echo -e "${BLUE}[*]${RESET} Checking Hyprland configuration structure..."
 if [ ! -f "$HYPRLAND_LUA" ]; then
@@ -164,7 +161,6 @@ else
     echo -e "    ${GRAY}➔${RESET} Existing hyprland.lua detected. Preserving file layout..."
 fi
 
-# Utility wrapper to append properties safely to script engines
 safe_append() {
     local file="$1"
     if [ -s "$file" ] && [ "$(tail -c1 "$file" | wc -l)" -eq 0 ]; then
@@ -207,9 +203,7 @@ echo -e "${BLUE}[*]${RESET} Booting underlying hardware service engines..."
 sudo systemctl enable --now bluetooth.service
 sudo systemctl enable --now NetworkManager.service
 
-# Inject connection permissions on any wireguard/vpn profiles so the bar toggle works instantly rootless
 echo -e "${BLUE}[*]${RESET} Aligning user policies for NetworkManager VPN integrations..."
-# Query all profiles matching VPN or WireGuard typings and map them to the active unprivileged user
 nmcli -t -f TYPE,NAME connection show | grep -E '^(wireguard|vpn|tun):' | cut -d: -f2 | while read -r profile; do
     if [ -n "$profile" ]; then
         echo -e "    ${GRAY}➔${RESET} Elevating user control permissions for connection profile: $profile"
