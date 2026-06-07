@@ -84,8 +84,6 @@ Once deployed, you can interact with or toggle the shell layout elements cleanly
 
 ## Star History
 
-## Star History
-
 <a href="https://www.star-history.com/?repos=natepayn3%2FApertura&type=date&legend=top-left">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=natepayn3/Apertura&type=date&theme=dark&legend=top-left" />
