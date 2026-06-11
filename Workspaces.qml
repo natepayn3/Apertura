@@ -236,7 +236,7 @@ Item {
                 id: hoverBackground
                 width: parent.width
                 height: parent.height
-                radius: height / 2
+                radius: 0
                 anchors.centerIn: parent
                 color: workspaceContainer.theme ? workspaceContainer.theme.theme_primary : "#89b4fa"
                 opacity: workspaceButton.containsMouse ? 0.3 : 0.0
