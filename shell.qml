@@ -309,6 +309,8 @@ Scope {
                         Workspaces { 
                             theme: rootScope.theme 
                             anchors.horizontalCenter: parent.horizontalCenter; z: 1 
+                            width: 28
+                            height: Math.min(implicitHeight, bottomGroupControls.y - (topStackColumn.y + y) - 16)
                         }
                     }
 
@@ -479,10 +481,13 @@ Scope {
                             DrawerModule { id: wrapAudio; Audio { anchors.centerIn: parent } }
                             DrawerModule { id: wrapSys; SysMonitor { id: sysMonitorItem; theme: rootScope.theme; anchors.centerIn: parent } }
                             DrawerModule { id: wrapNet; NetMonitor { id: netMonitorItem; anchors.centerIn: parent } }
+                            
                             DrawerModule { 
                                 id: wrapVpn
-                                Vpn { anchors.centerIn: parent } 
+                                moduleAvailable: vpnItem.hasVpnProfile
+                                Vpn { id: vpnItem; anchors.centerIn: parent } 
                             }
+                            
                             DrawerModule { id: wrapPower; Power { anchors.centerIn: parent } }
                         }
                     }
