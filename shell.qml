@@ -484,7 +484,7 @@ Scope {
                             
                             DrawerModule { 
                                 id: wrapVpn
-                                moduleAvailable: vpnItem.hasVpnProfile
+                                moduleAvailable: typeof vpnItem !== "undefined" && vpnItem.hasVpnProfile
                                 Vpn { id: vpnItem; anchors.centerIn: parent } 
                             }
                             
