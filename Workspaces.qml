@@ -128,10 +128,21 @@ Item {
         }
     }
 
-    Loader {
-        id: layoutLoader
+    Flickable {
+        id: scrollContainer
         anchors.fill: parent
-        sourceComponent: workspaceContainer.isVertical ? verticalLayoutComponent : horizontalLayoutComponent
+        contentWidth: isVertical ? parent.width : (layoutLoader.item ? layoutLoader.item.implicitWidth : parent.width)
+        contentHeight: isVertical ? (layoutLoader.item ? layoutLoader.item.implicitHeight : parent.height) : parent.height
+        flickableDirection: isVertical ? Flickable.VerticalFlick : Flickable.HorizontalFlick
+        boundsBehavior: Flickable.StopAtBounds
+        clip: true
+
+        Loader {
+            id: layoutLoader
+            width: isVertical ? parent.width : implicitWidth
+            height: isVertical ? implicitHeight : parent.height
+            sourceComponent: workspaceContainer.isVertical ? verticalLayoutComponent : horizontalLayoutComponent
+        }
     }
 
     Connections {
@@ -146,7 +157,6 @@ Item {
     Component {
         id: verticalLayoutComponent
         ColumnLayout {
-            anchors.fill: parent
             spacing: 10
             Repeater {
                 model: workspaceContainer.activeWorkspaceList
@@ -158,7 +168,6 @@ Item {
     Component {
         id: horizontalLayoutComponent
         RowLayout {
-            anchors.fill: parent
             spacing: 10
             Repeater {
                 model: workspaceContainer.activeWorkspaceList
@@ -227,7 +236,7 @@ Item {
                 id: hoverBackground
                 width: parent.width
                 height: parent.height
-                radius: 0
+                radius: height / 2
                 anchors.centerIn: parent
                 color: workspaceContainer.theme ? workspaceContainer.theme.theme_primary : "#89b4fa"
                 opacity: workspaceButton.containsMouse ? 0.3 : 0.0
@@ -244,7 +253,7 @@ Item {
                 
                 width: shapeWidth
                 height: shapeHeight
-                radius: 0
+                radius: height / 2
                 z: 2
 
                 Behavior on shapeWidth { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
