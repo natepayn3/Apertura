@@ -5,8 +5,12 @@ import Quickshell.Io
 
 Item {
     id: vpnRoot
-    width: 32
-    height: 32
+
+    property bool hasVpnProfile: false
+
+    implicitWidth: hasVpnProfile ? 32 : 0
+    implicitHeight: hasVpnProfile ? 32 : 0
+    visible: hasVpnProfile
 
     property string detectedConnection: ""
     property bool isVpnActive: false
@@ -19,6 +23,34 @@ Item {
         onTriggered: {
             vpnScanner.running = false;
             vpnScanner.running = true;
+            vpnProfileCheck.running = false;
+            vpnProfileCheck.running = true;
+        }
+    }
+
+    Process {
+        id: vpnProfileCheck
+        command: ["nmcli", "-g", "TYPE", "connection", "show"]
+        running: true
+        stdout: StdioCollector {
+            onTextChanged: {
+                let cleanText = text.trim();
+                if (!cleanText) {
+                    vpnRoot.hasVpnProfile = false;
+                    return;
+                }
+                
+                let lines = cleanText.split("\n");
+                let foundProfile = false;
+                for (let i = 0; i < lines.length; i++) {
+                    let type = lines[i].trim();
+                    if (type === "vpn" || type === "wireguard" || type === "tun") {
+                        foundProfile = true;
+                        break;
+                    }
+                }
+                vpnRoot.hasVpnProfile = foundProfile;
+            }
         }
     }
 
