@@ -9,117 +9,27 @@ Item {
     id: previewRoot
 
     property int targetWorkspace: -1
-    property bool active: false
-    property var theme
-
+    property bool active: targetWorkspace !== -1
     property var liveClientJson: []
-    property var stagedClientJson: []
 
-    property int delayedWorkspace: -1
-    property bool renderReady: false
-    property bool manualIsVertical: false
+    // Read-only state property string helper so shell.qml knows when the animation completes
+    property string activeState: animatedContainer.state
 
-    property bool containsMouseGlobal: rootHoverTracker.containsMouse || clickSurface.containsMouse
-
-    implicitWidth: active ? (renderReady ? (viewportFrame.width + 32) : (manualIsVertical ? 386 : 432)) : 0
-    implicitHeight: active ? (manualIsVertical ? 700 : 300) : 0
-
-    onContainsMouseGlobalChanged: {
-        if (!active) return;
-        if (containsMouseGlobal) {
-            globalWorkspacePreview.cancelDismiss();
-        } else {
-            globalWorkspacePreview.requestDismiss();
-        }
-    }
+    implicitWidth: active ? (viewportFrame.width + 28) : 0
+    implicitHeight: active ? (viewportFrame.calculatedBounds.isVertical ? 380 : 200) : 0
 
     onTargetWorkspaceChanged: {
         if (targetWorkspace !== -1) {
-            previewRoot.active = false;
-            previewRoot.renderReady = false;
-            
-            blankingTimer.restart();
-            updateGeometryMap();
-            retriggerTimer.restart();
+            clientQueryProcess.running = true;
         } else {
-            previewRoot.active = false;
-            previewRoot.delayedWorkspace = -1;
-            previewRoot.renderReady = false;
+            liveClientJson = [];
         }
-    }
-
-    onActiveChanged: {
-        if (active) {
-            Hyprland.refreshToplevels();
-            Hyprland.refreshWorkspaces();
-            previewRoot.updateGeometryMap();
-        }
-    }
-
-    Timer {
-        id: blankingTimer
-        interval: 250 
-        running: false
-        repeat: false
-        onTriggered: {
-            previewRoot.liveClientJson = previewRoot.stagedClientJson;
-            previewRoot.delayedWorkspace = previewRoot.targetWorkspace;
-            
-            previewRoot.manualIsVertical = viewportFrame.calculatedBounds.isVertical;
-            
-            Qt.callLater(function() {
-                previewRoot.renderReady = true;
-            });
-        }
-    }
-
-    Timer {
-        id: hoverRefreshTimer
-        interval: 50
-        running: previewRoot.active
-        repeat: true
-        property int ticks: 0
-
-        onRunningChanged: {
-            if (running) ticks = 0;
-        }
-
-        onTriggered: {
-            previewRoot.updateGeometryMap();
-            ticks++;
-            if (ticks >= 6) {
-                running = false;
-            }
-        }
-    }
-
-    Timer {
-        id: retriggerTimer
-        interval: 50
-        running: false
-        repeat: false
-        onTriggered: previewRoot.active = true;
-    }
-
-    function updateGeometryMap() {
-        if (targetWorkspace === -1) return;
-        clientQueryProcess.running = true;
-    }
-
-    Timer {
-        id: debounceTimer
-        interval: 50
-        running: false
-        repeat: false
-        onTriggered: previewRoot.updateGeometryMap()
     }
 
     Connections {
         target: Hyprland
         ignoreUnknownSignals: true
-        function onRawEvent(event) {
-            debounceTimer.restart();
-        }
+        function onRawEvent(event) { if (previewRoot.active) clientQueryProcess.running = true; }
     }
 
     Process {
@@ -128,275 +38,204 @@ Item {
         running: false
         stdout: StdioCollector {
             onTextChanged: {
-                if (!previewRoot.active) return;
                 let cleanText = text.trim();
                 if (!cleanText || cleanText === "[]") return;
-                try {
-                    previewRoot.stagedClientJson = JSON.parse(cleanText);
-                    if (previewRoot.renderReady) {
-                        previewRoot.liveClientJson = previewRoot.stagedClientJson;
-                    }
-                } catch(e) {}
+                try { previewRoot.liveClientJson = JSON.parse(cleanText); } catch(e) {}
             }
         }
     }
 
-    Process {
-        id: switchWorkspace
-        running: false
-    }
+    Process { id: switchWorkspace; running: false }
 
     function getCleanIconName(className) {
         if (!className) return "application-x-executable";
         let lowerClass = className.toLowerCase().trim();
-        
         if (lowerClass.includes("chrome")) return "google-chrome";
         if (lowerClass.includes("kitty")) return "kitty";
         if (lowerClass.includes("terminal")) return "utilities-terminal";
         if (lowerClass.includes("codium")) return "vscodium";
         if (lowerClass.includes("code")) return "vscode";
         if (lowerClass.includes("signal")) return "signal-desktop";
-        
         return lowerClass;
     }
 
-    MouseArea {
-        id: rootHoverTracker
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.NoButton
-    }
+    Item {
+        id: animatedContainer
+        width: previewRoot.implicitWidth
+        height: previewRoot.implicitHeight
 
-    Text {
-        id: titleLabel
-        text: "Workspace " + previewRoot.targetWorkspace
-        font.family: "Rubik"
-        font.pixelSize: 14
-        font.weight: Font.Bold
-        color: previewRoot.theme ? previewRoot.theme.theme_fg : "#89b4fa" 
-        x: 16
-        y: 14
-        visible: previewRoot.renderReady
-    }
-
-    RowLayout {
-        x: titleLabel.x + titleLabel.implicitWidth + 24
-        y: 14
-        height: titleLabel.implicitHeight
-        spacing: 8
-        
-        Repeater {
-            model: previewRoot.renderReady ? viewportFrame.workspaceWindows : []
-            delegate: Image {
-                property string appClass: modelData.class || ""
-                
-                visible: appClass !== "" && modelData.mapped
-                source: Quickshell.iconPath(getCleanIconName(appClass))
-                
-                Layout.preferredWidth: 16
-                Layout.preferredHeight: 16
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
+        states: [
+            State {
+                name: "hidden"
+                when: !previewRoot.active
+                PropertyChanges { target: animatedContainer; opacity: 0.0 }
+                PropertyChanges { 
+                    target: animatedContainer; 
+                    x: rootShell.barPosition === "left" ? -width : (rootShell.barPosition === "right" ? width : 0)
+                    y: rootShell.barPosition === "top" ? -height : (rootShell.barPosition === "bottom" ? height : 0)
+                }
+            },
+            State {
+                name: "shown"
+                when: previewRoot.active
+                PropertyChanges { target: animatedContainer; opacity: 1.0; x: 0; y: 0 }
             }
-        }
-    }
+        ]
 
-    Rectangle {
-        id: headerDivider
-        width: viewportFrame.width
-        height: 1
-        color: previewRoot.theme ? previewRoot.theme.theme_outline : "#313244"
-        x: 16
-        y: 38
-        visible: previewRoot.renderReady
-    }
-
-    Rectangle {
-        id: viewportFrame
-        x: 16
-        anchors.top: headerDivider.bottom
-        anchors.topMargin: 12
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 16
-        color: "transparent"
-        border.width: 0
-        radius: 0
-        clip: true
-        visible: previewRoot.renderReady
-
-        property var workspaceWindows: previewRoot.liveClientJson.filter(w => w.workspace.id === previewRoot.delayedWorkspace)
-
-        property var activeWsObj: Hyprland.workspaces.values.find(ws => ws.id === previewRoot.delayedWorkspace) || null
-        property var wsMonitor: activeWsObj ? activeWsObj.monitor : (Hyprland.activeMonitor || null)
-
-        property var calculatedBounds: {
-            if (!workspaceWindows || workspaceWindows.length === 0) {
-                return { "w": 1920, "h": 1080, "isVertical": false, "originX": 0, "originY": 0 };
+        transitions: [
+            Transition {
+                from: "hidden"; to: "shown"
+                ParallelAnimation {
+                    NumberAnimation { properties: "x,y"; duration: 180; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; duration: 120; easing.type: Easing.OutQuad }
+                }
+            },
+            Transition {
+                from: "shown"; to: "hidden"
+                ParallelAnimation {
+                    NumberAnimation { properties: "x,y"; duration: 140; easing.type: Easing.InQuad }
+                    NumberAnimation { property: "opacity"; duration: 100; easing.type: Easing.InQuad }
+                }
             }
-            
-            let minX = Infinity, minY = Infinity;
-            let maxX = -Infinity, maxY = -Infinity;
-            
-            for (let i = 0; i < workspaceWindows.length; i++) {
-                let win = workspaceWindows[i];
-                if (!win.at || !win.size) continue;
-                
-                if (win.at[0] < minX) minX = win.at[0];
-                if (win.at[1] < minY) minY = win.at[1];
-                
-                let rightEdge = win.at[0] + win.size[0];
-                let bottomEdge = win.at[1] + win.size[1];
-                
-                if (rightEdge > maxX) maxX = rightEdge;
-                if (bottomEdge > maxY) maxY = bottomEdge;
-            }
-            
-            let spanX = maxX - minX;
-            let spanY = maxY - minY;
-            let verticalDetected = spanY > spanX;
-            
-            let normW = verticalDetected ? 1080 : 1920;
-            let normH = verticalDetected ? 1920 : 1080;
-            
-            if (spanX > 0 && Math.abs(spanX - normW) > 100) normW = spanX;
-            if (spanY > 0 && Math.abs(spanY - normH) > 100) normH = spanY;
-            
-            return {
-                "w": normW,
-                "h": normH,
-                "isVertical": verticalDetected,
-                "originX": minX,
-                "originY": minY
-            };
-        }
+        ]
 
-        property real monitorW: calculatedBounds.w
-        property real monitorH: calculatedBounds.h
-        property bool isVertical: previewRoot.manualIsVertical
-
-        property real monitorX: calculatedBounds.originX
-        property real monitorY: calculatedBounds.originY
-
-        width: Math.round(height * (monitorW / monitorH))
-
-        property real scaleX: width / monitorW
-        property real scaleY: height / monitorH
-
-        Image {
+        Rectangle {
             anchors.fill: parent
-            source: viewportFrame.wsMonitor && typeof WallpaperService !== "undefined" ? WallpaperService.getWallpaper(viewportFrame.wsMonitor.name) : ""
-            fillMode: Image.PreserveAspectCrop
-            visible: source != ""
-            opacity: 0.45
+            color: rootShell.colorBackground
+            border.color: rootShell.colorBorder
+            border.width: 2
+            radius: 12
         }
 
-        Repeater {
-            model: previewRoot.renderReady ? viewportFrame.workspaceWindows : []
+        MouseArea { 
+            anchors.fill: parent 
+            hoverEnabled: true 
+            acceptedButtons: Qt.NoButton
+            onEntered: globalWorkspacePreview.cancelDismiss()
+            onExited: globalWorkspacePreview.requestDismiss()
+        }
 
-            delegate: Rectangle {
-                id: windowDelegate
-                property real winX: modelData.at ? modelData.at[0] : 0
-                property real winY: modelData.at ? modelData.at[1] : 0
-                property real winW: modelData.size ? modelData.size[0] : 0
-                property real winH: modelData.size ? modelData.size[1] : 0
+        Text {
+            id: titleLabel
+            text: "Workspace " + previewRoot.targetWorkspace
+            font.family: rootShell.shellFont
+            font.pixelSize: 13
+            font.bold: true
+            color: rootShell.colorAccent
+            x: 14; y: 10
+        }
 
-                x: ((winX - viewportFrame.monitorX) * viewportFrame.scaleX) + 2
-                y: ((winY - viewportFrame.monitorY) * viewportFrame.scaleY) + 2
-                
-                width: Math.max(4, (winW * viewportFrame.scaleX) - 4)
-                height: Math.max(4, (winH * viewportFrame.scaleY) - 4)
-
-                visible: modelData.mapped
-
-                color: Qt.rgba(0, 0, 0, 0.4)
-                border.width: 0
-                radius: 0
-                clip: true
-
-                property var wlToplevel: {
-                    if (!modelData || !modelData.address) return null;
-                    
-                    let tracker = clientQueryProcess.running;
-                    let targetAddr = modelData.address.trim().toLowerCase();
-
-                    let match = Hyprland.toplevels.values.find(t => {
-                        if (!t.lastIpcObject || !t.lastIpcObject.address) return false;
-                        return t.lastIpcObject.address.trim().toLowerCase() === targetAddr;
-                    });
-                    if (match && match.wayland) return match.wayland;
-                    
-                    if (viewportFrame.activeWsObj) {
-                        let localMatch = viewportFrame.activeWsObj.toplevels.values.find(t => {
-                            if (!t.lastIpcObject || !t.lastIpcObject.address) return false;
-                            return t.lastIpcObject.address.trim().toLowerCase() === targetAddr;
-                        });
-                        if (localMatch && localMatch.wayland) return localMatch.wayland;
-                    }
-                    return null;
+        RowLayout {
+            x: titleLabel.x + titleLabel.implicitWidth + 24
+            y: 12; height: titleLabel.implicitHeight; spacing: 8
+            
+            Repeater {
+                model: viewportFrame.workspaceWindows
+                delegate: Image {
+                    visible: (modelData.class || "") !== "" && modelData.mapped
+                    source: Quickshell.iconPath(getCleanIconName(modelData.class))
+                    Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                    fillMode: Image.PreserveAspectFit
                 }
+            }
+        }
 
-                Loader {
-                    anchors.fill: parent
-                    active: windowDelegate.wlToplevel !== null
-                    asynchronous: true
-                    
-                    opacity: status === Loader.Ready ? 1.0 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
+        Rectangle {
+            id: headerDivider
+            width: parent.width - 28; height: 1
+            color: rootShell.colorBorder
+            x: 14; y: 30
+        }
 
-                    sourceComponent: ScreencopyView {
-                        width: parent.width
-                        height: parent.height
-                        captureSource: windowDelegate.wlToplevel
-                        live: true
-                        paintCursor: false
-                        constraintSize: Qt.size(parent.width, parent.height)
-                    }
+        Rectangle {
+            id: viewportFrame
+            x: 14; anchors.top: headerDivider.bottom; anchors.topMargin: 8
+            anchors.bottom: parent.bottom; anchors.bottomMargin: 10
+            color: Qt.rgba(0, 0, 0, 0.2); radius: 4; clip: true
+
+            property var workspaceWindows: previewRoot.liveClientJson.filter(w => w.workspace.id === previewRoot.targetWorkspace)
+
+            property var calculatedBounds: {
+                if (!workspaceWindows || workspaceWindows.length === 0) {
+                    return { "w": 1920, "h": 1080, "isVertical": false, "originX": 0, "originY": 0 };
                 }
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                for (let i = 0; i < workspaceWindows.length; i++) {
+                    let win = workspaceWindows[i];
+                    if (!win.at || !win.size) continue;
+                    if (win.at[0] < minX) minX = win.at[0];
+                    if (win.at[1] < minY) minY = win.at[1];
+                    if ((win.at[0] + win.size[0]) > maxX) maxX = win.at[0] + win.size[0];
+                    if ((win.at[1] + win.size[1]) > maxY) maxY = win.at[1] + win.size[1];
+                }
+                let spanX = maxX - minX, spanY = maxY - minY;
+                let verticalDetected = spanY > spanX;
+                let normW = verticalDetected ? 1080 : 1920;
+                let normH = verticalDetected ? 1920 : 1080;
+                if (spanX > 0 && Math.abs(spanX - normW) > 100) normW = spanX;
+                if (spanY > 0 && Math.abs(spanY - normH) > 100) normH = spanY;
+                return { "w": normW, "h": normH, "isVertical": verticalDetected, "originX": minX, "originY": minY };
+            }
 
-                Rectangle {
-                    anchors.top: parent.top
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    height: Math.min(14, parent.height * 0.25)
-                    color: "#cc11111b"
-                    visible: parent.height > 20 && parent.width > 35
-                    z: 10 
+            width: Math.round(height * (calculatedBounds.w / calculatedBounds.h))
+            property real scaleX: width / calculatedBounds.w
+            property real scaleY: height / calculatedBounds.h
 
-                    Text {
-                        text: (modelData.title && modelData.title.trim() !== "" && modelData.title !== "~") ? modelData.title : (modelData.class || "")
-                        font.family: "Rubik"
-                        font.pixelSize: 8
-                        font.weight: Font.Bold
-                        color: "#ffffff"
-                        anchors.centerIn: parent
-                        width: parent.width - 4
-                        elide: Text.ElideRight
-                        horizontalAlignment: Text.AlignHCenter
+            Repeater {
+                model: viewportFrame.workspaceWindows
+                delegate: Rectangle {
+                    id: windowDelegate
+                    x: ((modelData.at[0] - viewportFrame.calculatedBounds.originX) * viewportFrame.scaleX)
+                    y: ((modelData.at[1] - viewportFrame.calculatedBounds.originY) * viewportFrame.scaleY)
+                    width: Math.max(4, (modelData.size[0] * viewportFrame.scaleX))
+                    height: Math.max(4, (modelData.size[1] * viewportFrame.scaleY))
+                    visible: modelData.mapped
+                    color: Qt.rgba(0, 0, 0, 0.6)
+                    border.color: rootShell.colorBorder; border.width: 1; radius: 2; clip: true
+
+                    property var wlToplevel: {
+                        if (!modelData || !modelData.address) return null;
+                        let targetAddr = modelData.address.trim().toLowerCase();
+                        let match = Hyprland.toplevels.values.find(t => t.lastIpcObject && t.lastIpcObject.address && t.lastIpcObject.address.trim().toLowerCase() === targetAddr);
+                        return match ? match.wayland : null;
+                    }
+
+                    Loader {
+                        anchors.fill: parent
+                        active: windowDelegate.wlToplevel !== null
+                        sourceComponent: ScreencopyView {
+                            captureSource: windowDelegate.wlToplevel
+                            live: true; paintCursor: false
+                        }
+                    }
+
+                    Rectangle {
+                        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+                        height: Math.min(14, parent.height * 0.25)
+                        color: "#cc11111b"
+                        visible: parent.height > 20 && parent.width > 35; z: 10
+
+                        Text {
+                            text: (modelData.title && modelData.title.trim() !== "" && modelData.title !== "~") ? modelData.title : (modelData.class || "")
+                            font.family: rootShell.shellFont; font.pixelSize: 8; font.bold: true; color: "#ffffff"
+                            anchors.centerIn: parent; width: parent.width - 4; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter
+                        }
                     }
                 }
             }
         }
-    }
 
-    MouseArea {
-        id: clickSurface
-        anchors.fill: viewportFrame
-        cursorShape: Qt.PointingHandCursor
-        z: 20
-        hoverEnabled: true
-        
-        propagateComposedEvents: true
-        
-        onPressed: (mouse) => mouse.accepted = true
-        onReleased: (mouse) => mouse.accepted = true
-        
-        onPositionChanged: (mouse) => mouse.accepted = false
-
-        onClicked: {
-            if (previewRoot.targetWorkspace !== -1) {
-                switchWorkspace.command = ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = \"" + previewRoot.targetWorkspace + "\" })"];
-                switchWorkspace.running = true;
+        MouseArea {
+            anchors.fill: viewportFrame
+            cursorShape: Qt.PointingHandCursor; z: 20; hoverEnabled: true
+            propagateComposedEvents: true
+            onPressed: (mouse) => mouse.accepted = true
+            onReleased: (mouse) => mouse.accepted = true
+            onClicked: {
+                if (previewRoot.targetWorkspace !== -1) {
+                    switchWorkspace.command = ["hyprctl", "dispatch", "workspace", previewRoot.targetWorkspace.toString()];
+                    switchWorkspace.running = true;
+                }
             }
         }
     }
